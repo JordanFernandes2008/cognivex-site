@@ -653,3 +653,395 @@
 
   seen.observe(rail);
 })();
+
+
+/* ============================================================================
+   The demo runs itself.
+
+   The product surface is the hero image of this page, and a still screenshot of
+   a queue does not show what the product does. So it plays: a card is approved
+   roughly every two and a half seconds, the ghost flies, the record lands in
+   the ledger, the counter rolls, the queue empties, it resets, it goes again.
+
+   It drives the real buttons with .click() rather than reaching into the
+   queue's own state. That matters - the autoplay takes exactly the same path a
+   person takes, so there is no second implementation to drift out of sync, and
+   anything that breaks for a visitor breaks here too.
+
+   It yields completely the first time a person touches it. This is a product
+   whose entire claim is that nothing happens without you; a demo that kept
+   approving things while you were trying to click would be arguing against the
+   page it sits on. One pointerdown or keydown anywhere in the surface and it
+   stops for good.
+   ========================================================================== */
+
+(function () {
+  "use strict";
+
+  var root = document.querySelector("[data-queue]");
+  if (!root) return;
+
+  var app = root.closest(".app") || root;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  /* A page that moves on its own is the thing reduced-motion is asking to be
+     spared. No autoplay, no hint, nothing - the queue is simply interactive. */
+  if (reduce.matches || !("IntersectionObserver" in window)) return;
+
+  var STEP = 2500;     /* between approvals */
+  var RESTART = 1800;  /* pause on the empty state before starting over */
+
+  var timer = null;
+  var onScreen = false;
+  var surrendered = false;
+  var observerFired = false;
+
+  /* --- The hint ------------------------------------------------------------
+     Built in script, not markup, so with JS off there is no dangling label for
+     a demo that is not running. */
+  var hint = document.createElement("p");
+  hint.className = "autoplay-hint mono";
+  hint.setAttribute("aria-hidden", "true");   /* the live region already narrates */
+  hint.textContent = "Demo playing \u2014 click anything to take over";
+  var foot = app.querySelector(".app__foot");
+  if (foot) foot.parentNode.insertBefore(hint, foot); else app.appendChild(hint);
+
+  function stopTimer() {
+    if (timer !== null) { window.clearTimeout(timer); timer = null; }
+  }
+
+  function surrender() {
+    if (surrendered) return;
+    surrendered = true;
+    stopTimer();
+    app.classList.remove("is-autoplaying");
+    hint.remove();
+  }
+
+  /* Real input only. A .click() we dispatch ourselves carries isTrusted false,
+     and pointerdown/keydown are not fired by .click() at all - but listening on
+     the capture phase for genuine events is the honest test either way. */
+  /* Deliberately not focusin. The queue moves focus to the next Approve
+     button itself after every resolution, and a programmatic .focus() still
+     produces a trusted focusin - so listening for it made the demo surrender
+     to its own first approval. Tabbing in is still caught, by keydown. */
+  ["pointerdown", "keydown", "wheel", "touchstart"].forEach(function (type) {
+    app.addEventListener(type, function (event) {
+      if (event.isTrusted) surrender();
+    }, { capture: true, passive: true });
+  });
+
+  function activeApprove() {
+    var card = root.querySelector("[data-item].is-active");
+    return card ? card.querySelector("[data-approve]") : null;
+  }
+
+  function tick() {
+    timer = null;
+    if (surrendered || !onScreen || document.hidden) return;
+
+    var btn = activeApprove();
+    if (btn) {
+      btn.click();
+      schedule(STEP);
+      return;
+    }
+
+    /* Queue is empty. Start over, unless the reset control is not available -
+       in which case there is nothing sensible left to do and we stop. */
+    var reset = root.querySelector("[data-reset]");
+    if (reset && !reset.hidden) {
+      reset.click();
+      schedule(RESTART);
+    } else {
+      surrender();
+    }
+  }
+
+  function schedule(delay) {
+    stopTimer();
+    if (surrendered || !onScreen || document.hidden) return;
+    timer = window.setTimeout(tick, delay);
+  }
+
+  /* Off-screen or in a background tab it does not run. A queue that churned
+     through its cards while nobody was looking would greet the reader with an
+     empty box, which is the opposite of the point. */
+  /* A ratio threshold cannot be used here. intersectionRatio is a fraction of
+     the ELEMENT, and the product surface is routinely taller than the viewport
+     - on a phone it is several times taller. Ask for 0.45 of it and the
+     callback never reports intersecting at any scroll position, so the demo
+     silently never starts. Measure the overlap against whichever is smaller,
+     the element or the viewport, and the same rule works at every size. */
+  var watch = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      observerFired = true;
+      var overlap = entry.intersectionRect.height;
+      var reference = Math.min(entry.boundingClientRect.height, window.innerHeight);
+      onScreen = entry.isIntersecting && reference > 0 && overlap >= reference * 0.35;
+
+      sync();
+    });
+  }, { threshold: [0, 0.05, 0.15, 0.3, 0.5, 0.75, 1] });
+
+  watch.observe(app);
+
+  /* IntersectionObserver delivery rides the rendering loop, so a tab that is
+     never painted - backgrounded, or a non-compositing embed - can leave the
+     callback having never run even once. The reveal code in this file already
+     carries a failsafe for the same reason. Without one here the demo would
+     simply never start and there would be nothing on screen to say why, so
+     after a beat, work the geometry out directly. */
+  window.setTimeout(function () {
+    if (observerFired || surrendered) return;
+    var r = app.getBoundingClientRect();
+    var overlap = Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0));
+    var reference = Math.min(r.height, window.innerHeight);
+    onScreen = reference > 0 && overlap >= reference * 0.35;
+    sync();
+  }, 1200);
+
+  /* One place decides whether the demo is running, so the class and the timer
+     can never disagree. Coming back to the tab has to re-add the class as well
+     as restart the clock - an IntersectionObserver only reports threshold
+     crossings, so it will not fire again just because you looked away and
+     back. */
+  function sync() {
+    var live = onScreen && !document.hidden && !surrendered;
+    app.classList.toggle("is-autoplaying", live);
+    if (live) schedule(STEP); else stopTimer();
+  }
+
+  document.addEventListener("visibilitychange", sync);
+})();
+
+
+/* ============================================================================
+   Masked word reveal.
+
+   The move every site in that gallery opens with: each word sits in a box that
+   clips it, and rises out of that box a beat after the one before. It reads as
+   type being set rather than type fading in.
+
+   Built entirely from textContent and createElement. The headline is split on
+   whitespace and every piece is re-attached as a text node, so no markup from
+   the document is ever re-parsed - there is no innerHTML anywhere in this path,
+   and a heading containing a stray angle bracket stays a stray angle bracket.
+
+   <br> and <em> are preserved by walking the element's child nodes rather than
+   flattening it to a string, so the line break and the emphasis on the second
+   line both survive the split.
+   ========================================================================== */
+
+(function () {
+  "use strict";
+
+  var targets = [].slice.call(document.querySelectorAll("[data-words]"));
+  if (!targets.length) return;
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (reduce.matches || !("IntersectionObserver" in window)) return;
+
+  function wrapWord(text) {
+    var mask = document.createElement("span");
+    mask.className = "word";
+    var inner = document.createElement("span");
+    inner.className = "word__in";
+    inner.textContent = text;          /* text in, text out */
+    mask.appendChild(inner);
+    return mask;
+  }
+
+  /* Rebuild one element's children, splitting only the text and leaving every
+     other node (BR, EM, anything else) structurally intact. */
+  function split(node, counter) {
+    var kids = [].slice.call(node.childNodes);
+
+    kids.forEach(function (kid) {
+      if (kid.nodeType === 3) {                       /* text */
+        var parts = kid.nodeValue.split(/(\s+)/);
+        var frag = document.createDocumentFragment();
+
+        parts.forEach(function (part) {
+          if (part === "") return;
+          if (/^\s+$/.test(part)) {
+            frag.appendChild(document.createTextNode(" "));
+            return;
+          }
+          var w = wrapWord(part);
+          w.style.setProperty("--w", counter.n);
+          counter.n += 1;
+          frag.appendChild(w);
+        });
+
+        node.replaceChild(frag, kid);
+      } else if (kid.nodeType === 1 && kid.tagName !== "BR") {
+        split(kid, counter);                          /* e.g. the <em> line */
+      }
+    });
+  }
+
+  targets.forEach(function (el) {
+    split(el, { n: 0 });
+    el.classList.add("words-armed");
+  });
+
+  var seen = new IntersectionObserver(function (entries, obs) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("words-in");
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.15 });
+
+  targets.forEach(function (el) { seen.observe(el); });
+
+  /* Same failsafe as everywhere else in this file: if the observer never gets
+     to run, the headline must not stay invisible. */
+  window.setTimeout(function () {
+    targets.forEach(function (el) { el.classList.add("words-in"); });
+  }, 1600);
+})();
+
+
+/* ============================================================================
+   Scroll-linked motion.
+
+   The thing that separates an award-gallery site from a corporate page is not
+   that it has animation - it is that nothing is ever at rest. Elements do not
+   fade in once and then sit there; their position is a continuous function of
+   where the page is. That is what this does, without a bundler, a physics
+   library or a canvas.
+
+   Two behaviours, both driven from one loop:
+
+     data-par="0.18"   translate on Y by a fraction of the distance the element
+                       has travelled through the viewport. Different fractions
+                       on neighbouring elements is what reads as depth.
+
+     data-scale-in     scale from 0.9 up to 1 across the element's approach,
+                       settling exactly as it centres.
+
+   Mechanics that matter:
+
+   · Scroll is read ONCE per frame into a variable and every element is written
+     from that one read. Reading layout per element inside a scroll handler is
+     what makes this pattern janky - each getBoundingClientRect after a write
+     forces a synchronous re-layout.
+
+   · Geometry is cached and recomputed only on resize, not per frame.
+
+   · The loop only runs while the page is actually being scrolled, plus a short
+     tail. An idle rAF loop burning a frame every 16ms on a mid-range Android
+     for a page nobody is touching is exactly the kind of thing that makes a
+     site feel cheap on the hardware this product is aimed at.
+
+   · Transforms only, so it stays on the compositor.
+   ========================================================================== */
+
+(function () {
+  "use strict";
+
+  var nodes = [].slice.call(document.querySelectorAll("[data-par], [data-scale-in]"));
+
+  /* An element cannot do both. data-rise animates transform from a class, and
+     this loop writes transform as an inline style - inline wins, so the reveal
+     would be cancelled with no error and no obvious cause. Drop the parallax
+     rather than the entrance: losing some decoration is a much smaller failure
+     than an element that never becomes visible. */
+  nodes = nodes.filter(function (el) { return !el.hasAttribute("data-rise"); });
+
+  if (!nodes.length) return;
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (reduce.matches) return;
+
+  var items = [];
+  var running = false;
+  var idleFrames = 0;
+
+  function measure() {
+    var top = window.scrollY || window.pageYOffset;
+    items = nodes.map(function (el) {
+      /* offsetTop chain rather than getBoundingClientRect + scrollY: the rect
+         already includes any transform we have written, so feeding it back in
+         would compound every frame and the element would drift away. */
+      var y = 0, node = el;
+      while (node) { y += node.offsetTop; node = node.offsetParent; }
+      return {
+        el: el,
+        top: y,
+        height: el.offsetHeight,
+        par: parseFloat(el.getAttribute("data-par")) || 0,
+        scale: el.hasAttribute("data-scale-in")
+      };
+    });
+    void top;
+  }
+
+  function frame() {
+    var scroll = window.scrollY || window.pageYOffset;
+    var view = window.innerHeight;
+
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+
+      /* Where the element sits in its own journey across the viewport.
+         0 = its top is entering at the bottom edge, 1 = its bottom is leaving
+         at the top edge. Clamped, so off-screen elements hold their end state
+         instead of flying off. */
+      var travel = view + it.height;
+      var p = (scroll + view - it.top) / travel;
+      if (p < 0) p = 0; else if (p > 1) p = 1;
+
+      var parts = "";
+
+      if (it.par) {
+        /* Centred on 0.5 so the element is in its authored position when it is
+           in the middle of the screen - the layout you see in a screenshot is
+           the layout the CSS describes. */
+        parts += "translate3d(0," + ((0.5 - p) * it.par * 100).toFixed(2) + "px,0)";
+      }
+
+      if (it.scale) {
+        var s = 0.9 + 0.1 * Math.min(p / 0.5, 1);
+        parts += " scale(" + s.toFixed(4) + ")";
+      }
+
+      it.el.style.transform = parts;
+    }
+  }
+
+  function loop() {
+    frame();
+    idleFrames += 1;
+    /* ~1s of tail after the last scroll, so momentum scrolling still resolves,
+       then stop burning frames. */
+    if (idleFrames > 60) { running = false; return; }
+    window.requestAnimationFrame(loop);
+  }
+
+  function kick() {
+    idleFrames = 0;
+    if (running) return;
+    running = true;
+    window.requestAnimationFrame(loop);
+  }
+
+  var resizeTimer = null;
+  function onResize() {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(function () { measure(); kick(); }, 150);
+  }
+
+  measure();
+  frame();
+
+  window.addEventListener("scroll", kick, { passive: true });
+  window.addEventListener("resize", onResize);
+  /* Late webfonts change every offsetTop on the page. */
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { measure(); frame(); });
+  }
+  window.addEventListener("load", function () { measure(); frame(); });
+})();

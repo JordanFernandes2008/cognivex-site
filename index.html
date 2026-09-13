@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css">
+<link rel="stylesheet" href="site.css?v=5240fc06">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -71,10 +71,10 @@
 
   <!-- ── Hero: copy on top, the product surface underneath and dominant ───── -->
   <section class="hero">
-    <div class="wrap hero__intro">
+    <div class="wrap hero__intro" data-par="-0.5">
       <p class="pill" data-rise><span class="pill__dot" aria-hidden="true"></span>Approval-first AI operations</p>
 
-      <h1 class="hero__title" data-rise data-rise-delay="50">
+      <h1 class="hero__title" data-words data-rise data-rise-delay="50">
         Other AI tools wait for instructions.<br>
         <em>Cognivex hands you finished work.</em>
       </h1>
@@ -95,7 +95,7 @@
     </div>
 
     <!-- The product surface. Real chrome, real density, genuinely operable. -->
-    <div class="wrap hero__stage" data-rise data-rise-delay="120">
+    <div class="wrap hero__stage" data-scale-in>
       <div class="app">
         <div class="app__bar">
           <span class="app__id"><i aria-hidden="true"></i>Cognivex</span>
@@ -221,6 +221,40 @@
   </section>
 
   <!-- ── The problem ──────────────────────────────────────────────────────── -->
+
+  <!-- A Tuesday morning, running past. Two identical tracks; the rail is
+       translated by half its own width, so the loop is seamless. Decorative
+       repetition of what the rail above already states, so it is hidden from
+       assistive technology rather than read out twice. -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker__rail">
+      <div class="ticker__track">
+          <span>Supplier, chasing payment <b>drafted</b></span><i>/</i>
+          <span>"Do you deliver to Andheri?" <b>answered</b></span><i>/</i>
+          <span>"What time do you open?" &times;3 <b>answered</b></span><i>/</i>
+          <span>Order confirmed <b>filed</b></span><i>/</i>
+          <span>Complaint &mdash; wrong item <b>needs you</b></span><i>/</i>
+          <span>Bank alert <b>filed</b></span><i>/</i>
+          <span>Supplier price list <b>filed</b></span><i>/</i>
+          <span>Invoice 0142, 18 days late <b>needs you</b></span><i>/</i>
+          <span>Newsletters &times;6 <b>ignored</b></span><i>/</i>
+          <span>Promotions &times;14 <b>ignored</b></span><i>/</i>
+      </div>
+      <div class="ticker__track">
+          <span>Supplier, chasing payment <b>drafted</b></span><i>/</i>
+          <span>"Do you deliver to Andheri?" <b>answered</b></span><i>/</i>
+          <span>"What time do you open?" &times;3 <b>answered</b></span><i>/</i>
+          <span>Order confirmed <b>filed</b></span><i>/</i>
+          <span>Complaint &mdash; wrong item <b>needs you</b></span><i>/</i>
+          <span>Bank alert <b>filed</b></span><i>/</i>
+          <span>Supplier price list <b>filed</b></span><i>/</i>
+          <span>Invoice 0142, 18 days late <b>needs you</b></span><i>/</i>
+          <span>Newsletters &times;6 <b>ignored</b></span><i>/</i>
+          <span>Promotions &times;14 <b>ignored</b></span><i>/</i>
+      </div>
+    </div>
+  </div>
+
   <section class="tuesday">
     <div class="wrap">
       <div class="tuesday__inner">
@@ -243,7 +277,7 @@
     <div class="wrap">
       <h2 class="loop__title" data-rise>Three steps. <em>You are the third one.</em></h2>
 
-      <ol class="loop__steps" data-loop>
+      <ol class="loop__steps" data-par="1.1" data-loop>
         <li class="step" data-rise>
           <p class="step__name">It reads</p>
           <p class="step__text">Your inbox, your order messages, and where every job and payment currently stands.</p>
@@ -304,7 +338,7 @@
 
   <!-- ── The position ─────────────────────────────────────────────────────── -->
   <section class="position">
-    <div class="wrap position__inner">
+    <div class="wrap position__inner" data-par="0.8">
       <h2 class="position__title" data-rise>Approval is not a safety setting. <em>It is the product.</em></h2>
       <div class="position__body">
         <p data-rise data-rise-delay="80">
@@ -332,7 +366,7 @@
 
   <!-- ── Closing ──────────────────────────────────────────────────────────── -->
   <section class="closing">
-    <div class="wrap closing__grid">
+    <div class="wrap closing__grid" data-par="0.6">
       <div class="closing__col" data-rise>
         <h2 class="closing__h">You are the <em>operations department.</em></h2>
         <p>
@@ -383,6 +417,6 @@
   </div>
 </footer>
 
-<script src="site.js"></script>
+<script src="site.js?v=8a2f8244"></script>
 </body>
 </html>
