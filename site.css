@@ -907,3 +907,26 @@ main, .foot { position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce) {
   [data-par], [data-scale-in] { will-change: auto; transform: none !important; }
 }
+
+/* --- Lenis ----------------------------------------------------------------
+   Required by the library: it takes over scrolling on <html>, so the element
+   must be allowed to size to its content and native smooth-scroll must be off
+   or the two fight over every anchor jump. */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* SplitText's masked lines. The mask wrapper needs to clip and the line needs
+   to be a block for yPercent to mean anything. */
+.gsline { will-change: transform; }
+
+
+/* --- GSAP ownership -------------------------------------------------------
+   motion.js stamps this on any element it drives. A CSS transition on a
+   property GSAP is writing every frame turns each write into a new 820ms
+   destination instead of a value, so the element eases toward a target that has
+   already moved and never arrives. One owner per property, always. */
+.gsap-owned {
+  transition: none !important;
+}

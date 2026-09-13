@@ -839,6 +839,12 @@
   var targets = [].slice.call(document.querySelectorAll("[data-words]"));
   if (!targets.length) return;
 
+  /* motion.js does this better when GSAP is loaded - SplitText splits on
+     rendered LINES, which depend on the font, the width and the wrap and so
+     cannot be computed by hand. Stand down rather than split the headline
+     twice. If GSAP is absent this runs and the reveal still happens. */
+  if (window.gsap && window.SplitText) return;
+
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
   if (reduce.matches || !("IntersectionObserver" in window)) return;
 
@@ -941,6 +947,11 @@
 
 (function () {
   "use strict";
+
+  /* motion.js drives these with ScrollTrigger when GSAP is loaded. Two systems
+     writing transform to the same element would fight every frame, so exactly
+     one of them ever runs. */
+  if (window.gsap && window.ScrollTrigger) return;
 
   var nodes = [].slice.call(document.querySelectorAll("[data-par], [data-scale-in]"));
 
