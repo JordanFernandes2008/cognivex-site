@@ -112,75 +112,36 @@
      keeps working when the next trigger is added somewhere in the middle.
      ========================================================================== */
 
-  function priority(el) {
+  /* Document-space top of an element. offsetTop chain rather than
+     getBoundingClientRect, because the rect already includes any transform GSAP
+     has written and feeding that back in would compound every frame. */
+  function docTop(el) {
     var y = 0, node = el;
-    /* offsetTop chain rather than getBoundingClientRect, because the rect
-       already includes any transform GSAP has written and would drift. */
     while (node) { y += node.offsetTop; node = node.offsetParent; }
-    return Math.round(y / 10);
+    return y;
+  }
+
+  function priority(el) {
+    return Math.round(docTop(el) / 10);
   }
 
   /* ==========================================================================
-     2. Parallax, scrubbed
+     Order of creation is load-bearing.
 
-     Same intent as the hand-rolled version in site.js, but tied to the scroll
-     position continuously rather than sampled in a rAF loop, and batched by
-     ScrollTrigger so all of it resolves in one layout pass.
-     ========================================================================== */
+     ScrollTrigger refreshes in the order triggers were CREATED, and a pinned
+     section inserts a spacer - 1260px of it here - which moves everything below
+     it down the document. Any trigger created before the pin has already cached
+     start and end values measured against a document that was that much shorter.
 
-  gsap.utils.toArray("[data-par]").forEach(function (el) {
-    /* Same rule as site.js: an element that also carries data-rise is left
-       alone. data-rise animates transform from a class; GSAP writes transform
-       inline; inline wins and the entrance would vanish with no error. */
-    if (el.hasAttribute("data-rise")) return;
+     The parallax used to be built first, and two of its targets sit below the
+     pinned section. Measured with the scroll position verified: .position__inner
+     reported its trigger starting at 2386, and at that exact scroll the element
+     was 1260px from where it should have been - the spacer height, precisely.
 
-    var amount = parseFloat(el.getAttribute("data-par")) || 0;
-    if (!amount) return;
-
-    gsap.fromTo(el,
-      { y: amount * 60 },
-      {
-        y: amount * -60,
-        ease: "none",
-        scrollTrigger: {
-          trigger: el,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 0.6,         /* the lag is the point — it trails the scroll */
-          refreshPriority: priority(el)
-        }
-      }
-    );
-  });
-
-  gsap.utils.toArray("[data-scale-in]").forEach(function (el) {
-    if (el.hasAttribute("data-rise")) return;
-    gsap.fromTo(el,
-      { scale: 0.88, opacity: 0.6 },
-      {
-        scale: 1, opacity: 1, ease: "none",
-        scrollTrigger: {
-          trigger: el,
-          start: "top bottom",
-          end: "center center",
-          scrub: 0.6,
-          refreshPriority: priority(el)
-        }
-      }
-    );
-  });
-
-  /* ==========================================================================
-     3. The pinned sequence
-
-     The mechanic the whole gallery is built on: the section stops, and scrolling
-     advances its content instead of moving the page. Here it means the three
-     steps are read one at a time, in order, at the reader's pace — which is the
-     correct shape for this content anyway, because they ARE a sequence.
-
-     Pinned only where there is room. On a short viewport, pinning a section
-     taller than the screen traps the reader in a region they cannot see the
-     whole of, so below 700px tall it degrades to an ordinary staggered reveal.
+     refreshPriority was tried first and was not sufficient on its own. The fix
+     GSAP actually documents is to create them in page order, so the pin is now
+     built before anything below it. refreshPriority is kept as a second line of
+     defence for anything added later in the wrong place.
      ========================================================================== */
 
   /* Hand an element to GSAP and take it away from CSS in the same breath.
@@ -296,6 +257,73 @@
   }
 
   /* ==========================================================================
+     2. Parallax, scrubbed
+
+     Same intent as the hand-rolled version in site.js, but tied to the scroll
+     position continuously rather than sampled in a rAF loop, and batched by
+     ScrollTrigger so all of it resolves in one layout pass.
+     ========================================================================== */
+
+  gsap.utils.toArray("[data-par]").forEach(function (el) {
+    /* Same rule as site.js: an element that also carries data-rise is left
+       alone. data-rise animates transform from a class; GSAP writes transform
+       inline; inline wins and the entrance would vanish with no error. */
+    if (el.hasAttribute("data-rise")) return;
+
+    var amount = parseFloat(el.getAttribute("data-par")) || 0;
+    if (!amount) return;
+
+    gsap.fromTo(el,
+      { y: amount * 60 },
+      {
+        y: amount * -60,
+        ease: "none",
+        scrollTrigger: {
+          trigger: el,
+          /* Functions, not strings: re-read on every refresh, so the pin spacer
+             that appears after these are created is accounted for. */
+          start: function () { return docTop(el) - window.innerHeight; },
+          end: function () { return docTop(el) + el.offsetHeight; },
+          invalidateOnRefresh: true,
+          scrub: 0.6,         /* the lag is the point — it trails the scroll */
+          refreshPriority: priority(el)
+        }
+      }
+    );
+  });
+
+  gsap.utils.toArray("[data-scale-in]").forEach(function (el) {
+    if (el.hasAttribute("data-rise")) return;
+    gsap.fromTo(el,
+      { scale: 0.88, opacity: 0.6 },
+      {
+        scale: 1, opacity: 1, ease: "none",
+        scrollTrigger: {
+          trigger: el,
+          start: function () { return docTop(el) - window.innerHeight; },
+          end: function () { return docTop(el) - window.innerHeight / 2 + el.offsetHeight / 2; },
+          invalidateOnRefresh: true,
+          scrub: 0.6,
+          refreshPriority: priority(el)
+        }
+      }
+    );
+  });
+
+  /* ==========================================================================
+     3. The pinned sequence
+
+     The mechanic the whole gallery is built on: the section stops, and scrolling
+     advances its content instead of moving the page. Here it means the three
+     steps are read one at a time, in order, at the reader's pace — which is the
+     correct shape for this content anyway, because they ARE a sequence.
+
+     Pinned only where there is room. On a short viewport, pinning a section
+     taller than the screen traps the reader in a region they cannot see the
+     whole of, so below 700px tall it degrades to an ordinary staggered reveal.
+     ========================================================================== */
+
+  /* ==========================================================================
      4. Headline reveal, by line
 
      site.js splits on words. SplitText splits on rendered LINES, which is the
@@ -332,8 +360,12 @@
     });
   }
 
-  /* Everything is built; make them all re-measure once, now in page order. */
+  /* Everything is built; make them all re-measure once, now in page order.
+     The second pass is on the next frame, after the pin spacer has actually
+     been laid out - the first refresh can run before the browser has applied
+     it, which leaves the triggers below the pin measuring a shorter document. */
   ScrollTrigger.refresh();
+  window.requestAnimationFrame(function () { ScrollTrigger.refresh(); });
 
   /* A late webfont changes every line break and every offsetTop on the page. */
   if (document.fonts && document.fonts.ready) {
