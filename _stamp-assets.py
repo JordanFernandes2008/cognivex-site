@@ -21,19 +21,22 @@ def digest(name):
         return hashlib.sha256(fh.read()).hexdigest()[:8]
 
 
-css_v = digest('site.css')
-js_v = digest('site.js')
-print('site.css -> %s' % css_v)
-print('site.js  -> %s' % js_v)
+ASSETS = ['site.css', 'site.js', 'motion.js']
+
+stamps = {}
+for name in ASSETS:
+    stamps[name] = digest(name)
+    print('%-10s -> %s' % (name, stamps[name]))
 
 for page in PAGES:
     path = os.path.join(ROOT, page)
     text = io.open(path, encoding='utf-8').read()
     before = text
-    text = re.sub(r'href="site\.css(?:\?v=[0-9a-f]+)?"',
-                  'href="site.css?v=%s"' % css_v, text)
-    text = re.sub(r'src="site\.js(?:\?v=[0-9a-f]+)?"',
-                  'src="site.js?v=%s"' % js_v, text)
+    for name, ver in stamps.items():
+        esc = re.escape(name)
+        attr = 'href' if name.endswith('.css') else 'src'
+        text = re.sub(r'%s="%s(?:\?v=[0-9a-f]+)?"' % (attr, esc),
+                      '%s="%s?v=%s"' % (attr, name, ver), text)
     if text != before:
         io.open(path, 'w', encoding='utf-8', newline='').write(text)
         print('stamped %s' % page)

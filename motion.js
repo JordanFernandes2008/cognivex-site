@@ -93,6 +93,34 @@
   }
 
   /* ==========================================================================
+     Refresh order
+
+     ScrollTrigger recalculates every trigger in the order the triggers were
+     CREATED, not the order they appear on the page. That is fine until one of
+     them pins something: a pin inserts a spacer - here 1260px of it - and every
+     trigger that refreshed before the spacer existed has cached start and end
+     values computed against a shorter document.
+
+     This file creates the parallax triggers before the pin, and two of them sit
+     below the pinned section, so exactly that happened: .closing__grid was
+     starting at 3002 while the pin did not release until 3135, putting its whole
+     range inside the pinned region.
+
+     refreshPriority fixes it without reordering the file. Lower refreshes first,
+     so deriving it from the element's real document position makes the refresh
+     run top-to-bottom down the page whatever order things were built in - and it
+     keeps working when the next trigger is added somewhere in the middle.
+     ========================================================================== */
+
+  function priority(el) {
+    var y = 0, node = el;
+    /* offsetTop chain rather than getBoundingClientRect, because the rect
+       already includes any transform GSAP has written and would drift. */
+    while (node) { y += node.offsetTop; node = node.offsetParent; }
+    return Math.round(y / 10);
+  }
+
+  /* ==========================================================================
      2. Parallax, scrubbed
 
      Same intent as the hand-rolled version in site.js, but tied to the scroll
@@ -118,7 +146,8 @@
           trigger: el,
           start: "top bottom",
           end: "bottom top",
-          scrub: 0.6          /* the lag is the point — it trails the scroll */
+          scrub: 0.6,         /* the lag is the point — it trails the scroll */
+          refreshPriority: priority(el)
         }
       }
     );
@@ -134,7 +163,8 @@
           trigger: el,
           start: "top bottom",
           end: "center center",
-          scrub: 0.6
+          scrub: 0.6,
+          refreshPriority: priority(el)
         }
       }
     );
@@ -222,7 +252,10 @@
              describes the real length of the page. */
           pinSpacing: true,
           scrub: 0.8,
-          anticipatePin: 1
+          anticipatePin: 1,
+          /* The pin changes the height of the document, so it has to refresh
+             before anything below it measures itself. */
+          refreshPriority: priority(document.querySelector(".loop"))
         }
       });
 
@@ -291,10 +324,16 @@
         duration: 1.1,
         ease: "expo.out",
         stagger: 0.09,
-        scrollTrigger: { trigger: el, start: "top 88%", once: true }
+        scrollTrigger: {
+          trigger: el, start: "top 88%", once: true,
+          refreshPriority: priority(el)
+        }
       });
     });
   }
+
+  /* Everything is built; make them all re-measure once, now in page order. */
+  ScrollTrigger.refresh();
 
   /* A late webfont changes every line break and every offsetTop on the page. */
   if (document.fonts && document.fonts.ready) {
