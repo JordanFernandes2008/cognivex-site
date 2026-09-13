@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Cognivex — it does your admin, you approve what goes out</title>
+<meta name="description" content="Cognivex reads your inbox, drafts the replies, invoices and posts, then puts each one in front of you finished. Nothing is sent, posted, paid or replied to without your approval.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- Living background. Fixed, inert, transform-only, disabled under
+     prefers-reduced-motion. Sits behind everything and is never interactive. -->
+<div class="aurora" aria-hidden="true">
+  <i class="aurora__a"></i><i class="aurora__b"></i><i class="aurora__c"></i><i class="aurora__d"></i>
+  <span class="aurora__grid"></span>
+</div>
+
+<div class="statusbar">
+  <div class="wrap statusbar__inner">
+    <span class="mono">In development · not yet available</span>
+    <span class="mono statusbar__aside">Nothing sends without your approval</span>
+  </div>
+</div>
+
+<header class="masthead" data-header>
+  <div class="wrap masthead__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span>Cognivex</span>
+    </a>
+
+    <nav class="nav" aria-label="Primary">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="capabilities.html">Capabilities</a>
+      <a href="trust.html">Trust</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+
+    <a class="masthead__cta" href="how-it-works.html">See how it works</a>
+
+    <button class="burger" type="button" data-nav-toggle aria-expanded="false" aria-controls="mobile-nav">
+      <span class="burger__bars" aria-hidden="true"><i></i><i></i></span>
+      <span class="burger__label">Menu</span>
+    </button>
+  </div>
+</header>
+
+<!-- Ships open so navigation exists without JavaScript; site.js closes it. -->
+<nav class="panel" id="mobile-nav" data-nav-panel aria-label="Primary">
+  <div class="panel__head">
+    <span class="mono">Go to</span>
+    <button class="panel__close" type="button" data-nav-close aria-label="Close menu">Close</button>
+  </div>
+  <a href="index.html" aria-current="page"><span>Home</span><i aria-hidden="true">→</i></a>
+  <a href="how-it-works.html"><span>How it works</span><i aria-hidden="true">→</i></a>
+  <a href="capabilities.html"><span>Capabilities</span><i aria-hidden="true">→</i></a>
+  <a href="trust.html"><span>Trust</span><i aria-hidden="true">→</i></a>
+  <a href="about.html"><span>About</span><i aria-hidden="true">→</i></a>
+  <a href="contact.html"><span>Contact</span><i aria-hidden="true">→</i></a>
+</nav>
+
+<main id="main">
+
+  <!-- ── Hero: copy on top, the product surface underneath and dominant ───── -->
+  <section class="hero">
+    <div class="wrap hero__intro">
+      <p class="pill" data-rise><span class="pill__dot" aria-hidden="true"></span>Approval-first AI operations</p>
+
+      <h1 class="hero__title" data-rise data-rise-delay="50">
+        Other AI tools wait for instructions.<br>
+        <em>Cognivex hands you finished work.</em>
+      </h1>
+
+      <p class="hero__lede" data-rise data-rise-delay="100">
+        It reads your inbox, drafts the replies, the invoices and the posts, then
+        puts each one in front of you with the reasoning attached. Nothing is
+        sent, posted, paid or replied to without your approval.
+      </p>
+
+      <div class="hero__cta" data-rise data-rise-delay="150">
+        <a class="cta" href="how-it-works.html" data-magnetic>
+          <span>See how it works</span>
+          <i class="cta__orb" aria-hidden="true">↗</i>
+        </a>
+        <span class="hero__hint mono">Or approve something below — it is live</span>
+      </div>
+    </div>
+
+    <!-- The product surface. Real chrome, real density, genuinely operable. -->
+    <div class="wrap hero__stage" data-rise data-rise-delay="120">
+      <div class="app">
+        <div class="app__bar">
+          <span class="app__id"><i aria-hidden="true"></i>Cognivex</span>
+          <span class="app__ctx mono">Tuesday · 9:40am · Bandra</span>
+          <span class="app__who" aria-hidden="true">SB</span>
+        </div>
+
+        <div class="app__body">
+          <aside class="rail">
+            <p class="rail__group mono">Today</p>
+            <ul class="rail__list">
+              <li class="rail__item is-on"><span>Needs you</span><b>3</b></li>
+              <li class="rail__item"><span>Drafted</span><b>12</b></li>
+              <li class="rail__item"><span>Sent</span><b>8</b></li>
+              <li class="rail__item"><span>Waiting on reply</span><b>5</b></li>
+            </ul>
+
+            <!-- The morning itself. The whole argument is the length of this
+                 list against the three items sitting to the right of it. -->
+            <p class="rail__group mono"><span>Came in this morning</span><b>41</b></p>
+            <ul class="rail__feed">
+              <li class="feed"><span>Supplier, chasing payment</span><i>2nd</i></li>
+              <li class="feed"><span>&ldquo;Do you deliver to Andheri?&rdquo;</span></li>
+              <li class="feed"><span>&ldquo;What time do you open?&rdquo;</span><i>&times;3</i></li>
+              <li class="feed"><span>Order confirmed</span></li>
+              <li class="feed"><span>Complaint &mdash; wrong item</span></li>
+              <li class="feed"><span>Bank alert</span></li>
+              <li class="feed"><span>Supplier price list</span></li>
+              <li class="feed feed--noise"><span>Newsletters</span><i>&times;6</i></li>
+              <li class="feed feed--noise"><span>Promotions</span><i>&times;14</i></li>
+              <li class="feed feed--rest">and 12 more, none needing you</li>
+            </ul>
+          </aside>
+
+          <!-- Demo 1 — the approval queue -->
+          <section class="queue" data-queue aria-label="Work awaiting your approval">
+            <div class="queue__head">
+              <h2 class="queue__title">Ready for you</h2>
+              <p class="queue__count mono">
+                <span class="roller" data-roller aria-hidden="true"><span class="roller__track"><span class="roller__digit">3</span></span></span>
+                <span>waiting</span>
+              </p>
+            </div>
+
+            <ol class="queue__stack" data-stack>
+              <li class="card is-active" data-item>
+                <div class="card__top">
+                  <span class="card__avatar" aria-hidden="true">PN</span>
+                  <div class="card__id">
+                    <p class="card__kind mono" data-kind>Email reply</p>
+                    <p class="card__meta mono" data-meta>Priya Nair · invoice 0142</p>
+                  </div>
+                  <span class="card__age mono">18d overdue</span>
+                </div>
+                <div class="card__body">
+                  <p class="card__draft" data-draft>Hi Priya — checking in on invoice 0142 from 3 March. It is still showing unpaid on my side. If it has already gone out, ignore this and I will chase my bank. If not, I have attached it again. Thanks.</p>
+                  <p class="card__why"><b>Why this draft</b>Invoice 0142 is 18 days past its due date. Priya replied on the last thread, so this keeps it in the same conversation rather than starting a new one.</p>
+                </div>
+                <div class="card__actions">
+                  <button class="btn btn--accent" type="button" data-approve>Approve and send</button>
+                  <button class="btn btn--quiet" type="button" data-edit>Edit</button>
+                  <button class="btn btn--quiet" type="button" data-skip>Skip</button>
+                </div>
+              </li>
+
+              <li class="card" data-item>
+                <div class="card__top">
+                  <span class="card__avatar" aria-hidden="true">FS</span>
+                  <div class="card__id">
+                    <p class="card__kind mono" data-kind>Invoice</p>
+                    <p class="card__meta mono" data-meta>Fairlane Studio · September retainer</p>
+                  </div>
+                  <span class="card__age mono">Due in 30d</span>
+                </div>
+                <div class="card__body">
+                  <p class="card__draft" data-draft>Invoice 0147 for the September retainer, due 30 days from today. Same line items and rate as August.</p>
+                  <p class="card__why"><b>Why this draft</b>September is marked complete and Fairlane is billed monthly on the same terms. Nothing is charged — this only drafts the invoice for you to send.</p>
+                </div>
+                <div class="card__actions">
+                  <button class="btn btn--accent" type="button" data-approve>Approve and send</button>
+                  <button class="btn btn--quiet" type="button" data-edit>Edit</button>
+                  <button class="btn btn--quiet" type="button" data-skip>Skip</button>
+                </div>
+              </li>
+
+              <li class="card" data-item>
+                <div class="card__top">
+                  <span class="card__avatar" aria-hidden="true">WB</span>
+                  <div class="card__id">
+                    <p class="card__kind mono" data-kind>Social post</p>
+                    <p class="card__meta mono" data-meta>Draft · the walnut bench</p>
+                  </div>
+                  <span class="card__age mono">Queued Fri</span>
+                </div>
+                <div class="card__body">
+                  <p class="card__draft" data-draft>Finished the walnut bench this week. Six weeks from first drawing to delivery. Commissions for winter are open until the end of the month.</p>
+                  <p class="card__why"><b>Why this draft</b>You asked to post when the bench was finished, and to mention that commissions close at the end of the month.</p>
+                </div>
+                <div class="card__actions">
+                  <button class="btn btn--accent" type="button" data-approve>Approve and post</button>
+                  <button class="btn btn--quiet" type="button" data-edit>Edit</button>
+                  <button class="btn btn--quiet" type="button" data-skip>Skip</button>
+                </div>
+              </li>
+            </ol>
+
+            <ul class="queue__log" data-log aria-label="Decisions you have made"></ul>
+
+            <p class="queue__empty" data-empty hidden>
+              Nothing left waiting. <button class="linkbtn" type="button" data-reset hidden>Start over</button>
+            </p>
+
+            <p class="queue__status" data-status role="status" aria-live="polite"></p>
+          </section>
+        </div>
+
+        <div class="app__foot">
+          <span class="mono">Illustrative interface. Not connected to a live account.</span>
+          <span class="mono app__foot-right">Nothing sends without approval</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── The problem ──────────────────────────────────────────────────────── -->
+  <section class="tuesday">
+    <div class="wrap">
+      <div class="tuesday__inner">
+        <p class="tuesday__mark mono" data-rise>Tuesday, 9:40am</p>
+        <p class="tuesday__lead" data-rise data-rise-delay="80">
+          Forty-one unread emails, two of which matter. An invoice from March that
+          may or may not have been chased. A post that should have gone up on
+          Friday. A quote someone is still waiting on.
+        </p>
+        <p class="tuesday__turn" data-rise data-rise-delay="160">
+          None of it is hard. All of it is yours — and it is four hours before you
+          get to the work people actually pay you for.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── The loop ─────────────────────────────────────────────────────────── -->
+  <section class="loop" id="loop">
+    <div class="wrap">
+      <h2 class="loop__title" data-rise>Three steps. <em>You are the third one.</em></h2>
+
+      <ol class="loop__steps" data-loop>
+        <li class="step" data-rise>
+          <p class="step__name">It reads</p>
+          <p class="step__text">Your inbox, your order messages, and where every job and payment currently stands.</p>
+        </li>
+        <li class="step" data-rise data-rise-delay="90">
+          <p class="step__name">It drafts</p>
+          <p class="step__text">The reply, the invoice, the follow-up, the post — written out in full, with the reason it wrote it.</p>
+        </li>
+        <li class="step step--you" data-rise data-rise-delay="180">
+          <p class="step__name">You approve</p>
+          <p class="step__text">You read it, edit it, or bin it. Only then does anything leave your business.</p>
+        </li>
+        <li class="loop__line" aria-hidden="true"><i data-loop-line></i></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ── Capabilities ─────────────────────────────────────────────────────── -->
+  <section class="ledger">
+    <div class="wrap">
+      <div class="ledger__top">
+        <h2 class="ledger__title" data-rise>Four things, <em>done properly.</em></h2>
+        <p class="ledger__note" data-rise data-rise-delay="80">That is the whole list. Anything not on it is not built.</p>
+      </div>
+
+      <ul class="ledger__rows">
+        <li class="row" data-rise>
+          <a class="row__link" href="capabilities.html#inbox">
+            <span class="row__name">Inbox triage</span>
+            <span class="row__eg">Forty emails in, six decisions out — each with a reply already written.</span>
+            <i class="row__orb" aria-hidden="true">↗</i>
+          </a>
+        </li>
+        <li class="row" data-rise data-rise-delay="70">
+          <a class="row__link" href="capabilities.html#invoices">
+            <span class="row__name">Invoices and follow-up</span>
+            <span class="row__eg">Knows which client has not paid since March, and drafts the chase.</span>
+            <i class="row__orb" aria-hidden="true">↗</i>
+          </a>
+        </li>
+        <li class="row" data-rise data-rise-delay="140">
+          <a class="row__link" href="capabilities.html#posts">
+            <span class="row__name">Social posts</span>
+            <span class="row__eg">Say what you want posted. It writes it and lays it out; you look before it goes.</span>
+            <i class="row__orb" aria-hidden="true">↗</i>
+          </a>
+        </li>
+        <li class="row" data-rise data-rise-delay="210">
+          <a class="row__link" href="capabilities.html#memory">
+            <span class="row__name">Memory and priorities</span>
+            <span class="row__eg">What is due, what is overdue, what to do first — and why that order.</span>
+            <i class="row__orb" aria-hidden="true">↗</i>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── The position ─────────────────────────────────────────────────────── -->
+  <section class="position">
+    <div class="wrap position__inner">
+      <h2 class="position__title" data-rise>Approval is not a safety setting. <em>It is the product.</em></h2>
+      <div class="position__body">
+        <p data-rise data-rise-delay="80">
+          Every other AI tool sells you on how little you have to do. That holds
+          right up to the moment the thing being automated is a message to the
+          client who is deciding whether to pay you.
+        </p>
+        <p data-rise data-rise-delay="140">
+          Cognivex does an hour of work unprompted and then stops. The step where
+          something leaves your business stays yours — not as a switch you could
+          turn off, but as the shape of the thing.
+        </p>
+        <ul class="checks" data-rise data-rise-delay="180">
+          <li><b>No autonomous mode</b> waiting behind a settings page.</li>
+          <li><b>No category approvals</b> — you approve that item, not that kind of item.</li>
+          <li><b>No silent sends</b>, including when it is confident.</li>
+        </ul>
+        <p class="position__kicker" data-rise data-rise-delay="220">
+          You are not supervising a machine that would rather you were not there.
+          You are signing work that is already done.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Closing ──────────────────────────────────────────────────────────── -->
+  <section class="closing">
+    <div class="wrap closing__grid">
+      <div class="closing__col" data-rise>
+        <h2 class="closing__h">You are the <em>operations department.</em></h2>
+        <p>
+          You answer the email, send the invoice and chase the payment. There is
+          nobody to hand that to, because you are also the person doing the work
+          the business is paid for.
+        </p>
+        <p>
+          Not a team with an operations hire. Not someone who wants to learn to
+          prompt an AI properly first.
+        </p>
+      </div>
+
+      <div class="closing__col" id="status" data-rise data-rise-delay="90">
+        <h2 class="closing__h">Where this <em>actually is.</em></h2>
+        <p>
+          Cognivex is in development and not yet available. There is no waitlist,
+          trial or private beta to join.
+        </p>
+
+        <div class="slot">
+          <p class="slot__tag mono">Needed before launch</p>
+          <p class="slot__what">Contact route</p>
+          <p class="slot__why">An email address, form endpoint or booking link. Nothing on this page can currently reach anyone.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <div class="foot__brand">
+      <a class="brand" href="index.html">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span>Cognivex</span>
+      </a>
+      <p class="foot__by">Built by Suraj Balke and Jordan Fernandes at Digital Coyotes.</p>
+    </div>
+    <nav class="foot__nav" aria-label="Footer">
+      <a href="how-it-works.html">How it works</a>
+      <a href="capabilities.html">Capabilities</a>
+      <a href="trust.html">Trust</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>

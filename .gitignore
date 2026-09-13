@@ -1,0 +1,13 @@
+# Local scratch
+_build-pages.py.bak
+*.log
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Nothing here needs npm. If a node_modules ever appears, it is a mistake.
+node_modules/

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Capabilities — Cognivex</title>
+<meta name="description" content="Inbox triage, invoices and follow-up, social posts, memory and priorities. The complete list of what Cognivex does.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- Living background. Fixed, inert, transform-only, disabled under
+     prefers-reduced-motion. Sits behind everything and is never interactive. -->
+<div class="aurora" aria-hidden="true">
+  <i class="aurora__a"></i><i class="aurora__b"></i><i class="aurora__c"></i><i class="aurora__d"></i>
+  <span class="aurora__grid"></span>
+</div>
+
+<div class="statusbar">
+  <div class="wrap statusbar__inner">
+    <span class="mono">In development · not yet available</span>
+    <span class="mono statusbar__aside">Nothing sends without your approval</span>
+  </div>
+</div>
+
+<header class="masthead" data-header>
+  <div class="wrap masthead__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span>Cognivex</span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="capabilities.html" aria-current="page">Capabilities</a>
+      <a href="trust.html">Trust</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <a class="masthead__cta" href="how-it-works.html">See how it works</a>
+
+    <button class="burger" type="button" data-nav-toggle aria-expanded="false" aria-controls="mobile-nav">
+      <span class="burger__bars" aria-hidden="true"><i></i><i></i></span>
+      <span class="burger__label">Menu</span>
+    </button>
+  </div>
+</header>
+
+<!-- Ships open so navigation exists without JavaScript; site.js closes it. -->
+<nav class="panel" id="mobile-nav" data-nav-panel aria-label="Primary">
+  <div class="panel__head">
+    <span class="mono">Go to</span>
+    <button class="panel__close" type="button" data-nav-close aria-label="Close menu">Close</button>
+  </div>
+  <a href="index.html"><span>Home</span><i aria-hidden="true">→</i></a>
+  <a href="how-it-works.html"><span>How it works</span><i aria-hidden="true">→</i></a>
+  <a href="capabilities.html" aria-current="page"><span>Capabilities</span><i aria-hidden="true">→</i></a>
+  <a href="trust.html"><span>Trust</span><i aria-hidden="true">→</i></a>
+  <a href="about.html"><span>About</span><i aria-hidden="true">→</i></a>
+  <a href="contact.html"><span>Contact</span><i aria-hidden="true">→</i></a>
+</nav>
+
+<main id="main">
+
+  <section class="phero">
+    <div class="wrap">
+      <p class="pill" data-rise><span class="pill__dot" aria-hidden="true"></span>Capabilities</p>
+      <h1 class="phero__title" data-rise data-rise-delay="50">Four things, <em>done properly.</em></h1>
+      <p class="phero__lede" data-rise data-rise-delay="100">This is the complete list. If something is not on this page, it is not built, and the site will not imply otherwise.</p>
+    </div>
+  </section>
+
+  <section class="prose" id="inbox">
+    <div class="wrap prose__grid">
+      <div class="prose__side" data-rise><p class="mono">One</p></div>
+      <div class="prose__body" data-rise data-rise-delay="60">
+        <h2>Inbox triage</h2>
+        <p class="prose__lede">Forty emails in, a handful of decisions out — each with a reply already written.</p>
+        <p>
+          It reads the morning, groups what repeats, answers what you have
+          already approved answers for, and brings you the rest with a draft
+          attached. The supplier chasing payment for the second time is not
+          buried under fourteen promotions.
+        </p>
+        <p><b>What you control:</b> which mailboxes it reads, which questions it may answer without asking, and which topics always come to you.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="prose prose--alt" id="invoices">
+    <div class="wrap prose__grid">
+      <div class="prose__side" data-rise><p class="mono">Two</p></div>
+      <div class="prose__body" data-rise data-rise-delay="60">
+        <h2>Invoices and follow-up</h2>
+        <p class="prose__lede">Knows which client has not paid since March, and drafts the chase.</p>
+        <p>
+          It tracks what has been invoiced, what has been paid, and what is
+          overdue. On the dates you choose it drafts the invoice or the
+          follow-up, in the same thread as the last conversation, and puts it in
+          front of you.
+        </p>
+        <p class="prose__note">
+          It drafts invoices. It does not move money, take payment, or touch your
+          bank. There is no version of this product that does.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="prose" id="posts">
+    <div class="wrap prose__grid">
+      <div class="prose__side" data-rise><p class="mono">Three</p></div>
+      <div class="prose__body" data-rise data-rise-delay="60">
+        <h2>Social posts</h2>
+        <p class="prose__lede">Say what you want posted. It writes it and lays it out; you look before it goes.</p>
+        <p>
+          You describe the post in plain language — what happened, which photos,
+          what you want people to do. It writes the caption, lays out the post,
+          and shows you the finished thing. Nothing appears anywhere until you
+          have seen it.
+        </p>
+        <p><b>What you control:</b> the photos it may use, the tone, and the final word on every post.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="prose prose--alt" id="memory">
+    <div class="wrap prose__grid">
+      <div class="prose__side" data-rise><p class="mono">Four</p></div>
+      <div class="prose__body" data-rise data-rise-delay="60">
+        <h2>Memory and priorities</h2>
+        <p class="prose__lede">What is due, what is overdue, what to do first — and why that order.</p>
+        <p>
+          It remembers ongoing work across weeks, so you are not the only place
+          the context lives. When it tells you what to do first it also tells you
+          why it put that first, which means you can disagree with it.
+        </p>
+        <p><b>What you control:</b> what it remembers, what it forgets, and the order when you know better.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="prose">
+    <div class="wrap prose__grid">
+      <div class="prose__side" data-rise><p class="mono">Not built</p></div>
+      <div class="prose__body" data-rise data-rise-delay="60">
+        <h2>What this page does not claim</h2>
+        <p>
+          No call listening. No placing orders. No moving money. No named
+          integrations. No accuracy or uptime figures, because there is nothing
+          measured yet to quote.
+        </p>
+        <p>
+          When any of that is built it will get its own section here, written the
+          same way. Until then this page stays short.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pclose">
+    <div class="wrap pclose__inner" data-rise>
+      <div>
+        <h2 class="pclose__h">The obvious next question is whether to trust it.</h2>
+        <p>What it reads, what it will never do, and where the limits are.</p>
+      </div>
+      <a class="cta" href="trust.html" data-magnetic><span>Trust</span><i class="cta__orb" aria-hidden="true">↗</i></a>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <div class="foot__brand">
+      <a class="brand" href="index.html">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span>Cognivex</span>
+      </a>
+      <p class="foot__by">Built by Suraj Balke and Jordan Fernandes at Digital Coyotes.</p>
+    </div>
+    <nav class="foot__nav" aria-label="Footer">
+      <a href="how-it-works.html">How it works</a>
+      <a href="capabilities.html">Capabilities</a>
+      <a href="trust.html">Trust</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>
