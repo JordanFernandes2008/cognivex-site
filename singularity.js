@@ -67,6 +67,45 @@
                 (navigator.deviceMemory === undefined || navigator.deviceMemory >= 4) &&
                 (navigator.hardwareConcurrency === undefined || navigator.hardwareConcurrency >= 4);
 
+  /* ---- WHERE THE SCENE IS VISIBLE ------------------------------------
+
+     The layer is fixed and the document scrolls through it, so what decides
+     whether it is on is which ROOM you are in — not how far down the page you
+     have got. There are two: the hero and the dark morning. Between them the
+     page's light sections are opaque and cover the layer anyway.
+
+     One object seen twice, which is the whole reason for making it a layer.
+
+     THIS RUNS ON EVERY PATH, above the capability gate. It sets the page's own
+     dark GROUND, which is chrome and not scenery: when the gate declined WebGL
+     it used to return before this ran, --void-ground stayed at its 0 default,
+     and the hero lost its background entirely — light grey type on white paper,
+     unreadable, on exactly the modest devices that get the fallback. */
+  var visible = -1;
+  var rooms = [".hero__void", ".tuesday--dark"]
+    .map(function (s) { return document.querySelector(s); })
+    .filter(Boolean);
+
+  function measureRooms() {
+    var best = 0;
+    for (var i = 0; i < rooms.length; i++) {
+      var r = rooms[i].getBoundingClientRect();
+      if (r.bottom <= 0 || r.top >= window.innerHeight) continue;
+      /* How much of the viewport this room covers, ramped rather than switched:
+         a cut here would flash the whole page's ground. */
+      var covered = (Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) /
+                    window.innerHeight;
+      best = Math.max(best, Math.min(1, covered / 0.55));
+    }
+    if (Math.abs(best - visible) < 0.004) return;
+    visible = best;
+    host.style.setProperty("--void-ground", visible.toFixed(3));
+    host.style.setProperty("--void-scene", visible.toFixed(3));
+  }
+  measureRooms();
+  window.addEventListener("scroll", measureRooms, { passive: true });
+  window.addEventListener("resize", measureRooms);
+
   if (!capable) { host.classList.add("is-static"); return; }
 
   /* This is the HERO: above the fold by definition, so there is no observer to
@@ -346,8 +385,11 @@
        watches the element itself. */
     var W = 0, H = 0;
     function resize() {
-      var w = host.clientWidth  || window.innerWidth;
-      var h = host.clientHeight || window.innerHeight;
+      /* The layer IS the viewport now — it is position:fixed and inset:0 — so
+         it is measured against the window rather than against a section that
+         could be any height. */
+      var w = window.innerWidth;
+      var h = window.innerHeight;
       if (!w || !h || (w === W && h === H)) return;
       W = w; H = h;
       /* Capped rather than raw: a 3x screen would otherwise render nine times
@@ -367,10 +409,15 @@
        same measurement rather than from two guesses that have to agree. */
     var copyEnd = 0.70;
     function measureCopy() {
-      var title = host.querySelector(".hero__title");
-      var intro = host.querySelector(".hero__intro");
+      /* The hero is no longer this layer's parent, so it is found on the
+         document. The gap and the scrim are still ITS problem: they belong to
+         the section the type is in, not to the layer the scene is on. */
+      var hero  = document.querySelector(".hero__void");
+      if (!hero) return;
+      var title = hero.querySelector(".hero__title");
+      var intro = hero.querySelector(".hero__intro");
       if (!title || !intro) return;
-      var hb = host.getBoundingClientRect();
+      var hb = hero.getBoundingClientRect();
       if (!hb.height) return;
 
       /* THE GAP THE BAND PASSES THROUGH.
@@ -388,13 +435,13 @@
          2.94 against the 4.5 it needs. Starting it at 62% puts it clear of the
          ramp entirely rather than clear of the ring by a hair. */
       var gap = Math.max(48, hb.height * 0.665 - titleBottom);
-      host.style.setProperty("--band-gap", gap.toFixed(0) + "px");
+      hero.style.setProperty("--band-gap", gap.toFixed(0) + "px");
 
       /* Written through the CSSOM, which style-src does not block — only a
          style ATTRIBUTE in the markup would be. */
       var ib = intro.getBoundingClientRect();
       copyEnd = Math.min(0.82, Math.max(0.30, (ib.bottom - hb.top) / hb.height));
-      host.style.setProperty("--scrim-end", (copyEnd * 100).toFixed(1) + "%");
+      hero.style.setProperty("--scrim-end", (copyEnd * 100).toFixed(1) + "%");
     }
     measureCopy();
     window.addEventListener("resize", measureCopy);
@@ -407,17 +454,9 @@
       return t * t * (3 - 2 * t);
     }
 
-    if (window.ScrollTrigger) {
-      /* Used only to settle it as the hero is left behind. This is the hero:
-         it is present at rest, not scrolled into existence. */
-      window.ScrollTrigger.create({
-        trigger: host,
-        start: "top top",
-        end: "bottom top",
-        onUpdate: function (self) { scrollP = self.progress; },
-        refreshPriority: -90
-      });
-    }
+    /* Room visibility is measured OUTSIDE this function — see measureRooms
+       above. It governs the page's own ground, which has to work whether or not
+       there is ever a scene to put on it. */
 
     /* ------------------------------------------------------------------ loop */
     var clock = 0, raf = null, onScreen = true, born = 0;
@@ -436,12 +475,19 @@
     function frame() {
       raf = window.requestAnimationFrame(frame);
       if (!onScreen) return;
+      /* Neither room on screen: the layer is invisible and the page's opaque
+         sections are over it, so there is nothing to draw. This is most of the
+         page. */
+      if (visible < 0.005 && born >= 1) return;
       clock += 0.0055;
       born = Math.min(1, born + 0.012);
 
       /* Arrives once, holds, and dims as the hero is left behind. It does not
          re-arrive on the way back up: this is a hero, not an event. */
-      var presence = smoothstep(0, 1, born) * (1 - scrollP * 0.85);
+      /* Born once, then it follows whichever room you are in. The layer's own
+         opacity is doing the same fade in CSS, so this only has to stop the
+         shader costing anything once the scene is fully hidden. */
+      var presence = smoothstep(0, 1, born) * Math.max(visible, 0.001);
 
       /* Held at a fixed distance. The hero does not fly anywhere — it breathes,
          so the frame is never completely still and never travelling either. */
