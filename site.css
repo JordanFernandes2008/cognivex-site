@@ -715,13 +715,40 @@ main, .foot { position: relative; z-index: 1; }
      gradient holds full strength to that line and then gets out of the way
      fast. Both the text and the image get exactly what they need. The fallback
      covers the case where script never runs, where there is no scene to dim. */
-  inset: 0 0 auto 0;
-  height: calc(var(--scrim-end, 72%) + 14%);
+  /* A WINDOW, not a wash.
+
+     The hole is centred now, so a scrim that simply gets weaker downward is
+     the wrong shape: it is strongest exactly where the band is and weakest
+     where the lower copy sits. This one is opaque at the top for the headline,
+     CLEAR through the middle so the band is at full strength, and opaque again
+     at the bottom for the lede and the button.
+
+     The window's edges are the two numbers the layout already uses, so the
+     scrim, the copy gap and the shader cannot drift apart. */
+  inset: 0;
   background: linear-gradient(180deg,
     #05070a 0%,
-    rgb(5 7 10 / 97%) calc(var(--scrim-end, 72%) * 0.82),
-    rgb(5 7 10 / 93%) var(--scrim-end, 72%),
-    rgb(5 7 10 / 0%) 100%);
+    /* SOLVED against where the copy actually lands, not eyeballed. Measured at
+       33-63%: the headline's last line ends at 36% and the lede begins at 60%,
+       so both had a foot inside the clear window and read 2.04 and 1.83 against
+       the 3 and 4.5 they need. The ring itself only spans 42-58%, so closing
+       the window to 37-59% costs the band nothing visible and gives the type
+       the margin it needs. */
+    /* HELD TO THE COPY'S EDGE, THEN DROPPED FAST.
+
+       The bright part of the scene is narrower than it looks: the shadow spans
+       44-56% of the void and the photon ring 41.5-58.5%. Everything outside
+       that is near-black anyway. So the scrim has no reason to start fading at
+       29% — it was down to 6% by 36%, which is exactly where the headline's
+       box ends, and the last line measured 1.78 against the 3 it needs.
+
+       Holding full strength to 38% and clearing by 41.5% gives the type its
+       margin and costs the ring nothing. Same on the way back up. */
+    rgb(5 7 10 / 97%) 38%,
+    rgb(5 7 10 / 0%) 42%,
+    rgb(5 7 10 / 0%) 58%,
+    rgb(5 7 10 / 97%) 61%,
+    #05070a 100%);
   pointer-events: none;
 }
 
@@ -1071,7 +1098,11 @@ html.lenis, html.lenis body { height: auto; }
      height moves with its own type, and a hero that is fifteen pixels short is
      invisible where one that is fifteen pixels long pushes its own subject off
      the bottom. */
-  min-height: clamp(460px, calc(96svh - 150px), 900px);
+  /* DEFINITE, not content-driven. The gap below is computed from this height,
+     and a height that grows with the content it is used to lay out oscillates:
+     measure, enlarge the gap, grow the box, measure again. Fixing the box ends
+     the loop, and the gap is then solved to fit inside it. */
+  height: clamp(440px, calc(94svh - 150px), 900px);
   display: flex;
   /* TOP, not centre. Centred, the copy's last row — the button and the hint
      beside it — landed in the middle of the frame, which is exactly where the
@@ -1154,6 +1185,21 @@ html.lenis, html.lenis body { height: auto; }
    against #05070a, which is the easy case and the one that has let this
    project ship a contrast failure four times.
    -------------------------------------------------------------------------- */
+/* THE BAND CROSSES THE COPY, so the copy opens to let it through.
+
+   The headline sits above it, the lede and the button below it, and the gap
+   between them is the band's own height plus air. This is the layout the
+   subject actually wants: a near edge-on black hole is a horizontal rule with
+   a hole in it, and a hero built around one should use it as a rule.
+
+   THE GAP IS MEASURED, NOT GUESSED. Every vh value tried here was wrong at some
+   viewport: too small and the lede sat on the disk, too large and the button
+   fell off the bottom. Script reads the void's height and the headline's actual
+   bottom, and sets the gap so the lede's top lands just below the band — see
+   measureCopy() in singularity.js. The fallback is only for the case where
+   script never runs, and there is then no scene to collide with anyway. */
+.hero__void .hero__lede { margin-top: var(--band-gap, 12rem); }
+
 .hero__void .hero__title { color: #aab3bf; }
 .hero__void .hero__title em { color: #ffffff; }
 .hero__void .hero__lede { color: #b6bdc7; }

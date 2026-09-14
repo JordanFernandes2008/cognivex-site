@@ -367,14 +367,33 @@
        same measurement rather than from two guesses that have to agree. */
     var copyEnd = 0.70;
     function measureCopy() {
+      var title = host.querySelector(".hero__title");
       var intro = host.querySelector(".hero__intro");
-      if (!intro) return;
+      if (!title || !intro) return;
       var hb = host.getBoundingClientRect();
-      var ib = intro.getBoundingClientRect();
       if (!hb.height) return;
-      copyEnd = Math.min(0.82, Math.max(0.30, (ib.bottom - hb.top) / hb.height));
+
+      /* THE GAP THE BAND PASSES THROUGH.
+
+         The scrim's clear window runs 33% to 63% of the void, so the lower half
+         of the copy has to begin after 63% — solved from where the headline
+         actually ends rather than from a vh guess, because the headline wraps
+         to two lines or three depending on width and every fixed value was
+         right at one size and wrong at the next. Floored at 48px so a very
+         short viewport degrades to a tight hero rather than to overlapping
+         text. */
+      var titleBottom = title.getBoundingClientRect().bottom - hb.top;
+      /* 0.665, not 0.645. The scrim comes back to full strength at 61% and the
+         lede was starting at 60% — one percent inside the ramp, which measured
+         2.94 against the 4.5 it needs. Starting it at 62% puts it clear of the
+         ramp entirely rather than clear of the ring by a hair. */
+      var gap = Math.max(48, hb.height * 0.665 - titleBottom);
+      host.style.setProperty("--band-gap", gap.toFixed(0) + "px");
+
       /* Written through the CSSOM, which style-src does not block — only a
          style ATTRIBUTE in the markup would be. */
+      var ib = intro.getBoundingClientRect();
+      copyEnd = Math.min(0.82, Math.max(0.30, (ib.bottom - hb.top) / hb.height));
       host.style.setProperty("--scrim-end", (copyEnd * 100).toFixed(1) + "%");
     }
     measureCopy();
@@ -453,22 +472,18 @@
 
       camFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
       hole.position.copy(camera.position).addScaledVector(camFwd, dist);
-      /* PUSHED DOWN UNTIL THE RING CLEARS THE COPY.
+      /* DEAD CENTRE, and the layout is what moves instead.
 
-         Not a fixed offset: the copy's height changes with the viewport, and
-         every constant tried here was right at one size and wrong at the next.
-         The ring's outer edge is rs * ringAt plus its halo, so the drop is
-         solved so that edge lands below where the copy actually ends — and is
-         then clamped so the disk cannot fall out of the bottom of the frame.
+         Every previous version pushed the hole down the frame to get it out of
+         the copy's way, and every one of them read as a thing that had been
+         shoved aside. It is the subject: it belongs in the middle.
 
-         This is the one place on the site where two things want the same
-         horizontal strip. The fix is to stop them sharing it, not to dim one. */
-      var ringOuter = (HOLE.rs * HOLE.ringAt + HOLE.rs * 0.9) * hs;
-      var wantTopAt = (copyEnd + 0.05) * frameH;     /* from the frame's top   */
-      var dropFromCentre = wantTopAt + ringOuter - frameH * 0.5;
-      /* And never so far that the band leaves the frame. */
-      var maxDrop = frameH * 0.5 - ringOuter * 0.72;
-      hole.position.y -= Math.max(0, Math.min(dropFromCentre, maxDrop));
+         So the copy gets out of ITS way instead. The band is thin — measured at
+         11.4% of frame height against 48.4% of width — which means a centred
+         hole divides the hero into three usable strips rather than occupying
+         it: headline above, band across, supporting copy below. The gap in the
+         middle of the copy is sized in site.css from the same numbers, and the
+         scrim has a clear window cut through it at the same place. */
       hole.quaternion.copy(camera.quaternion);
       hole.scale.set(hs, hs, 1);
 
