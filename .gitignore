@@ -11,3 +11,11 @@ desktop.ini
 
 # Nothing here needs npm. If a node_modules ever appears, it is a mistake.
 node_modules/
+
+# Internal working notes. Kept on disk, deliberately out of the repo: this is a
+# public repository, REFERENCE-STUDY.md dissects a named third party's live site,
+# and CLAUDE.md is scratch context rather than anything a reader of this project
+# needs. Both were also removed from history rather than only untracked - an
+# untracked file is still recoverable from every commit that carried it.
+CLAUDE.md
+REFERENCE-STUDY.md
