@@ -540,11 +540,25 @@
          with it. The type wins, which was always the rule. */
       var portrait = camera.aspect < 1;
 
-      var govW = Math.max(frameW, frameH * 0.95);
-      var hs = Math.min(
-        ((portrait ? 0.92 : 1.28) * govW)   / (2 * HOLE.diskOut),
-        ((portrait ? 0.19 : 0.26) * frameH) / (2 * HOLE.rs)
-      );
+      /* THE DISK'S OUTER DIAMETER IS THE NUMBER THAT GETS STATED, and the
+         scale is solved backwards from it.
+
+         The previous solver governed on max(frameW, frameH * 0.95) and asked
+         for 1.28x of that, which at 16:9 resolved to hs = 0.636 * frameW and
+         an outer diameter of 1.84 * 0.636 = 1.17 * frameW. The disk was WIDER
+         THAN THE FRAME. Both arms ran off the sides, so what reached the
+         screen was not a ring around anything - it was a bright bar smeared
+         across the top of the hero, cut off hard at the masthead. No amount of
+         darkening behind the type fixes that, which is why three passes of
+         scrims and shadows kept almost-working and never working.
+
+         So: state the span, derive the scale. 0.70 on landscape puts the arm's
+         left edge at 41% of the frame width while the copy column tops out at
+         40rem - 33% at 1920 - so the glow and the words never meet, and the
+         right arm bleeds 11% off the edge so the object reads as continuing
+         past the frame rather than as a sticker centred in it. */
+      var diskSpan = portrait ? 0.80 : 0.64;
+      var hs = (diskSpan * frameW) / (2 * HOLE.diskOut);
 
       camera.position.set(0, 0, 6);
       camera.rotation.z = Math.sin(clock * 0.17) * 0.012;
@@ -571,10 +585,13 @@
          takes the right and the vertical fight is over. Portrait has no second
          column, so there it drops below the copy instead. */
       if (portrait) {
-        hole.position.y -= frameH * 0.16;
+        hole.position.y -= frameH * 0.18;
       } else {
-        hole.position.x += frameW * 0.24;
-        hole.position.y += frameH * 0.10;
+        /* Right column, and level. It sat at +10% of the frame height before,
+           which pushed the oversized disk's arm into the top seam; now that it
+           fits, the middle of the frame is where it belongs. */
+        hole.position.x += frameW * 0.34;
+        hole.position.y -= frameH * 0.02;
       }
       /* DEAD CENTRE, and the layout is what moves instead.
 

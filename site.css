@@ -1188,56 +1188,7 @@ html.lenis, html.lenis body { height: auto; }
   opacity: 0;
   transition: opacity 1100ms var(--ease-out);
 }
-.hero__void.is-live .singularity__canvas { opacity: 1; }
 
-/* --------------------------------------------------------------------------
-   THE STILL
-
-   The same subject in gradients, on the same measured numbers as the shader:
-   the box is 34svh tall, so a shadow that should be 16.2% of the frame's height
-   is 47.6% of the box - a radius of 23.8% - and the ring sits at 1.38x that,
-   which is 32.8%.
-   -------------------------------------------------------------------------- */
-.singularity__still {
-  position: absolute;
-  left: 50%; top: 68.5%;
-  height: 34svh; aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  z-index: 0;
-  pointer-events: none;
-  background:
-    /* the photon ring, white into yellow */
-    radial-gradient(circle at 50% 50%,
-      transparent 0 30.6%,
-      rgb(247 253 240 / 96%) 32.2%,
-      rgb(247 228 137 / 82%) 34.4%,
-      rgb(240 163 96 / 22%) 40%,
-      transparent 56%),
-    /* the shadow, and it is opaque */
-    radial-gradient(circle at 50% 50%, #000 0 23.4%, rgb(0 0 0 / 0%) 24.4%);
-}
-
-/* The disk: a separate, much wider ellipse, because the ring above has to stay
-   circular and a single box cannot be both. */
-.singularity__still::before {
-  content: "";
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 300%; height: 34%;
-  transform: translate(-50%, -50%) rotate(-8deg);
-  background:
-    radial-gradient(ellipse 50% 50% at 50% 50%,
-      rgb(247 253 240 / 78%) 0%,
-      rgb(247 228 137 / 62%) 12%,
-      rgb(240 163 96 / 46%) 30%,
-      rgb(220 70 77 / 34%) 58%,
-      rgb(220 70 77 / 0%) 88%);
-}
-
-.hero__void.is-live .singularity__still {
-  opacity: 0;
-  transition: opacity 1100ms var(--ease-out);
-}
 
 /* --------------------------------------------------------------------------
    The copy, inverted for the ground it now sits on.
@@ -1303,7 +1254,20 @@ html.lenis, html.lenis body { height: auto; }
 
    The copy now owns the left half and the scene the right. Nothing overlaps, so
    nothing needs protecting, and the scene goes back to full brightness. */
-.hero__void .hero__intro { max-width: min(54%, 40rem); }
+/* THE COPY COLUMN, AND WHY THE CAP MOVED OFF THIS ELEMENT.
+
+   .hero__intro IS the .wrap - one element, two classes - and .wrap is
+   max-width: 1180px with margin-inline: auto. So capping .hero__intro at
+   min(54%, 40rem) did not make a LEFT column, it made a narrower CENTRED one:
+   measured at 1521px the copy ran 31.6% to 65% of the frame while the disk
+   started at 41%. The headline was sitting on the brightest part of the disk
+   the entire time, and measured contrast on it was 1.13:1.
+
+   So the wrap keeps its page gutter and its auto margins - the hero lines up
+   with every other section again - and the MEASURE is capped on the children
+   instead. The copy now runs 13.8% to 49.6% and the disk begins at 52%. */
+.hero__void .hero__intro { max-width: 1180px; }
+.hero__void .hero__intro > * { max-width: 34rem; }
 .hero__void .hero__title {
   color: #aab3bf;
   font-size: clamp(2rem, 1rem + 3.1vw, 4rem);
@@ -1317,7 +1281,9 @@ html.lenis, html.lenis body { height: auto; }
    wraps again. An overflowing headline is a decision; an unreadable one is not. */
 @media (max-width: 700px) {
   .hero__void .hero__title { font-size: clamp(2rem, 8.2vw, 3.2rem); }
-  .hero__void .hero__intro { max-width: none; }
+  /* One column below this width: the scene is behind the type, not beside it,
+     so the measure is the viewport rather than half of it. */
+  .hero__void .hero__intro > * { max-width: none; }
 }
 .hero__void .hero__title em { color: #ffffff; }
 /* Same treatment, lighter: the lede sits below the band but its first line can
@@ -1336,7 +1302,6 @@ html.lenis, html.lenis body { height: auto; }
   /* A static alternative, not a shortened one: the still is the whole hero and
      nothing moves. */
   .singularity__canvas { display: none; }
-  .hero__void.is-live .singularity__still { opacity: 1; transition: none; }
 }
 
 /* ============================================================================
@@ -1453,8 +1418,8 @@ html.lenis, html.lenis body { height: auto; }
    the second before three.js arrives. */
 .singularity__still {
   position: absolute;
-  left: 50%; top: 50%;
-  height: 52svh; aspect-ratio: 1;
+  left: 76%; top: 50%;
+  height: 40svh; aspect-ratio: 1;
   transform: translate(-50%, -50%);
   opacity: var(--void-scene, 1);
   background:
@@ -1493,8 +1458,8 @@ html.lenis, html.lenis body { height: auto; }
 @media (max-aspect-ratio: 1 / 1) {
   .singularity__still {
     height: 34svh;
-    top: 64%;
-    opacity: .5;
+    left: 50%; top: 76%;
+    opacity: .42;
   }
   .singularity.is-live .singularity__still { opacity: 0; }
 }
