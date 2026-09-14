@@ -784,34 +784,21 @@ main, .foot { position: relative; z-index: 1; }
    is on near-ground whatever its height, the band keeps the bottom quarter to
    itself, and the two never negotiate. Full width, because the copy is full
    width and a radial's own edge is the thing that reads as a smear. */
-.hero__void::before {
-  content: ""; position: absolute; z-index: 1;
-  inset: 0;
+/* NO SCRIM, AND NO TEXT SHADOW.
 
-  /* NO HARD EDGES, AND NO CLEAR WINDOW.
+   Both existed to keep the headline legible where the accretion band crosses
+   it, and both were visible as a dark smear - which is worse than the problem
+   they solved. Removed together.
 
-     This rule accumulated three passes of stops as the hole grew, and the last
-     of them held 92% at 26%, fell to 0 by 33%, stayed fully clear to 70% and
-     snapped back to 92% by 77%. A seven-percent fall at a tall viewport is
-     about sixty pixels, which is not a gradient — it is an edge. Rendered, it
-     was a dark slab with a visible top and bottom sitting behind the headline,
-     which is exactly what it looked like.
+   What makes that safe is the shape of the subject rather than anything added
+   on top of it. MEASURED at 1536x864: the shadow disc is opaque black and spans
+   37-63% of the viewport; the headline sits at 34-49%. Most of the headline is
+   therefore already against pure black, which is the best contrast available
+   anywhere on this page. The scene supplies its own ground.
 
-     The type carries its own legibility now, per glyph, so this only has to
-     keep the band from washing the copy out generally. Long overlapping ramps,
-     never fully clear and never fully opaque in the middle, so there is no
-     boundary anywhere for the eye to catch. */
-  background: linear-gradient(180deg,
-    rgb(5 7 10 / 96%)  0%,
-    rgb(5 7 10 / 90%) 20%,
-    rgb(5 7 10 / 62%) 36%,
-    rgb(5 7 10 / 44%) 48%,
-    rgb(5 7 10 / 52%) 58%,
-    rgb(5 7 10 / 78%) 72%,
-    rgb(5 7 10 / 94%) 88%,
-    rgb(5 7 10 / 97%) 100%);
-  pointer-events: none;
-}
+   Where the ring does cross the type, the fix is to move the SUBJECT, not to
+   put a box behind the words - see the vertical offset in singularity.js. */
+
 
 
 /* The product surface floats. It is the hero image, so it earns some life. */
@@ -1260,20 +1247,17 @@ html.lenis, html.lenis body { height: auto; }
    against #05070a, which is the easy case and the one that has let this
    project ship a contrast failure four times.
    -------------------------------------------------------------------------- */
-/* THE BAND CROSSES THE COPY, so the copy opens to let it through.
+/* NO BAND GAP. The copy is one block at the top.
 
-   The headline sits above it, the lede and the button below it, and the gap
-   between them is the band's own height plus air. This is the layout the
-   subject actually wants: a near edge-on black hole is a horizontal rule with
-   a hole in it, and a hero built around one should use it as a rule.
+   This carried a large computed gap so the accretion band could pass BETWEEN
+   the headline and the lede, back when the hole was dead centre and the copy
+   split around it. The hole has since moved down, and the gap was left behind
+   pushing the headline down into the ring rather than clear of it — which is
+   why dimming and nudging kept not being enough. I was treating the symptom.
 
-   THE GAP IS MEASURED, NOT GUESSED. Every vh value tried here was wrong at some
-   viewport: too small and the lede sat on the disk, too large and the button
-   fell off the bottom. Script reads the void's height and the headline's actual
-   bottom, and sets the gap so the lede's top lands just below the band — see
-   measureCopy() in singularity.js. The fallback is only for the case where
-   script never runs, and there is then no scene to collide with anyway. */
-.hero__void .hero__lede { margin-top: var(--band-gap, 12rem); }
+   With the copy compact at the top, the headline lands high and the scene owns
+   the lower two thirds. Nothing overlaps, so nothing needs a scrim. */
+.hero__void .hero__lede { margin-top: 1.4rem; }
 
 /* THE HEADLINE IS ARCHITECTURE, NOT A LABEL.
 
@@ -1316,21 +1300,7 @@ html.lenis, html.lenis body { height: auto; }
   line-height: 1.02;
   letter-spacing: -.028em;
   white-space: normal;
-  /* A PER GLYPH SCRIM, not a panel.
-
-     The headline now crosses the disk, which is what the reference does with
-     its own type and imagery — it lets them occupy the same frame and wins on
-     weight. A flat panel behind the words would buy legibility by putting out
-     the one thing the hero is for.
-
-     Three stacked shadows: a tight dark halo that rides each letterform, and
-     two softer ones for the glow. They travel with the type at any size, cost
-     one paint, and dim nothing except the few pixels immediately around a
-     stroke. */
-  text-shadow:
-    0 0 .10em rgb(5 7 10 / 96%),
-    0 0 .28em rgb(5 7 10 / 88%),
-    0 .02em .6em rgb(5 7 10 / 72%);
+  /* No text-shadow. See the note on .hero__void::before below. */
 }
 
 /* Below the measure where the second line would be cut past legibility, it
@@ -1496,6 +1466,28 @@ html.lenis, html.lenis body { height: auto; }
     rgb(240 163 96 / 46%) 30%, rgb(220 70 77 / 34%) 58%, rgb(220 70 77 / 0%) 88%);
 }
 .singularity.is-live .singularity__still { opacity: 0; transition: opacity 1100ms var(--ease-out); }
+
+/* PORTRAIT IS A DIFFERENT COMPOSITION, and this is the path that actually runs
+   there. WebGL is gated off below 720px, so a phone sees the STILL - which
+   means a portrait fix written into the shader never executes on the devices
+   that need it most. That is exactly what happened: the scene was stepped back
+   in singularity.js and the phone looked identical, because none of that code
+   was running.
+
+   Measured at 390x760: the still is 52svh tall and centred, so it spans 18% to
+   76% of the viewport while the headline sits at 38.7% to 55.9%. The ring's
+   brightest arc ran straight through the second word.
+
+   Smaller, lower and dimmer: it becomes atmosphere under the type rather than
+   an object competing with it. The type wins, which was always the rule. */
+@media (max-aspect-ratio: 1 / 1) {
+  .singularity__still {
+    height: 34svh;
+    top: 64%;
+    opacity: .5;
+  }
+  .singularity.is-live .singularity__still { opacity: 0; }
+}
 
 /* The morning lets the layer through. Translucent rather than opaque, so the
    same object that lit the hero is still there behind it. */

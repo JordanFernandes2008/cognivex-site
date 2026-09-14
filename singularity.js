@@ -420,22 +420,12 @@
       var hb = hero.getBoundingClientRect();
       if (!hb.height) return;
 
-      /* THE GAP THE BAND PASSES THROUGH.
-
-         The scrim's clear window runs 33% to 63% of the void, so the lower half
-         of the copy has to begin after 63% — solved from where the headline
-         actually ends rather than from a vh guess, because the headline wraps
-         to two lines or three depending on width and every fixed value was
-         right at one size and wrong at the next. Floored at 48px so a very
-         short viewport degrades to a tight hero rather than to overlapping
-         text. */
-      var titleBottom = title.getBoundingClientRect().bottom - hb.top;
-      /* 0.665, not 0.645. The scrim comes back to full strength at 61% and the
-         lede was starting at 60% — one percent inside the ramp, which measured
-         2.94 against the 4.5 it needs. Starting it at 62% puts it clear of the
-         ramp entirely rather than clear of the ring by a hair. */
-      var gap = Math.max(48, hb.height * 0.665 - titleBottom);
-      hero.style.setProperty("--band-gap", gap.toFixed(0) + "px");
+      /* The band gap is retired. It existed so the accretion band could pass
+         BETWEEN the headline and the lede, back when the hole was dead centre
+         and the copy split around it. The hole now sits lower and the copy is
+         one block at the top, so there is nothing to push apart — and leaving
+         the gap in place was what kept pushing the headline down into the ring
+         while I dimmed and nudged the scene trying to fix the symptom. */
 
       /* Written through the CSSOM, which style-src does not block — only a
          style ATTRIBUTE in the markup would be. */
@@ -487,7 +477,21 @@
       /* Born once, then it follows whichever room you are in. The layer's own
          opacity is doing the same fade in CSS, so this only has to stop the
          shader costing anything once the scene is fully hidden. */
-      var presence = smoothstep(0, 1, born) * Math.max(visible, 0.001);
+      /* DIMMER, WHICH IS THE ONLY LEVER LEFT THAT HAS NO EDGES.
+
+         Three things were wanted at once: no dark box behind the words, a large
+         subject, and it near the middle. With the headline occupying 37% to 52%
+         of the viewport and the ring's radius near 18% of the frame, those three
+         cannot all hold — pushed far enough down to clear the type, the disk
+         leaves the bottom of the frame; left centred, it burns through the first
+         line. Measured both.
+
+         So the scene gives up brightness rather than size or position. A box has
+         a boundary and reads as a panel; a dimmer scene has neither and reads as
+         atmosphere, which is what a hero background should be when there are
+         words in front of it. The disk stays 1.15 of the frame's width. */
+      var presence = smoothstep(0, 1, born) * Math.max(visible, 0.001)
+                   * (portrait ? 0.42 : 0.5);
 
       /* Held at a fixed distance. The hero does not fly anywhere — it breathes,
          so the frame is never completely still and never travelling either. */
@@ -519,10 +523,24 @@
          the frame on both sides, and the eye completes it. The shadow goes to
          26% of the frame's height, which is roughly two and a half times what
          it was. */
+      /* PORTRAIT IS A DIFFERENT COMPOSITION, not the same one squeezed.
+
+         On a tall screen the copy takes the upper half and there is no room
+         left for a large centred subject: measured at 390x760, the headline
+         occupies 38.7% to 55.9% of the viewport and the ring spans roughly 32%
+         to 68%, so the brightest arc ran straight through the second word. The
+         scrim that used to hide that collision has been removed, because a dark
+         box behind the words is worse than the problem it solves.
+
+         So on portrait the scene steps back instead: smaller, and dimmer, so it
+         reads as atmosphere behind the type rather than an object competing
+         with it. The type wins, which was always the rule. */
+      var portrait = camera.aspect < 1;
+
       var govW = Math.max(frameW, frameH * 0.95);
       var hs = Math.min(
-        (1.28 * govW)   / (2 * HOLE.diskOut),
-        (0.26 * frameH) / (2 * HOLE.rs)
+        ((portrait ? 0.92 : 1.28) * govW)   / (2 * HOLE.diskOut),
+        ((portrait ? 0.19 : 0.26) * frameH) / (2 * HOLE.rs)
       );
 
       camera.position.set(0, 0, 6);
@@ -531,6 +549,22 @@
 
       camFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
       hole.position.copy(camera.position).addScaledVector(camFwd, dist);
+      /* IT SITS BELOW THE HEADLINE ON BOTH, and the reason is worth recording.
+
+         The scrim and the per-glyph shadows were removed because they rendered
+         as a dark box, which was worse than what they fixed. That left the
+         bright band crossing the type on landscape as well as portrait — and I
+         nearly missed it, because the frame I first checked had presence 0: the
+         inspector pane had paused the render loop, so I was reading legibility
+         off a picture with no scene in it. Rechecked awake, the first line was
+         washed out.
+
+         So the subject moves rather than the words getting a panel. MEASURED at
+         1536x864: the headline runs 34% to 49% of the viewport and the ring's
+         radius is about 17.6% of the frame, so a centre at roughly 67% puts the
+         ring's top edge clear of the last line. The shadow then sits low-centre
+         and still reads as the middle of the composition at this size. */
+      hole.position.y -= frameH * (portrait ? 0.14 : 0.11);
       /* DEAD CENTRE, and the layout is what moves instead.
 
          Every previous version pushed the hole down the frame to get it out of

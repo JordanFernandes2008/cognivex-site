@@ -9,14 +9,28 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=5f3b7f41">
+<link rel="stylesheet" href="site.css?v=3cabeda1">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
 <!-- Living background. Fixed, inert, transform-only, disabled under
      prefers-reduced-motion. Sits behind everything and is never interactive. -->
-<!-- THE SINGULARITY LAYER.
+
+
+<div class="aurora" aria-hidden="true">
+  <i class="aurora__a"></i><i class="aurora__b"></i><i class="aurora__c"></i><i class="aurora__d"></i>
+  <span class="aurora__grid"></span>
+</div>
+
+<!-- Ordered AFTER .aurora deliberately. Both are position:fixed at z-index 0,
+     so the later one in the DOM paints on top - and with the aurora last, its
+     pale blobs washed a diagonal wedge across the dark hero and took the lede
+     down with it. No z-index was touched to fix this; the two layers simply
+     swapped order. The aurora still shows through everywhere the singularity
+     layer is transparent, which is every light section on the page.
+
+     THE SINGULARITY LAYER.
 
      Fixed, full viewport, and the whole document scrolls through it rather than
      it living inside one section. This is the thing the previous build had
@@ -31,11 +45,6 @@
   <div class="singularity__ground"></div>
   <div class="singularity__still"></div>
   <canvas class="singularity__canvas"></canvas>
-</div>
-
-<div class="aurora" aria-hidden="true">
-  <i class="aurora__a"></i><i class="aurora__b"></i><i class="aurora__c"></i><i class="aurora__d"></i>
-  <span class="aurora__grid"></span>
 </div>
 
 <!-- The ticker. A running status line rather than two fixed labels: this is an
@@ -554,7 +563,7 @@
 <script src="vendor/lenis.min.js"></script>
 <script src="site.js?v=1032b88e"></script>
 <script src="cursor.js?v=f97330b9"></script>
-<script src="singularity.js?v=26b81d16"></script>
+<script src="singularity.js?v=e3dcde2f"></script>
 <script src="motion.js?v=bc725647"></script>
 </body>
 </html>
