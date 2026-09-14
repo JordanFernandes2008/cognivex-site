@@ -193,7 +193,13 @@
            what makes the outer disk read as matter instead of as a fade. */
         "vec3 ramp(float t){",
         "  t = clamp(t, 0.0, 1.0);",
-        "  vec3 w = vec3(0.969, 0.992, 0.941);",
+        /* LIGHT GREY, not white. This stop is additive and the photon ring
+           multiplied it by 3.10, so it resolved to (3.00, 3.08, 2.92) and hard
+           clipped - every pixel near the ring was pure #ffffff with no
+           gradient left in it, which is what read as blown out. Dropping the
+           stop alone would not have fixed it; the multiplier had to come down
+           too, or the grey would just clip to white again. */
+        "  vec3 w = vec3(0.784, 0.804, 0.784);",
         "  vec3 y = vec3(0.969, 0.894, 0.537);",
         "  vec3 o = vec3(0.941, 0.639, 0.376);",
         "  vec3 d = vec3(0.863, 0.275, 0.302);",
@@ -305,14 +311,14 @@
            thing in the reference by a wide margin — measured at luminance 248
            against 167 for the hottest part of the disk — and at parity it
            stops reading as the thing the light is bending around. */
-        "  col += ramp(0.0) * core * 3.10;",
-        "  col += ramp(0.14) * halo * 0.66;",
+        "  col += ramp(0.0) * core * 1.06;",
+        "  col += ramp(0.14) * halo * 0.50;",
 
         /* A soft vertical bloom above and below the ring, which is the
            atmosphere the reference has and a bare ring does not. Narrowed
            toward the sides so it does not wash the whole band out. */
         "  float bloom = exp(-abs(r - ring) / (rs * 2.6)) * max(1.0 - abs(p.x) * 0.55, 0.0);",
-        "  col += ramp(0.30) * bloom * 0.14;",
+        "  col += ramp(0.30) * bloom * 0.11;",
 
         /* The shadow. Nothing comes out, so nothing is added. */
         "  col *= smoothstep(rs, rs + 0.006, r);",
@@ -370,6 +376,145 @@
     var hole = new THREE.Mesh(quad, glow);
     hole.frustumCulled = false; hole.renderOrder = 2; sc.add(hole);
 
+    /* ======================================================================
+       HYPERSPACE
+
+       Stars in a corridor the camera sits inside, drawn as LINE SEGMENTS so a
+       streak is one primitive rather than a trail of sprites. Each star is two
+       vertices at the same x/y: the head, and a tail pushed back down the
+       corridor by uStreak. At uStreak near zero that is a dot; opened up, it is
+       a stripe pointing at the vanishing point, which is the whole effect.
+
+       IT IS DRIVEN BY SCROLL VELOCITY, NOT BY TIME. Sitting still you get a
+       static starfield - the streaks exist because YOU moved, so the motion
+       reads as travel rather than as a screensaver running behind the copy.
+
+       The wrap is done in the vertex shader with mod() on a per-star z, so
+       nothing is uploaded per frame: one uniform moves 1400 stars.
+       ====================================================================== */
+    var STAR_N = 1400, STAR_SPAN = 150.0;
+    var sGeo = new THREE.BufferGeometry();
+    var sPos = new Float32Array(STAR_N * 2 * 3);
+    var sEnd = new Float32Array(STAR_N * 2);
+    var sBri = new Float32Array(STAR_N * 2);
+    for (var si = 0; si < STAR_N; si++) {
+      var sa = Math.random() * Math.PI * 2;
+      /* sqrt keeps the density even across the disc instead of piling every
+         star up around the axis, which is where the camera is looking. */
+      var sr = Math.sqrt(Math.random()) * 62;
+      var sx = Math.cos(sa) * sr;
+      var sy = Math.sin(sa) * sr * 0.72;   /* a wide corridor, not a round one */
+      var sz = Math.random() * STAR_SPAN;
+      var sb = 0.32 + Math.random() * 0.68;
+      for (var sk = 0; sk < 2; sk++) {
+        var so = (si * 2 + sk) * 3;
+        sPos[so] = sx; sPos[so + 1] = sy; sPos[so + 2] = sz;
+        sEnd[si * 2 + sk] = sk;           /* vertex 1 is the head */
+        sBri[si * 2 + sk] = sb;
+      }
+    }
+    sGeo.setAttribute("position", new THREE.BufferAttribute(sPos, 3));
+    sGeo.setAttribute("aEnd",     new THREE.BufferAttribute(sEnd, 1));
+    sGeo.setAttribute("aBright",  new THREE.BufferAttribute(sBri, 1));
+
+    var starU = {
+      uTravel:   { value: 0 },
+      uStreak:   { value: 0 },
+      uWarp:     { value: 0 },
+      /* the hole's world x/y, so the streaks point at wherever it has drifted */
+      uAxis:     { value: new THREE.Vector2(0, 0) },
+      /* the copy column in NDC: xMin, yMin, xMax, yMax */
+      uCopy:     { value: new THREE.Vector4(-1, -1, -1, -1) },
+      /* drawing-buffer size, so gl_FragCoord can be turned back into NDC */
+      uRes:      { value: new THREE.Vector2(1, 1) },
+      /* the same object, not a copy - the stars fade with the scene */
+      uPresence: uniforms.uPresence
+    };
+
+    var starMat = new THREE.ShaderMaterial({
+      uniforms: starU,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      blending: THREE.AdditiveBlending,
+      premultipliedAlpha: true,   /* same reasoning as the glow above */
+      vertexShader: [
+        "attribute float aEnd;",
+        "attribute float aBright;",
+        "uniform float uTravel, uStreak, uWarp, uPresence;",
+        "uniform vec2 uAxis;",
+        "varying float vA;",
+        "void main() {",
+        "  vec3 p = position;",
+        /* The corridor runs -132 to +18; the camera sits at z = 6 inside it,
+           so stars pass it and wrap round to the far end. */
+        "  float z = mod(p.z + uTravel, " + STAR_SPAN.toFixed(1) + ") - 132.0;",
+        "  z -= (1.0 - aEnd) * uStreak;",
+        /* THE VANISHING POINT IS THE HOLE. A corridor down the world's z axis
+           converges at the centre of the screen, which put the streaks' origin
+           where the composition has nothing - the effect and the subject were
+           two separate things happening in one frame. Shearing the corridor
+           along the line from the camera through the hole moves the origin
+           onto it, so the light appears to come OUT of the thing it should.
+           The shear is proportional to depth, which is what keeps each streak
+           a straight line instead of a curve. */
+        "  vec2 axis = uAxis * ((6.0 - z) / 30.0);",
+        "  gl_Position = projectionMatrix * modelViewMatrix * vec4(p.x + axis.x, p.y + axis.y, z, 1.0);",
+        /* Fade at both ends so nothing pops into or out of existence: out as a
+           star reaches the camera, in as it arrives at the far end. */
+        "  float near = 1.0 - smoothstep(-12.0, 4.0, z);",
+        "  float far  = smoothstep(-132.0, -98.0, z);",
+        /* Dim at rest, bright under warp: standing still this is a faint
+           starfield behind the copy, not a competing light source. */
+        /* MEASURED AT FULL WARP: streaks crossing the headline took its worst
+           background to (193, 200, 198) and its contrast to 1.25:1. The copy
+           is mid-grey, so dimming the TEXT cannot help - against a light
+           background it fails AA at any weight. The field has to stay off the
+           words instead.
+
+           Not the whole left half, though - that is where most of the effect
+           lives. Only the rectangle the copy actually occupies, in NDC: x
+           below -0.06, y between -0.06 and 0.62. The streaks still run at full
+           strength above the headline, below the button, and across the right
+           where the hole is. */
+        "  vA = aBright * near * far * uPresence * (0.16 + 0.84 * uWarp);",
+        "}"
+      ].join("\n"),
+      fragmentShader: [
+        "precision mediump float;",
+        "varying float vA;",
+        "uniform vec4 uCopy;",
+        "uniform vec2 uRes;",
+        "void main() {",
+        /* THE MASK IS PER PIXEL, and it has to be.
+
+           Computed in the vertex shader it was evaluated at the two ends of
+           each streak and interpolated between them - so a 30-unit streak with
+           its head out in the open and its tail over the copy carried the
+           head's brightness straight across the boundary. Measured: the first
+           headline line read 2.18:1 while the other three passed, which is
+           exactly what a leak along one direction looks like.
+
+           gl_FragCoord is this pixel's real window position, so the box test
+           is exact and no interpolation can smuggle light into it. */
+        "  vec2 ndc = (gl_FragCoord.xy / uRes) * 2.0 - 1.0;",
+        "  float mx = 1.0 - smoothstep(uCopy.z, uCopy.z + 0.20, ndc.x);",
+        "  float my = smoothstep(uCopy.y - 0.14, uCopy.y, ndc.y)",
+        "           * (1.0 - smoothstep(uCopy.w, uCopy.w + 0.14, ndc.y));",
+        "  float a = vA * (1.0 - 0.88 * mx * my);",
+        /* The same light grey the ring resolves to, so the starfield belongs
+           to the scene rather than sitting on top of it as blue-white dust. */
+        "  vec3 c = vec3(0.784, 0.804, 0.784);",
+        "  gl_FragColor = vec4(c * a, a);",
+        "}"
+      ].join("\n")
+    });
+
+    var stars = new THREE.LineSegments(sGeo, starMat);
+    /* Behind the shadow: renderOrder 0 puts it under the core pass, which is
+       normally blended and therefore actually covers what is behind it. */
+    stars.frustumCulled = false; stars.renderOrder = 0; sc.add(stars);
+
     /* ------------------------------------------------------------------ fit
 
        Measured off the ELEMENT, and re-measured whenever it could have
@@ -396,6 +541,10 @@
          the pixels for a background nobody is studying. */
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
       renderer.setSize(W, H, false);
+      if (typeof starU !== "undefined") {
+        var gl0 = renderer.getContext();
+        starU.uRes.value.set(gl0.drawingBufferWidth, gl0.drawingBufferHeight);
+      }
       camera.aspect = W / Math.max(H, 1);
       camera.updateProjectionMatrix();
     }
@@ -435,15 +584,53 @@
 
     var camFwd = new THREE.Vector3();
 
+    /* ---- warp, from how fast the page is actually moving ------------------
+       Fast attack and a slow decay: the streaks should snap open the moment
+       you flick the wheel and then ease shut, which is how motion blur behaves
+       and is what stops a scroll-linked effect looking like a slider.
+       Sampled in the loop rather than in a scroll handler, because Lenis
+       animates scrollY every frame and a listener would just fire twice. */
+    var lastY = window.scrollY || 0, warp = 0, travel = 0;
+    var copyEl = document.querySelector(".hero__void .hero__intro");
+    var copyKids = copyEl ? [].slice.call(copyEl.children) : [];
+
     function frame() {
       raf = window.requestAnimationFrame(frame);
       if (!onScreen) return;
       /* Neither room on screen: the layer is invisible and the page's opaque
          sections are over it, so there is nothing to draw. This is most of the
          page. */
-      if (visible < 0.005 && born >= 1) return;
+      if (visible < 0.005 && born >= 1) {
+        /* Still track the scroll position while parked. Otherwise lastY goes
+           stale against the whole distance scrolled away and back, and the
+           scene wakes with warp slammed to 1 - a burst of streaks that nobody
+           asked for, triggered by arriving rather than by moving. */
+        lastY = window.scrollY || window.pageYOffset || 0;
+        return;
+      }
       clock += 0.0055;
       born = Math.min(1, born + 0.012);
+
+      /* ---- warp ---------------------------------------------------------
+         How far the page moved since the last frame, normalised against a
+         brisk wheel notch. Attack is five times faster than decay so the
+         streaks snap open and ease shut; symmetrical smoothing makes the
+         whole thing feel like a slider being dragged instead of like speed. */
+      var sy = window.scrollY || window.pageYOffset || 0;
+      var dy = sy - lastY; lastY = sy;
+      var want = Math.min(1, Math.abs(dy) / 46);
+      warp += (want - warp) * (want > warp ? 0.30 : 0.055);
+
+      /* The corridor always drifts a little so the field is never frozen, and
+         accelerates hard with warp. */
+      travel += 0.30 + warp * 8.2;
+      starU.uTravel.value = travel;
+      starU.uStreak.value = 0.45 + warp * 30.0;
+      starU.uWarp.value   = warp;
+
+      /* How far through the first screen we are. The hole is parked while you
+         read the hero and only starts moving once you leave it. */
+      scrollP = Math.min(1, sy / Math.max(1, window.innerHeight));
 
       /* Arrives once, holds, and dims as the hero is left behind. It does not
          re-arrive on the way back up: this is a hero, not an event. */
@@ -534,7 +721,9 @@
       var hs = (diskSpan * frameW) / (2 * HOLE.diskOut);
 
       camera.position.set(0, 0, 6);
-      camera.rotation.z = Math.sin(clock * 0.17) * 0.012;
+      /* The breath, plus a touch of roll while travelling - a corridor that
+         banks slightly sells motion far better than one that only gets faster. */
+      camera.rotation.z = Math.sin(clock * 0.17) * 0.012 + warp * 0.035;
       camera.lookAt(0, 0, -40);
 
       camFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
@@ -562,9 +751,16 @@
       } else {
         /* Right column, and level. It sat at +10% of the frame height before,
            which pushed the oversized disk's arm into the top seam; now that it
-           fits, the middle of the frame is where it belongs. */
-        hole.position.x += frameW * 0.34;
-        hole.position.y -= frameH * 0.02;
+           fits, the middle of the frame is where it belongs.
+
+           IT THEN TRAVELS. Parked while you read the hero, it swings back
+           toward the middle and lifts as you scroll out of it, so leaving the
+           hero reads as moving past the thing rather than as it fading. The
+           drift is eased, not linear - a constant slide would race the scroll
+           and arrive before you do. */
+        var ease = scrollP * scrollP * (3 - 2 * scrollP);
+        hole.position.x += frameW * (0.34 - 0.30 * ease);
+        hole.position.y -= frameH * (0.02 - 0.20 * ease);
       }
       /* DEAD CENTRE, and the layout is what moves instead.
 
@@ -580,6 +776,40 @@
          scrim has a clear window cut through it at the same place. */
       hole.quaternion.copy(camera.quaternion);
       hole.scale.set(hs, hs, 1);
+
+      /* After the hole is placed, so the corridor tracks it through the drift
+         instead of aiming at where it used to be. */
+      starU.uAxis.value.set(hole.position.x, hole.position.y);
+
+      /* The copy's own box, straight off the DOM. One getBoundingClientRect on
+         one element, and the loop never mutates style, so there is nothing
+         invalidated for it to force a reflow on. When the copy has scrolled
+         away the box goes off-screen on its own and the field opens up. */
+      /* THE CHILDREN, NOT THE WRAPPER. .hero__intro is the .wrap - 1180px and
+         centred - so measuring it returned a box reaching ndcX 0.85, which
+         masked the streaks across nearly the whole frame including the hole.
+         The text is capped at 34rem on the children, so their union is the
+         box that actually has words in it. */
+      if (copyKids.length) {
+        var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, got = 0;
+        for (var ci = 0; ci < copyKids.length; ci++) {
+          var kb = copyKids[ci].getBoundingClientRect();
+          if (!kb.width || !kb.height) continue;
+          if (kb.left < x0) x0 = kb.left;
+          if (kb.top < y0) y0 = kb.top;
+          if (kb.right > x1) x1 = kb.right;
+          if (kb.bottom > y1) y1 = kb.bottom;
+          got = 1;
+        }
+        if (got) {
+          starU.uCopy.value.set(
+            (x0 / W) * 2 - 1,
+            1 - (y1 / H) * 2,
+            (x1 / W) * 2 - 1,
+            1 - (y0 / H) * 2
+          );
+        }
+      }
 
       core.position.copy(hole.position);
       core.quaternion.copy(hole.quaternion);
@@ -609,6 +839,9 @@
         return {
           presence: +uniforms.uPresence.value.toFixed(3),
           scrollProgress: +scrollP.toFixed(3),
+          warp: +warp.toFixed(3),
+          streak: +starU.uStreak.value.toFixed(2),
+          stars: STAR_N,
           drawCalls: renderer.info.render.calls,
           cssBox: W + "x" + H,
           drawingBuffer: gl.drawingBufferWidth + "x" + gl.drawingBufferHeight,

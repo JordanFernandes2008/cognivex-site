@@ -1423,7 +1423,7 @@ html.lenis, html.lenis body { height: auto; }
   background:
     radial-gradient(circle at 50% 50%,
       transparent 0 30.6%,
-      rgb(247 253 240 / 96%) 32.2%,
+      rgb(200 205 200 / 96%) 32.2%,
       rgb(247 228 137 / 82%) 34.4%,
       rgb(240 163 96 / 22%) 40%,
       transparent 56%),
@@ -1435,7 +1435,7 @@ html.lenis, html.lenis body { height: auto; }
   width: 300%; height: 34%;
   transform: translate(-50%, -50%) rotate(-8deg);
   background: radial-gradient(ellipse 50% 50% at 50% 50%,
-    rgb(247 253 240 / 78%) 0%, rgb(247 228 137 / 62%) 12%,
+    rgb(200 205 200 / 78%) 0%, rgb(247 228 137 / 62%) 12%,
     rgb(240 163 96 / 46%) 30%, rgb(220 70 77 / 34%) 58%, rgb(220 70 77 / 0%) 88%);
 }
 .singularity.is-live .singularity__still { opacity: 0; transition: opacity 1100ms var(--ease-out); }
