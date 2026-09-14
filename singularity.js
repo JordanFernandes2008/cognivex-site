@@ -460,10 +460,23 @@
          nothing, so the scene rendered a black hole by rendering nothing.
 
          0.162 of frame height is the measured shadow diameter. */
+      /* BIG, and the disk deliberately RUNS OFF THE SIDES.
+
+         Every version until now solved for "the disk must fit inside the
+         frame", which is why it kept reading as a picture of a black hole
+         placed on a page. The reference this is chasing lets its subject
+         overflow the frame on purpose — type cut off by the right edge, media
+         bleeding past both — and that overflow is what makes a thing read as
+         bigger than the window you are looking at it through.
+
+         So the disk is now 1.28 of the frame's WIDTH: its outer reaches leave
+         the frame on both sides, and the eye completes it. The shadow goes to
+         26% of the frame's height, which is roughly two and a half times what
+         it was. */
       var govW = Math.max(frameW, frameH * 0.95);
       var hs = Math.min(
-        (0.72  * govW)   / (2 * HOLE.diskOut),
-        (0.145 * frameH) / (2 * HOLE.rs)
+        (1.28 * govW)   / (2 * HOLE.diskOut),
+        (0.26 * frameH) / (2 * HOLE.rs)
       );
 
       camera.position.set(0, 0, 6);

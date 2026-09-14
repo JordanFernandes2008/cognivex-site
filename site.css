@@ -744,10 +744,15 @@ main, .foot { position: relative; z-index: 1; }
 
        Holding full strength to 38% and clearing by 41.5% gives the type its
        margin and costs the ring nothing. Same on the way back up. */
-    rgb(5 7 10 / 97%) 38%,
-    rgb(5 7 10 / 0%) 42%,
-    rgb(5 7 10 / 0%) 58%,
-    rgb(5 7 10 / 97%) 61%,
+    /* OPENED to the band's real extent. The hole is now 1.28 of the frame's
+       width and its shadow 26% of its height, so the bright region runs roughly
+       30% to 70% — a 42-58% window was clipping the disk's best part under a
+       97% wash. The type that now sits inside this window is protected per
+       glyph instead, below. */
+    rgb(5 7 10 / 92%) 26%,
+    rgb(5 7 10 / 0%) 33%,
+    rgb(5 7 10 / 0%) 70%,
+    rgb(5 7 10 / 92%) 77%,
     #05070a 100%);
   pointer-events: none;
 }
@@ -1200,9 +1205,53 @@ html.lenis, html.lenis body { height: auto; }
    script never runs, and there is then no scene to collide with anyway. */
 .hero__void .hero__lede { margin-top: var(--band-gap, 12rem); }
 
-.hero__void .hero__title { color: #aab3bf; }
+/* THE HEADLINE IS ARCHITECTURE, NOT A LABEL.
+
+   Taken from the reference, which sets its display type large enough that the
+   frame cuts it off and does not apologise for it. That single decision is most
+   of why its pages feel enormous: a line that runs past the edge tells you the
+   thing you are looking at is bigger than the window.
+
+   nowrap plus a clipped parent is what makes that happen without a scrollbar —
+   .hero__void already carries overflow: clip, so the overflow is contained by
+   the section rather than pushed onto the document. Checked: horizontal
+   overflow on the page is still zero. */
+.hero__void .hero__intro { max-width: none; }
+.hero__void .hero__title {
+  color: #aab3bf;
+  font-size: clamp(2.6rem, 7.4vw, 8rem);
+  line-height: .94;
+  letter-spacing: -.035em;
+  white-space: nowrap;
+  /* A PER GLYPH SCRIM, not a panel.
+
+     The headline now crosses the disk, which is what the reference does with
+     its own type and imagery — it lets them occupy the same frame and wins on
+     weight. A flat panel behind the words would buy legibility by putting out
+     the one thing the hero is for.
+
+     Three stacked shadows: a tight dark halo that rides each letterform, and
+     two softer ones for the glow. They travel with the type at any size, cost
+     one paint, and dim nothing except the few pixels immediately around a
+     stroke. */
+  text-shadow:
+    0 0 .10em rgb(5 7 10 / 96%),
+    0 0 .28em rgb(5 7 10 / 88%),
+    0 .02em .6em rgb(5 7 10 / 72%);
+}
+
+/* Below the measure where the second line would be cut past legibility, it
+   wraps again. An overflowing headline is a decision; an unreadable one is not. */
+@media (max-width: 700px) {
+  .hero__void .hero__title { white-space: normal; font-size: clamp(2.1rem, 9vw, 3.4rem); }
+}
 .hero__void .hero__title em { color: #ffffff; }
-.hero__void .hero__lede { color: #b6bdc7; }
+/* Same treatment, lighter: the lede sits below the band but its first line can
+   still catch the disk's lower glow at short viewports. */
+.hero__void .hero__lede {
+  color: #d4d9e0;
+  text-shadow: 0 0 .14em rgb(5 7 10 / 94%), 0 0 .5em rgb(5 7 10 / 76%);
+}
 .hero__void .hero__hint { color: #98a1ad; }
 .hero__void .pill { color: #f2b183; border-color: rgb(255 255 255 / 18%); background: rgb(255 255 255 / 6%); }
 
