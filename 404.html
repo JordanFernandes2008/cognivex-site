@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Page not found — Cognivex</title>
+<meta name="description" content="That page does not exist on this site. Here is the way back.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css?v=a869204e">
+</head>
+<!--
+  THE 404.
+
+  Vercel serves this automatically for any unmatched route. Before it existed the
+  site answered a bad URL with Vercel's own page - "404: NOT_FOUND", a CODE and a
+  deployment ID - which is infrastructure talking to an operator, not a site
+  talking to a person, and it published an internal region and request id to
+  anyone who mistyped a path.
+
+  DELIBERATELY SCRIPT-FREE. Every other page loads GSAP, ScrollTrigger, SplitText
+  and Lenis; none of that earns its download on the page you land on by mistake.
+  That has two consequences handled below: no [data-rise] attributes, since those
+  are only revealed by motion.js and would otherwise sit at opacity 0 forever,
+  and no burger button, since the menu it opens is wired up by script. The nav is
+  laid out plainly instead, so nothing here is an affordance that cannot work.
+-->
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="aurora" aria-hidden="true">
+  <i class="aurora__a"></i><i class="aurora__b"></i><i class="aurora__c"></i><i class="aurora__d"></i>
+  <span class="aurora__grid"></span>
+</div>
+
+<div class="statusbar">
+  <div class="wrap statusbar__inner">
+    <span class="mono">In development · not yet available</span>
+    <span class="mono statusbar__aside">Nothing sends without your approval</span>
+  </div>
+</div>
+
+<header class="masthead" data-header>
+  <div class="wrap masthead__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span>Cognivex</span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="capabilities.html">Capabilities</a>
+      <a href="trust.html">Trust</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="phero">
+    <div class="wrap">
+      <p class="pill"><span class="pill__dot" aria-hidden="true"></span>404</p>
+      <h1 class="phero__title">That page isn&rsquo;t here &mdash; <em>but the site still is.</em></h1>
+      <p class="phero__lede">
+        The address you followed does not match anything on this site. It may have
+        been mistyped, or it may be a page that never existed. Nothing is broken;
+        there is simply nothing at that path.
+      </p>
+    </div>
+  </section>
+
+  <section class="prose">
+    <div class="wrap prose__grid">
+      <div class="prose__side"><p class="mono">Where to go</p></div>
+      <div class="prose__body">
+        <p>Six pages, and this is not one of them:</p>
+        <ul class="nf__list">
+          <li><a href="index.html">Home</a> &mdash; what Cognivex does, and the approval queue you can actually operate.</li>
+          <li><a href="how-it-works.html">How it works</a> &mdash; the loop, end to end.</li>
+          <li><a href="capabilities.html">Capabilities</a> &mdash; what it handles today.</li>
+          <li><a href="trust.html">Trust</a> &mdash; what it will not do without you.</li>
+          <li><a href="about.html">About</a> &mdash; who is building it.</li>
+          <li><a href="contact.html">Contact</a> &mdash; and the honest state of that.</li>
+        </ul>
+        <p><a class="linkbtn" href="index.html">Back to the homepage</a></p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <div class="foot__brand">
+      <a class="brand" href="index.html">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span>Cognivex</span>
+      </a>
+      <p class="foot__by">Built by Suraj Balke and Jordan Fernandes at Digital Coyotes.</p>
+    </div>
+    <nav class="foot__nav" aria-label="Footer">
+      <a href="how-it-works.html">How it works</a>
+      <a href="capabilities.html">Capabilities</a>
+      <a href="trust.html">Trust</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

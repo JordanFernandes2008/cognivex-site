@@ -1729,3 +1729,10 @@ html:has(.void-page) { background: #05070a; }
   color-scheme: light;
   color: var(--ink);
 }
+
+/* The 404's link list. Plain, because the page's whole job is to get someone
+   back out of it. */
+.nf__list { margin: .9rem 0 1.4rem; padding: 0; list-style: none; display: grid; gap: .6rem; }
+.nf__list li { color: var(--muted); font-size: .95rem; line-height: 1.55; }
+.nf__list a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.nf__list a:hover { color: var(--accent-text); }

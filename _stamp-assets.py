@@ -13,7 +13,11 @@ import re
 
 ROOT = r'C:\Users\LENOVO_17\Downloads\cognivex-rebuild'
 PAGES = ['index.html', 'how-it-works.html', 'capabilities.html',
-         'trust.html', 'about.html', 'contact.html']
+         'trust.html', 'about.html', 'contact.html',
+         # The 404 is served by Vercel for unmatched routes and needs the same
+         # cache busting as everything else - it was left off this list when it
+         # was added, so its stylesheet link went out unstamped.
+         '404.html']
 
 
 def digest(name):
