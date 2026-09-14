@@ -1581,3 +1581,93 @@ html.lenis, html.lenis body { height: auto; }
      comes down to keep the block the same size it was. */
   .foot__nav { gap: 0 1.4rem; }
 }
+
+/* ============================================================================
+   THE NIGHT'S WORK — the catalogue
+
+   REFERENCE-STUDY.md section 9.6. Ruled, tabular, small. The restraint is the
+   point: this section is EVIDENCE, and evidence styled loudly stops reading as
+   evidence.
+
+   It uses the type tokens rather than its own sizes, so it moves with the scale
+   set in the typography pass instead of drifting away from it.
+   ========================================================================== */
+.nightwork {
+  background: rgb(255 255 255 / 94%);
+  padding-block: clamp(3.5rem, 9vw, 7rem);
+}
+.nightwork__h {
+  font-size: var(--t-h2);
+  line-height: var(--lh-h2);
+  letter-spacing: -.032em;
+  max-width: 22ch;
+}
+.nightwork__h em { font-style: normal; color: var(--accent-text); }
+
+.nw { margin-top: clamp(2rem, 5vw, 3.5rem); border-top: 1px solid var(--line-2); }
+
+.nw__head, .nw__row {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1.1fr) minmax(0, 1.4fr) 7.5rem;
+  gap: clamp(.6rem, 2vw, 1.4rem);
+  align-items: baseline;
+  padding: .95rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.nw__head {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: var(--t-micro);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding-bottom: .7rem;
+}
+
+.nw__i    { color: var(--edge); font-size: var(--t-micro); font-variant-numeric: tabular-nums; }
+.nw__what { color: var(--ink);   font-size: var(--t-small); }
+.nw__did  { color: var(--muted); font-size: var(--t-small); }
+
+.nw__st {
+  font-size: var(--t-micro);
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* The only loud value in the table, and it is loud because it is the only one
+   that asks the reader for anything. */
+.nw__st--you   { color: var(--accent-text); }
+.nw__st--quiet { color: var(--edge); }
+.nw__row--rest .nw__what, .nw__row--rest .nw__did { color: var(--dim); }
+
+/* Enough lift to track one line across four columns, which is what a wide
+   table actually needs. Hover only — it is not a control. */
+@media (hover: hover) {
+  .nw__row { transition: background-color var(--t-micro) var(--ease-out); }
+  .nw__row:hover { background: var(--alt); }
+}
+
+.nw__sum { margin-top: 1.6rem; color: var(--dim); font-size: var(--t-small); }
+.nw__sum b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.nw__sum i { font-style: normal; color: var(--edge); padding: 0 .45rem; }
+
+/* Narrow: four columns become two rows per record rather than four unreadable
+   slivers. Status stays on the top line with the index, because status is what
+   anyone scanning this table is looking for. */
+@media (max-width: 720px) {
+  .nw__head { display: none; }
+  .nw__row {
+    grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+    gap: .3rem .8rem;
+    padding: 1rem 0;
+  }
+  .nw__i    { grid-column: 1; grid-row: 1; }
+  .nw__what { grid-column: 2; grid-row: 1; }
+  .nw__st   { grid-column: 3; grid-row: 1; }
+  .nw__did  { grid-column: 2 / -1; grid-row: 2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nw__row { transition: none; }
+}
