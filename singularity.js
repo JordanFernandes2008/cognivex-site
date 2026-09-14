@@ -490,8 +490,11 @@
          a boundary and reads as a panel; a dimmer scene has neither and reads as
          atmosphere, which is what a hero background should be when there are
          words in front of it. The disk stays 1.15 of the frame's width. */
+      /* FULL BRIGHTNESS on landscape. It was dimmed to 0.5 only because it was
+         burning through the headline; with the copy in its own column there is
+         nothing left to burn through. */
       var presence = smoothstep(0, 1, born) * Math.max(visible, 0.001)
-                   * (portrait ? 0.42 : 0.5);
+                   * (portrait ? 0.5 : 1);
 
       /* Held at a fixed distance. The hero does not fly anywhere — it breathes,
          so the frame is never completely still and never travelling either. */
@@ -564,7 +567,15 @@
          radius is about 17.6% of the frame, so a centre at roughly 67% puts the
          ring's top edge clear of the last line. The shadow then sits low-centre
          and still reads as the middle of the composition at this size. */
-      hole.position.y -= frameH * (portrait ? 0.14 : 0.11);
+      /* RIGHT, not down. On landscape the copy owns the left 54%, so the scene
+         takes the right and the vertical fight is over. Portrait has no second
+         column, so there it drops below the copy instead. */
+      if (portrait) {
+        hole.position.y -= frameH * 0.16;
+      } else {
+        hole.position.x += frameW * 0.24;
+        hole.position.y += frameH * 0.10;
+      }
       /* DEAD CENTRE, and the layout is what moves instead.
 
          Every previous version pushed the hole down the frame to get it out of
