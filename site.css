@@ -786,71 +786,33 @@ main, .foot { position: relative; z-index: 1; }
    width and a radial's own edge is the thing that reads as a smear. */
 .hero__void::before {
   content: ""; position: absolute; z-index: 1;
-  /* SOLVED against where the copy actually ends, not chosen by eye.
-
-     At 80% tall with the fade starting at 62%, the last row of copy sat 65%
-     down the void, which is 81% along the gradient's own length — the scrim
-     was down to 56% there, and the worst case behind it (the photon ring's
-     hottest pixel) measured 1.82 against the 4.5 that size of text needs. It
-     LOOKED fine, because the ring is not behind those words at every moment;
-     the worst case is the one that has to pass, not the average one.
-
-     Taller, and held high until 72%, which puts the last row at 92%. The band
-     itself starts below that, so it is not dimmed by this. */
-  /* AS TALL AS THE COPY, AND NO TALLER.
-
-     Every fixed fraction tried here was wrong at some viewport, because the
-     copy's height is not a fixed fraction of anything — the headline wraps to
-     two lines or three depending on width, and the whole block moves. Guessing
-     short left the last row at a scrim of 56% and a worst case of 1.82 against
-     the 4.5 it needs; guessing long put a 92% black wash across the top half of
-     the accretion disk and greyed out the one thing the hero is for.
-
-     So script measures where the copy actually ends and writes it here, and the
-     gradient holds full strength to that line and then gets out of the way
-     fast. Both the text and the image get exactly what they need. The fallback
-     covers the case where script never runs, where there is no scene to dim. */
-  /* A WINDOW, not a wash.
-
-     The hole is centred now, so a scrim that simply gets weaker downward is
-     the wrong shape: it is strongest exactly where the band is and weakest
-     where the lower copy sits. This one is opaque at the top for the headline,
-     CLEAR through the middle so the band is at full strength, and opaque again
-     at the bottom for the lede and the button.
-
-     The window's edges are the two numbers the layout already uses, so the
-     scrim, the copy gap and the shader cannot drift apart. */
   inset: 0;
+
+  /* NO HARD EDGES, AND NO CLEAR WINDOW.
+
+     This rule accumulated three passes of stops as the hole grew, and the last
+     of them held 92% at 26%, fell to 0 by 33%, stayed fully clear to 70% and
+     snapped back to 92% by 77%. A seven-percent fall at a tall viewport is
+     about sixty pixels, which is not a gradient — it is an edge. Rendered, it
+     was a dark slab with a visible top and bottom sitting behind the headline,
+     which is exactly what it looked like.
+
+     The type carries its own legibility now, per glyph, so this only has to
+     keep the band from washing the copy out generally. Long overlapping ramps,
+     never fully clear and never fully opaque in the middle, so there is no
+     boundary anywhere for the eye to catch. */
   background: linear-gradient(180deg,
-    #05070a 0%,
-    /* SOLVED against where the copy actually lands, not eyeballed. Measured at
-       33-63%: the headline's last line ends at 36% and the lede begins at 60%,
-       so both had a foot inside the clear window and read 2.04 and 1.83 against
-       the 3 and 4.5 they need. The ring itself only spans 42-58%, so closing
-       the window to 37-59% costs the band nothing visible and gives the type
-       the margin it needs. */
-    /* HELD TO THE COPY'S EDGE, THEN DROPPED FAST.
-
-       The bright part of the scene is narrower than it looks: the shadow spans
-       44-56% of the void and the photon ring 41.5-58.5%. Everything outside
-       that is near-black anyway. So the scrim has no reason to start fading at
-       29% — it was down to 6% by 36%, which is exactly where the headline's
-       box ends, and the last line measured 1.78 against the 3 it needs.
-
-       Holding full strength to 38% and clearing by 41.5% gives the type its
-       margin and costs the ring nothing. Same on the way back up. */
-    /* OPENED to the band's real extent. The hole is now 1.28 of the frame's
-       width and its shadow 26% of its height, so the bright region runs roughly
-       30% to 70% — a 42-58% window was clipping the disk's best part under a
-       97% wash. The type that now sits inside this window is protected per
-       glyph instead, below. */
-    rgb(5 7 10 / 92%) 26%,
-    rgb(5 7 10 / 0%) 33%,
-    rgb(5 7 10 / 0%) 70%,
-    rgb(5 7 10 / 92%) 77%,
-    #05070a 100%);
+    rgb(5 7 10 / 96%)  0%,
+    rgb(5 7 10 / 90%) 20%,
+    rgb(5 7 10 / 62%) 36%,
+    rgb(5 7 10 / 44%) 48%,
+    rgb(5 7 10 / 52%) 58%,
+    rgb(5 7 10 / 78%) 72%,
+    rgb(5 7 10 / 94%) 88%,
+    rgb(5 7 10 / 97%) 100%);
   pointer-events: none;
 }
+
 
 /* The product surface floats. It is the hero image, so it earns some life. */
 .app { animation: float 6s ease-in-out infinite; }
@@ -1184,6 +1146,17 @@ html.lenis, html.lenis body { height: auto; }
 /* TRANSPARENT. The dark ground is painted by the fixed layer underneath, which
    is what lets the scene be continuous with the rest of the page instead of
    ending at this element's edges. */
+/* The hero's top met the masthead as a hard line with the scene's bright band
+   cut across it — the layer beneath is fixed and full-viewport, so the
+   section's own top edge is where the cut showed. A short fade turns the join
+   into a transition. */
+.hero__void::after {
+  content: ""; position: absolute; z-index: 1;
+  left: 0; right: 0; top: 0; height: 90px;
+  background: linear-gradient(180deg, #05070a 0%, rgb(5 7 10 / 0%) 100%);
+  pointer-events: none;
+}
+
 .hero__void {
   position: relative;
   /* clip, never hidden: hidden makes this a scroll container, which is what a
@@ -1313,13 +1286,36 @@ html.lenis, html.lenis body { height: auto; }
    .hero__void already carries overflow: clip, so the overflow is contained by
    the section rather than pushed onto the document. Checked: horizontal
    overflow on the page is still zero. */
+/* IT WRAPS. NOTHING IS CUT.
+
+   This carried white-space: nowrap, borrowed from a reference whose display
+   type runs past the frame on purpose. That works there because the line reads
+   as CONTINUING. Here it cut "work" to "wor" and took the full stop off
+   "instructions" — reproduced at 1536x864, which is what a 1920 screen reports
+   at 125% Windows scaling, an extremely common setup.
+
+   A headline that loses its last letter is not a device, it is a defect. The
+   type stays large; it is allowed a third line rather than losing characters. */
+/* THE MEASURE BELONGS TO THE COLUMN, NOT TO ME.
+
+   My first attempt at this put max-width: 26ch on .hero__intro, which is the
+   block holding the headline AND the lede AND the button. It collapsed the
+   whole column to 205px and broke the headline one word per line — twenty-two
+   lines of it. Measured, not noticed by eye.
+
+   The markup already sets the line breaks it wants with a <br>. So the width is
+   left alone and the SIZE is solved instead: the longest line is "Cognivex
+   hands you finished work." at 33 characters, and DM Sans averages about half
+   an em per character, so it needs roughly 16.5em. Against the 1100px of usable
+   wrap at desktop that puts the ceiling at about 66px, and 4rem sits under it
+   with margin. Wrapping stays enabled as insurance rather than as the plan. */
 .hero__void .hero__intro { max-width: none; }
 .hero__void .hero__title {
   color: #aab3bf;
-  font-size: clamp(2.6rem, 7.4vw, 8rem);
-  line-height: .94;
-  letter-spacing: -.035em;
-  white-space: nowrap;
+  font-size: clamp(2rem, 1rem + 3.1vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -.028em;
+  white-space: normal;
   /* A PER GLYPH SCRIM, not a panel.
 
      The headline now crosses the disk, which is what the reference does with
@@ -1340,7 +1336,8 @@ html.lenis, html.lenis body { height: auto; }
 /* Below the measure where the second line would be cut past legibility, it
    wraps again. An overflowing headline is a decision; an unreadable one is not. */
 @media (max-width: 700px) {
-  .hero__void .hero__title { white-space: normal; font-size: clamp(2.1rem, 9vw, 3.4rem); }
+  .hero__void .hero__title { font-size: clamp(2rem, 8.2vw, 3.2rem); }
+  .hero__void .hero__intro { max-width: none; }
 }
 .hero__void .hero__title em { color: #ffffff; }
 /* Same treatment, lighter: the lede sits below the band but its first line can
