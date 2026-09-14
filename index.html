@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=f39782d7">
+<link rel="stylesheet" href="site.css?v=d0e44dda">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -286,8 +286,13 @@
     </div>
   </div>
 
-  <section class="tuesday">
+  <!-- The second dark screen. The page now alternates: dark hero, light product
+       surface, dark morning, light everything-else, dark close. That alternation
+       is the rhythm, and it is what stops eight consecutive sections of cream
+       reading as one very long section. -->
+  <section class="tuesday tuesday--dark">
     <div class="wrap">
+      <p class="cap mono"><span>The morning</span><b>41 things</b></p>
       <div class="tuesday__inner">
         <p class="tuesday__mark mono" data-rise>Tuesday, 9:40am</p>
         <p class="tuesday__lead" data-rise data-rise-delay="80">
@@ -306,6 +311,7 @@
   <!-- ── The loop ─────────────────────────────────────────────────────────── -->
   <section class="loop" id="loop">
     <div class="wrap">
+      <p class="cap mono"><span>The loop</span><b>3 steps</b></p>
       <h2 class="loop__title" data-rise>Three steps. <em>You are the third one.</em></h2>
 
       <ol class="loop__steps" data-loop>
@@ -330,6 +336,7 @@
   <section class="ledger">
     <div class="wrap">
       <div class="ledger__top">
+        <p class="cap mono"><span>What it does</span><b>4 things</b></p>
         <h2 class="ledger__title" data-rise>Four things, <em>done properly.</em></h2>
         <p class="ledger__note" data-rise data-rise-delay="80">That is the whole list. Anything not on it is not built.</p>
       </div>
@@ -370,6 +377,7 @@
   <!-- ── The position ─────────────────────────────────────────────────────── -->
   <section class="position">
     <div class="wrap position__inner" data-par="0.8">
+      <p class="cap mono"><span>The position</span><b>Not a setting</b></p>
       <h2 class="position__title" data-rise>Approval is not a safety setting. <em>It is the product.</em></h2>
       <div class="position__body">
         <p data-rise data-rise-delay="80">
@@ -399,7 +407,7 @@
   <section class="closing">
     <div class="wrap closing__grid" data-par="0.6">
       <div class="closing__col" data-rise>
-        <h2 class="closing__h">You are the <em>operations department.</em></h2>
+        <h2 class="closing__h closing__h--wall">You are the<br><em>operations department.</em></h2>
         <p>
           You answer the email, send the invoice and chase the payment. There is
           nobody to hand that to, because you are also the person doing the work

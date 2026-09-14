@@ -1307,3 +1307,75 @@ html.lenis, html.lenis body { height: auto; }
   .singularity__canvas { display: none; }
   .hero__void.is-live .singularity__still { opacity: 1; transition: none; }
 }
+
+/* ============================================================================
+   THE RHYTHM
+
+   Three structural changes, all taken from the same observation about the
+   reference: it alternates. Full-bleed loud screens against flat quiet ones,
+   enormous display type against very small mono, and a caption on everything so
+   you always know what you are looking at.
+
+   The page before this was a dark hero followed by eight consecutive sections
+   of cream, which reads as one very long section however good each one is.
+   ========================================================================== */
+
+/* --- 1. captions ---------------------------------------------------------
+   A label and a real datum, the way the reference captions each piece with a
+   title and a year. Deliberately NOT 01 / 02 / 03: invented numbering is the
+   house style of generated design and it says nothing. "4 things" is the
+   actual count of what is in that section. */
+.cap {
+  display: flex; align-items: baseline; gap: .9rem;
+  margin: 0 0 clamp(1.4rem, 3vw, 2.4rem);
+  font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--dim);
+}
+.cap::before {
+  content: ""; width: 1.6rem; height: 1px; background: var(--edge);
+  transform: translateY(-.25em);
+}
+.cap b { font-weight: 400; color: var(--accent-text); margin-left: auto; }
+.cap span { white-space: nowrap; }
+
+/* --- 2. the second dark screen ------------------------------------------
+   Full bleed, and it owns the whole viewport. The copy inside is already
+   written as a single held thought, which is exactly what a screen like this
+   is for. */
+.tuesday--dark {
+  background: #0a0d12;
+  color: #e7eaef;
+  padding-block: clamp(5rem, 16vh, 10rem);
+  border-block: 1px solid #171b22;
+}
+.tuesday--dark .cap { color: #8d96a2; }
+.tuesday--dark .cap::before { background: #39414d; }
+.tuesday--dark .cap b { color: var(--accent-fill); }
+.tuesday--dark .tuesday__mark { color: var(--accent-fill); }
+.tuesday--dark .tuesday__lead {
+  color: #f2f4f7;                       /* 16.4 on #0a0d12 */
+  font-size: clamp(1.5rem, 1.1rem + 2vw, 3rem);
+  line-height: 1.16;
+  letter-spacing: -.02em;
+  max-width: 22ch;
+}
+.tuesday--dark .tuesday__turn { color: #b6bdc7; }   /* 8.6 */
+
+/* --- 3. the wall ---------------------------------------------------------
+   The closing line, set large enough that the frame cuts it. Same move as the
+   hero headline and for the same reason: type that runs past the edge reads as
+   bigger than the page.
+
+   .closing already clips nothing, so the containment is added here rather than
+   letting it push the document sideways. */
+.closing { overflow: clip; }
+.closing__h--wall {
+  font-size: clamp(2.4rem, 8.2vw, 7.5rem);
+  line-height: .92;
+  letter-spacing: -.04em;
+  white-space: nowrap;
+  margin-bottom: clamp(1.2rem, 3vw, 2rem);
+}
+@media (max-width: 760px) {
+  .closing__h--wall { white-space: normal; font-size: clamp(2rem, 9vw, 3.2rem); }
+}
