@@ -1293,24 +1293,37 @@ html.lenis, html.lenis body { height: auto; }
    an em per character, so it needs roughly 16.5em. Against the 1100px of usable
    wrap at desktop that puts the ceiling at about 66px, and 4rem sits under it
    with margin. Wrapping stays enabled as insurance rather than as the plan. */
-/* COPY LEFT, SCENE RIGHT. They stop sharing a column.
+/* The wash behind the hero copy. Long overlapping ramps, never fully clear and
+   never fully opaque in the middle, so there is no boundary for the eye to
+   catch as an edge. */
+.hero__void::before {
+  content: ""; position: absolute; z-index: 1;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgb(5 7 10 / 96%)  0%,
+    rgb(5 7 10 / 90%) 20%,
+    rgb(5 7 10 / 62%) 36%,
+    rgb(5 7 10 / 44%) 48%,
+    rgb(5 7 10 / 52%) 58%,
+    rgb(5 7 10 / 78%) 72%,
+    rgb(5 7 10 / 94%) 88%,
+    rgb(5 7 10 / 97%) 100%);
+  pointer-events: none;
+}
 
-   Every previous attempt had the headline and the accretion band occupying the
-   same horizontal strip and then tried to referee it — a scrim, then per-glyph
-   shadows, then dimming, then moving the hole down. Each one worked at a single
-   viewport and failed at the next, because the collision was structural and I
-   was fixing it cosmetically.
-
-   The copy now owns the left half and the scene the right. Nothing overlaps, so
-   nothing needs protecting, and the scene goes back to full brightness. */
-.hero__void .hero__intro { max-width: min(54%, 40rem); }
+.hero__void .hero__intro { max-width: none; }
 .hero__void .hero__title {
   color: #aab3bf;
   font-size: clamp(2rem, 1rem + 3.1vw, 4rem);
   line-height: 1.02;
   letter-spacing: -.028em;
   white-space: normal;
-  /* No text-shadow. See the note on .hero__void::before below. */
+  /* A per-glyph scrim rather than a panel: a tight dark halo riding each
+     letterform plus two softer ones for the glow. */
+  text-shadow:
+    0 0 .10em rgb(5 7 10 / 96%),
+    0 0 .28em rgb(5 7 10 / 88%),
+    0 .02em .6em rgb(5 7 10 / 72%);
 }
 
 /* Below the measure where the second line would be cut past legibility, it
