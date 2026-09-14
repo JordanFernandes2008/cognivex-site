@@ -1115,3 +1115,66 @@ html.lenis, html.lenis body { height: auto; }
   .sbeat { transition: none; }
   .sbeat.is-armed { opacity: 1; transform: none; }
 }
+
+/* ============================================================================
+   THE POINTER'S SHADOW
+
+   A soft shadow cast by the cursor onto the page, which separates from it while
+   you scroll and settles back under it when you stop. See cursor.js for why the
+   separation goes upward when you scroll down: the shadow belongs to the PAGE,
+   so when the page travels the shadow travels with it and the cursor is briefly
+   left hanging over nothing.
+
+   NO BLUR FILTER. A blurred element is repainted through a filter on every
+   frame it moves, and this one moves on every frame there is. A radial gradient
+   is already soft, costs nothing beyond a normal paint, and unlike a blur its
+   edge does not crawl when the element is scaled.
+
+   BLEND MODE RATHER THAN COLOUR. This page is white for most of its length and
+   near-black for the singularity chapter. A dark shadow is invisible on one and
+   a pale one is invisible on the other, so the script reads what is actually
+   beneath the pointer and switches. The honest reading is that the cursor is
+   lit from behind: what it casts on a dark ground is a glow, on a light one a
+   shadow.
+   ========================================================================== */
+.pshadow {
+  position: fixed;
+  left: 0; top: 0;
+  width: 116px; height: 116px;
+  margin: -58px 0 0 -58px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 90;
+  opacity: 0;
+  /* Transform is written every frame by script, so it must never be
+     transitioned — a transition here fights the rAF loop and produces exactly
+     the stutter that reads as a dropped frame. Only the fade is CSS. */
+  transition: opacity 320ms var(--ease-out);
+  will-change: transform, opacity;
+  background: radial-gradient(circle at 50% 50%,
+    rgb(20 22 26 / 40%) 0%,
+    rgb(20 22 26 / 22%) 34%,
+    rgb(20 22 26 / 7%) 58%,
+    transparent 74%);
+  mix-blend-mode: multiply;
+}
+
+/* Over a dark ground. Warm rather than white, because the one dark chapter here
+   is lit by an accretion disk and a neutral highlight on it reads as a screen
+   artefact. */
+.pshadow.is-lit {
+  background: radial-gradient(circle at 50% 50%,
+    rgb(255 236 208 / 30%) 0%,
+    rgb(255 228 190 / 16%) 34%,
+    rgb(255 224 180 / 5%) 58%,
+    transparent 74%);
+  mix-blend-mode: screen;
+}
+
+.pshadow.is-on { opacity: 1; }
+
+/* Never on touch: there is no hovering pointer to cast anything, and the layer
+   would sit wherever a finger last was. */
+@media (hover: none), (pointer: coarse) {
+  .pshadow { display: none; }
+}
