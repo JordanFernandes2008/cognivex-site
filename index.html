@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=f4e77349">
+<link rel="stylesheet" href="site.css?v=d3ff5407">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -71,6 +71,17 @@
 
   <!-- ── Hero: copy on top, the product surface underneath and dominant ───── -->
   <section class="hero">
+    <!-- THE VOID. The hero's ground, and the scene lives in it.
+
+         The still underneath is a designed state, not a failure state: the same
+         subject built from gradients, calibrated to the same measurements as
+         the shader. It is what shows without WebGL, on a device not worth
+         handing 603KB of three.js, under reduced motion, and for the second
+         before the scene has loaded. The hero is never an empty black box. -->
+    <div class="hero__void" data-singularity>
+      <div class="singularity__still" aria-hidden="true"></div>
+      <canvas class="singularity__canvas" aria-hidden="true"></canvas>
+
     <div class="wrap hero__intro" data-par="-0.5">
       <p class="pill" data-rise><span class="pill__dot" aria-hidden="true"></span>Approval-first AI operations</p>
 
@@ -93,6 +104,7 @@
         <span class="hero__hint mono">Or approve something below — it is live</span>
       </div>
     </div>
+    </div><!-- /.hero__void -->
 
     <!-- The product surface. Real chrome, real density, genuinely operable. -->
     <div class="wrap hero__stage" data-scale-in>
@@ -272,28 +284,6 @@
     </div>
   </section>
 
-  <!-- ── The singularity ────────────────────────────────────── -->
-  <!-- The one chapter here that is an image rather than an argument. See
-       singularity.js for what it is doing and site.css for why it is three
-       screens tall. The still underneath is a designed state: it is what shows
-       without WebGL, on a modest device, under reduced motion, and for the
-       second before the scene has loaded. This section is never an empty box. -->
-  <section class="singularity" data-singularity aria-labelledby="sing-h">
-    <div class="singularity__stage">
-      <div class="singularity__still" aria-hidden="true"></div>
-      <canvas class="singularity__canvas" aria-hidden="true"></canvas>
-
-      <div class="wrap singularity__copy">
-        <div class="singularity__beats">
-          <h2 class="sbeat" id="sing-h" data-sbeat>Forty-one things arrived before you opened the laptop.</h2>
-          <p class="sbeat" data-sbeat>Thirty-eight of them were never going to need you.</p>
-          <p class="sbeat" data-sbeat><em>Three were.</em></p>
-        </div>
-        <p class="singularity__tag mono">Nothing leaves without you</p>
-      </div>
-    </div>
-  </section>
-
   <!-- ── The loop ─────────────────────────────────────────────────────────── -->
   <section class="loop" id="loop">
     <div class="wrap">
@@ -449,7 +439,7 @@
 <script src="vendor/lenis.min.js"></script>
 <script src="site.js?v=1032b88e"></script>
 <script src="cursor.js?v=f97330b9"></script>
-<script src="singularity.js?v=f3ef3d5c"></script>
+<script src="singularity.js?v=72fabcb9"></script>
 <script src="motion.js?v=bc725647"></script>
 </body>
 </html>

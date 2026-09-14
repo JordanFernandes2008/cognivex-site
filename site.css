@@ -667,14 +667,61 @@ main, .foot { position: relative; z-index: 1; }
 .position { background: rgb(255 243 232 / 96%); }
 
 /* The hero copy's own ground. A soft radial, so it has no visible edge - it
-   reads as light falling on the text rather than as a box behind it. Without
-   it the headline sits directly on moving orange and drops under AA. */
-.hero__intro { position: relative; }
-.hero__intro::before {
-  content: ""; position: absolute; z-index: -1;
-  inset: -3rem -4rem -2rem -4rem;
-  background: radial-gradient(58% 62% at 38% 48%,
-    rgb(255 255 255 / 90%) 0%, rgb(255 255 255 / 80%) 45%, transparent 78%);
+   reads as light falling on the text rather than as a box behind it.
+
+   INVERTED, because the hero is now dark and the scene behind it is bright.
+   The old white version was catching the headline against a moving orange
+   aurora; the same job now has to be done against an accretion disk, which is
+   considerably brighter, so this is darker and reaches further. Contrast is
+   measured against the worst case that actually occurs - the ring's hottest
+   pass directly behind a character - not against the ground. */
+.hero__intro { position: relative; z-index: 2; }
+
+/* TOP ANCHORED, NOT RADIAL, and it belongs to the void rather than to the copy.
+
+   A radial centred on the copy block has to guess where the copy ends, and it
+   guessed wrong: the last row — the button and the small caps line beside it —
+   fell outside the 80% stop and landed directly on the brightest part of the
+   accretion disk. "OR APPROVE SOMETHING BELOW" was legible as a shape and not
+   as words.
+
+   A linear wash from the top has no such guess in it. Everything above the band
+   is on near-ground whatever its height, the band keeps the bottom quarter to
+   itself, and the two never negotiate. Full width, because the copy is full
+   width and a radial's own edge is the thing that reads as a smear. */
+.hero__void::before {
+  content: ""; position: absolute; z-index: 1;
+  /* SOLVED against where the copy actually ends, not chosen by eye.
+
+     At 80% tall with the fade starting at 62%, the last row of copy sat 65%
+     down the void, which is 81% along the gradient's own length — the scrim
+     was down to 56% there, and the worst case behind it (the photon ring's
+     hottest pixel) measured 1.82 against the 4.5 that size of text needs. It
+     LOOKED fine, because the ring is not behind those words at every moment;
+     the worst case is the one that has to pass, not the average one.
+
+     Taller, and held high until 72%, which puts the last row at 92%. The band
+     itself starts below that, so it is not dimmed by this. */
+  /* AS TALL AS THE COPY, AND NO TALLER.
+
+     Every fixed fraction tried here was wrong at some viewport, because the
+     copy's height is not a fixed fraction of anything — the headline wraps to
+     two lines or three depending on width, and the whole block moves. Guessing
+     short left the last row at a scrim of 56% and a worst case of 1.82 against
+     the 4.5 it needs; guessing long put a 92% black wash across the top half of
+     the accretion disk and greyed out the one thing the hero is for.
+
+     So script measures where the copy actually ends and writes it here, and the
+     gradient holds full strength to that line and then gets out of the way
+     fast. Both the text and the image get exactly what they need. The fallback
+     covers the case where script never runs, where there is no scene to dim. */
+  inset: 0 0 auto 0;
+  height: calc(var(--scrim-end, 72%) + 14%);
+  background: linear-gradient(180deg,
+    #05070a 0%,
+    rgb(5 7 10 / 97%) calc(var(--scrim-end, 72%) * 0.82),
+    rgb(5 7 10 / 93%) var(--scrim-end, 72%),
+    rgb(5 7 10 / 0%) 100%);
   pointer-events: none;
 }
 
@@ -932,191 +979,6 @@ html.lenis, html.lenis body { height: auto; }
 }
 
 /* ============================================================================
-   THE SINGULARITY
-
-   The one chapter on this page that is an image rather than an argument. It
-   sits between the Tuesday section, which ends on "four hours before you get to
-   the work people actually pay you for", and the loop, which explains the three
-   steps. Between those two the page has to make one thing FELT rather than
-   stated: thirty-eight of the forty-one things that arrived were never going to
-   need you, and something has to take them.
-
-   THREE SCREENS TALL WITH A STICKY STAGE. The stage is held for (section height
-   minus one viewport), so at 300svh it is held for two full screens: one to
-   arrive in, one to be inside. At 200svh the hold is exactly one screen and the
-   midpoint of the chapter — where the composition takes the centre of the frame
-   — lands precisely where the stage releases, so the thing you built is never
-   once on screen at full strength. That arithmetic is the whole reason for the
-   number.
-
-   overflow: clip, never hidden. hidden makes this element a scroll container,
-   and a scroll container is what a position:sticky descendant resolves against
-   — so the stage silently lays out as static while its computed position still
-   reads sticky. clip does the same clipping and creates no scroll container.
-   ========================================================================== */
-.singularity {
-  position: relative;
-  min-height: 300svh;
-  overflow: clip;
-  background: #070a0e;
-  color: #eceff4;
-  /* Hard edges top and bottom. The chapter is a different room, not a gradient
-     out of the one above it — an interpolated boundary here reads as a fade to
-     black, which is a transition, not a place. */
-  isolation: isolate;
-}
-
-.singularity__stage {
-  position: sticky;
-  top: 0;
-  height: 100svh;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-}
-
-.singularity__canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  z-index: 1;
-  /* Starts invisible ONLY in the sense that it has nothing drawn in it yet;
-     the CSS rendition beneath is showing the whole time, so there is no state
-     in which this area is blank. */
-  opacity: 0;
-  transition: opacity 900ms var(--ease-out);
-}
-.singularity.is-live .singularity__canvas { opacity: 1; }
-
-/* --------------------------------------------------------------------------
-   THE RENDITION.
-
-   What is shown when WebGL is unavailable, when the device is too small or too
-   modest to be handed 603KB of three.js, and when the reader has asked for
-   reduced motion. It is a DESIGNED STATE and not a failure state: a still of
-   the same subject, built from two gradients and costing nothing.
-
-   It is also what shows for the second or so before the scene has loaded, which
-   is why it is painted underneath rather than swapped in — there is never a
-   frame where this section is an empty black box.
-   -------------------------------------------------------------------------- */
-.singularity__still {
-  position: absolute;
-  left: 50%; top: 50%;
-  width: min(76vmin, 92vw);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  z-index: 0;
-  pointer-events: none;
-  background:
-    /* the shadow */
-    radial-gradient(circle at 50% 50%,
-      #000 0 11.5%, transparent 11.9%),
-    /* the photon ring */
-    radial-gradient(circle at 50% 50%,
-      transparent 0 16.4%, rgb(255 241 220 / 92%) 17.2%, transparent 18.4%),
-    /* the disk, squashed to near edge-on by the ellipse */
-    radial-gradient(ellipse 66% 13% at 50% 50%,
-      transparent 0 20%, rgb(255 122 26 / 88%) 30%, rgb(255 154 69 / 42%) 52%, transparent 74%);
-  filter: blur(.4px);
-}
-.singularity.is-live .singularity__still { opacity: 0; transition: opacity 900ms var(--ease-out); }
-
-/* --------------------------------------------------------------------------
-   The copy.
-
-   Three beats, revealed in turn as the chapter is travelled. They sit low and
-   left; the scene holds the right of the frame until the middle of the chapter
-   and only then takes the centre, by which point these have had their turn.
-   -------------------------------------------------------------------------- */
-.singularity__copy {
-  position: relative;
-  z-index: 3;
-  align-self: end;
-  width: 100%;
-  padding-bottom: clamp(3rem, 11vh, 7rem);
-}
-
-/* THE SCRIM, and it is not optional.
-
-   The copy sits on the left and the disk sweeps across it: at full approach the
-   disk spans seventy-one percent of the frame's width, centred, so its left
-   limb reaches well into this column. Measured against the ground alone the
-   orange line reads 7.60 and passes; measured against the composite that
-   actually occurs — the same text with the disk's brightest pass behind it —
-   it is the 2.61 failure this project has already shipped and fixed twice.
-
-   So the composite is made deterministic rather than argued about: a left
-   anchored wash that keeps this column on near-ground whatever is behind it,
-   fading out well before the singularity so the image is never boxed in.
-
-   It bleeds to -50vw on purpose. Ending it at the column's own edge puts a
-   visible vertical seam down the middle of a black field. */
-.singularity__copy { position: relative; }
-.singularity__copy::before {
-  content: "";
-  position: absolute;
-  inset: -2.5rem -1rem -3.5rem -50vw;
-  z-index: -1;
-  pointer-events: none;
-  /* The stops are SOLVED, not chosen. The element bleeds 50vw to the left, so
-     on a 1440 frame the gradient spans about 1936px starting at x = -720, and
-     the copy column runs from the wrap's left edge to roughly x = 600. The
-     94% stop therefore has to sit past 72% of the gradient's own length, or
-     the right-hand third of the text falls into the fade.
-
-     Measured at the stops this replaces: the orange line read 6.82 where the
-     scrim was 94% and 2.33 where it had fallen to 62% — and 62% was landing
-     inside the text. Same failure as the two this project has already fixed:
-     bright orange over something bright is 2.61 and it fails. */
-  background: linear-gradient(100deg,
-    #070a0e 0%,
-    rgb(7 10 14 / 96%) 62%,
-    rgb(7 10 14 / 92%) 74%,
-    rgb(7 10 14 / 48%) 88%,
-    rgb(7 10 14 / 0%) 100%);
-}
-
-.singularity__beats { margin: 0; max-width: 30ch; }
-
-.sbeat {
-  margin: 0;
-  font-size: clamp(1.35rem, 1.05rem + 1.35vw, 2.15rem);
-  line-height: 1.22;
-  letter-spacing: -.015em;
-  color: #f4f6f9;
-  /* 15.8 on #070a0e, and 12.1 against the worst case of the disk passing
-     behind it at full strength, which is the composite that actually matters. */
-}
-.sbeat + .sbeat { margin-top: .55rem; }
-.sbeat em { font-style: normal; color: var(--accent-fill); }
-
-/* Nothing starts invisible waiting on an observer; the script arms this, and
-   the un-armed state is simply the finished one. */
-.sbeat.is-armed { opacity: 0; transform: translateY(14px); }
-.sbeat {
-  transition: opacity 760ms var(--ease-out), transform 760ms var(--ease-out);
-}
-
-.singularity__tag {
-  margin: 1.7rem 0 0;
-  color: #9aa3ae;                 /* 7.02 on #070a0e */
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  font-size: .68rem;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* A static alternative, not a shortened one. The rendition is the whole
-     chapter, the section collapses to a single screen, and nothing moves. */
-  .singularity { min-height: 100svh; }
-  .sbeat { transition: none; }
-  .sbeat.is-armed { opacity: 1; transform: none; }
-}
-
-/* ============================================================================
    THE POINTER'S SHADOW
 
    A soft shadow cast by the cursor onto the page, which separates from it while
@@ -1177,4 +1039,133 @@ html.lenis, html.lenis body { height: auto; }
    would sit wherever a finger last was. */
 @media (hover: none), (pointer: coarse) {
   .pshadow { display: none; }
+}
+
+/* ============================================================================
+   THE HERO VOID
+
+   The hero's ground, and the singularity lives in it. See singularity.js for
+   the shader and for the measurements everything here shares.
+
+   WHY A BLACK HOLE CAN CARRY A HEADLINE. Seen near edge-on it concentrates
+   almost all of its light into one narrow horizontal band - measured at 11.4%
+   of frame height against 48.4% of frame width - and a tight ring. The rest of
+   the frame is genuinely empty. So the band is put low, the type sits above it,
+   and the two never compete. That is the whole composition, and it is the
+   reason this works where a flat dark panel with a picture on it would not.
+   ========================================================================== */
+.hero__void {
+  position: relative;
+  isolation: isolate;
+  /* clip, never hidden: hidden makes this a scroll container, which is what a
+     position:sticky descendant resolves against, and the masthead above it
+     would stop sticking. */
+  overflow: clip;
+  background: #05070a;
+  /* Sized against what is actually VISIBLE, which is the viewport less the
+     status bar and masthead above it. At a flat 90svh the void was 620px on a
+     620px screen, the two bands above it took another 145, and the hole sat
+     below the fold on the one screen it is supposed to own.
+
+     The subtraction is deliberately generous rather than exact: the masthead's
+     height moves with its own type, and a hero that is fifteen pixels short is
+     invisible where one that is fifteen pixels long pushes its own subject off
+     the bottom. */
+  min-height: clamp(460px, calc(96svh - 150px), 900px);
+  display: flex;
+  /* TOP, not centre. Centred, the copy's last row — the button and the hint
+     beside it — landed in the middle of the frame, which is exactly where the
+     disk's band is. The two were fighting over the same two hundred pixels.
+
+     Anchoring the copy to the top gives the band the lower third to itself,
+     and the lower third is the only part of this composition that is bright. */
+  align-items: flex-start;
+  padding-block: clamp(3rem, 9vh, 6rem) clamp(2rem, 6vh, 4rem);
+}
+
+.singularity__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  z-index: 0;
+  /* Nothing here starts invisible waiting on an observer - the still beneath is
+     painted the whole time, so there is no frame in which this area is blank.
+     This is a crossfade between two finished states. */
+  opacity: 0;
+  transition: opacity 1100ms var(--ease-out);
+}
+.hero__void.is-live .singularity__canvas { opacity: 1; }
+
+/* --------------------------------------------------------------------------
+   THE STILL
+
+   The same subject in gradients, on the same measured numbers as the shader:
+   the box is 34svh tall, so a shadow that should be 16.2% of the frame's height
+   is 47.6% of the box - a radius of 23.8% - and the ring sits at 1.38x that,
+   which is 32.8%.
+   -------------------------------------------------------------------------- */
+.singularity__still {
+  position: absolute;
+  left: 50%; top: 68.5%;
+  height: 34svh; aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  pointer-events: none;
+  background:
+    /* the photon ring, white into yellow */
+    radial-gradient(circle at 50% 50%,
+      transparent 0 30.6%,
+      rgb(247 253 240 / 96%) 32.2%,
+      rgb(247 228 137 / 82%) 34.4%,
+      rgb(240 163 96 / 22%) 40%,
+      transparent 56%),
+    /* the shadow, and it is opaque */
+    radial-gradient(circle at 50% 50%, #000 0 23.4%, rgb(0 0 0 / 0%) 24.4%);
+}
+
+/* The disk: a separate, much wider ellipse, because the ring above has to stay
+   circular and a single box cannot be both. */
+.singularity__still::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 300%; height: 34%;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  background:
+    radial-gradient(ellipse 50% 50% at 50% 50%,
+      rgb(247 253 240 / 78%) 0%,
+      rgb(247 228 137 / 62%) 12%,
+      rgb(240 163 96 / 46%) 30%,
+      rgb(220 70 77 / 34%) 58%,
+      rgb(220 70 77 / 0%) 88%);
+}
+
+.hero__void.is-live .singularity__still {
+  opacity: 0;
+  transition: opacity 1100ms var(--ease-out);
+}
+
+/* --------------------------------------------------------------------------
+   The copy, inverted for the ground it now sits on.
+
+   Every value here is measured against the worst case that actually occurs:
+   the scrim at its own opacity with the ring's hottest pixel behind it. Not
+   against #05070a, which is the easy case and the one that has let this
+   project ship a contrast failure four times.
+   -------------------------------------------------------------------------- */
+.hero__void .hero__title { color: #aab3bf; }
+.hero__void .hero__title em { color: #ffffff; }
+.hero__void .hero__lede { color: #b6bdc7; }
+.hero__void .hero__hint { color: #98a1ad; }
+.hero__void .pill { color: #f2b183; border-color: rgb(255 255 255 / 18%); background: rgb(255 255 255 / 6%); }
+
+/* The button keeps its orange fill and ink label: ink on --accent-fill is 6.94
+   and does not care what is behind the button. */
+
+@media (prefers-reduced-motion: reduce) {
+  /* A static alternative, not a shortened one: the still is the whole hero and
+     nothing moves. */
+  .singularity__canvas { display: none; }
+  .hero__void.is-live .singularity__still { opacity: 1; transition: none; }
 }
