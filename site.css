@@ -1508,3 +1508,76 @@ html.lenis, html.lenis body { height: auto; }
   .singularity__canvas { display: none; }
   .singularity.is-live .singularity__still { opacity: var(--void-scene, 1); transition: none; }
 }
+
+/* ============================================================================
+   HIT AREAS
+
+   MEASURED at 390x760 before this block, every one of these under the 44x44
+   minimum: the brand mark at 26px tall, the menu button at 38, the queue's
+   approve / edit / skip buttons at 33, the panel's close at 28, and the footer
+   navigation at 23. The desktop navigation measured 23 as well.
+
+   THE TYPE DOES NOT CHANGE. Not one font-size, letter-spacing or colour is
+   touched here — a tap target is a property of the hit area, not of the
+   lettering, and growing the text to fix a touch problem would break the type
+   system that was just built.
+
+   Two techniques, chosen per case:
+
+     min-height + centring   where the element already lays out as a box and can
+                             simply be taller. The text stays put; the box grows
+                             around it.
+
+     an invisible ::after    where widening the box would visibly change the
+                             spacing between items — the footer row, where the
+                             narrowest link is 32px wide and the gap between
+                             links is only 22px. The pseudo-element extends the
+                             hit area 6px each side without moving anything,
+                             which still leaves ~10px of dead space between
+                             neighbours so two targets can never overlap.
+   ========================================================================== */
+
+/* --- boxes that can simply be taller ----------------------------------- */
+.brand,
+.burger,
+.btn,
+.cta,
+.panel__close,
+.linkbtn {
+  min-height: 44px;
+}
+/* These are inline-flex already, but .brand and the text buttons are not
+   guaranteed to centre their own content once a min-height is applied. */
+.brand, .panel__close, .linkbtn {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* --- rows where widening would move things ------------------------------ */
+.nav a,
+.foot__nav a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.nav a::after,
+.foot__nav a::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: -6px; right: -6px;
+  /* Invisible, and behind its own text so it can never intercept a selection. */
+  z-index: -1;
+}
+
+/* The focus ring must follow the VISIBLE element, not the expanded hit area,
+   or it draws a box that looks wrong by six pixels on every side. :focus-visible
+   is already defined globally; this only stops the pseudo-element interfering. */
+.nav a:focus-visible,
+.foot__nav a:focus-visible { outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  /* The footer row gains height from the taller links, so its own vertical gap
+     comes down to keep the block the same size it was. */
+  .foot__nav { gap: 0 1.4rem; }
+}
