@@ -168,6 +168,49 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 }
 
 /* ============================================================================
+   THE TICKER
+
+   A running status line in the top band. LINEAR, and permanently so: this is a
+   constant-speed loop that meets itself, and any easing on it changes speed
+   across the seam, which reads as a stutter every time the track wraps. The
+   house rule against linear transitions is about UI feedback, where easing
+   carries meaning; a conveyor belt is the exception and this is a conveyor
+   belt.
+
+   The track holds the same run twice and travels exactly -50% of itself, so the
+   second copy is under the first at the moment it resets and the join is
+   invisible. Transform only, so it composites and never touches layout.
+   ========================================================================== */
+.ticker { overflow: hidden; }
+.ticker__track {
+  display: flex;
+  width: max-content;
+  animation: ticker 46s linear infinite;
+}
+.ticker__run {
+  display: flex; align-items: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.ticker__run b { font-weight: 500; color: var(--accent-fill); }
+.ticker__run span { color: #b9bec7; }
+.ticker__run i { font-style: normal; color: #6c727c; padding: 0 1.25rem; }
+
+@keyframes ticker {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* Paused on hover, so anyone trying to actually read a line can. */
+.ticker:hover .ticker__track { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Stopped, not slowed. The content is all still there and readable from the
+     start of the track. */
+  .ticker__track { animation: none; }
+}
+
+/* ============================================================================
    HERO
    ========================================================================== */
 

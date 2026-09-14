@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=dada48eb">
+<link rel="stylesheet" href="site.css?v=f39782d7">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -21,10 +21,29 @@
   <span class="aurora__grid"></span>
 </div>
 
+<!-- The ticker. A running status line rather than two fixed labels: this is an
+     operations product, and an ops surface that never moves is claiming nothing
+     is happening. The track is duplicated once and shifted by exactly half its
+     own width, which is what makes the loop seamless — aria-hidden on the copy
+     so it is announced once, not twice. -->
 <div class="statusbar">
-  <div class="wrap statusbar__inner">
-    <span class="mono">In development · not yet available</span>
-    <span class="mono statusbar__aside">Nothing sends without your approval</span>
+  <div class="ticker" data-ticker>
+    <div class="ticker__track">
+      <span class="ticker__run mono">
+        <b>In development</b><i>·</i><span>not yet available</span><i>·</i>
+        <b>Nothing sends without your approval</b><i>·</i>
+        <span>You approve that item, never that kind of item</span><i>·</i>
+        <b>No autonomous mode</b><i>·</i>
+        <span>Built in Mumbai</span><i>·</i>
+      </span>
+      <span class="ticker__run mono" aria-hidden="true">
+        <b>In development</b><i>·</i><span>not yet available</span><i>·</i>
+        <b>Nothing sends without your approval</b><i>·</i>
+        <span>You approve that item, never that kind of item</span><i>·</i>
+        <b>No autonomous mode</b><i>·</i>
+        <span>Built in Mumbai</span><i>·</i>
+      </span>
+    </div>
   </div>
 </div>
 
