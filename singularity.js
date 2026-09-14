@@ -403,39 +403,12 @@
     window.addEventListener("resize", resize);
     if (window.ResizeObserver) new ResizeObserver(resize).observe(host);
 
-    /* ---- where does the copy end? -------------------------------------
-       The scrim above the scene has to reach exactly that far and no further,
-       and the band below has to start after it. Both numbers come from the
-       same measurement rather than from two guesses that have to agree. */
-    var copyEnd = 0.70;
-    function measureCopy() {
-      /* The hero is no longer this layer's parent, so it is found on the
-         document. The gap and the scrim are still ITS problem: they belong to
-         the section the type is in, not to the layer the scene is on. */
-      var hero  = document.querySelector(".hero__void");
-      if (!hero) return;
-      var title = hero.querySelector(".hero__title");
-      var intro = hero.querySelector(".hero__intro");
-      if (!title || !intro) return;
-      var hb = hero.getBoundingClientRect();
-      if (!hb.height) return;
-
-      /* The band gap is retired. It existed so the accretion band could pass
-         BETWEEN the headline and the lede, back when the hole was dead centre
-         and the copy split around it. The hole now sits lower and the copy is
-         one block at the top, so there is nothing to push apart — and leaving
-         the gap in place was what kept pushing the headline down into the ring
-         while I dimmed and nudged the scene trying to fix the symptom. */
-
-      /* Written through the CSSOM, which style-src does not block — only a
-         style ATTRIBUTE in the markup would be. */
-      var ib = intro.getBoundingClientRect();
-      copyEnd = Math.min(0.82, Math.max(0.30, (ib.bottom - hb.top) / hb.height));
-      hero.style.setProperty("--scrim-end", (copyEnd * 100).toFixed(1) + "%");
-    }
-    measureCopy();
-    window.addEventListener("resize", measureCopy);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureCopy);
+    /* The copy used to be measured here to drive an inline --scrim-end custom
+       property on .hero__void. Nothing in the stylesheet has read that variable
+       since the scrim was deleted, so it was re-measuring the headline on every
+       resize and font load to set a value with no consumer - and it still
+       showed up in the inspector, which made it look like a live scrim.
+       Removed along with the band it used to position. */
 
     /* ---------------------------------------------------------------- state */
     var scrollP = 0;

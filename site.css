@@ -1133,16 +1133,15 @@ html.lenis, html.lenis body { height: auto; }
 /* TRANSPARENT. The dark ground is painted by the fixed layer underneath, which
    is what lets the scene be continuous with the rest of the page instead of
    ending at this element's edges. */
-/* The hero's top met the masthead as a hard line with the scene's bright band
-   cut across it — the layer beneath is fixed and full-viewport, so the
-   section's own top edge is where the cut showed. A short fade turns the join
-   into a transition. */
-.hero__void::after {
-  content: ""; position: absolute; z-index: 1;
-  left: 0; right: 0; top: 0; height: 90px;
-  background: linear-gradient(180deg, #05070a 0%, rgb(5 7 10 / 0%) 100%);
-  pointer-events: none;
-}
+/* NO BAND ACROSS THE TOP OF THE HERO. There was a .hero__void::after here: a
+   90px full-width strip pinned to top: 0, ramping from solid #05070a down to
+   transparent. It was added to soften the join where the oversized disk was
+   being cut off by the section's top edge - and it read as exactly what it
+   was, a hard black bar. Every earlier attempt to remove "the black shading"
+   deleted ::before, the scrim, and left this one standing.
+
+   The disk no longer reaches the hero's top edge, so there is no join left to
+   soften. The fix was the composition; this was covering for it. */
 
 .hero__void {
   position: relative;
@@ -1274,7 +1273,6 @@ html.lenis, html.lenis body { height: auto; }
   line-height: 1.02;
   letter-spacing: -.028em;
   white-space: normal;
-  /* No text-shadow. See the note on .hero__void::before below. */
 }
 
 /* Below the measure where the second line would be cut past legibility, it
