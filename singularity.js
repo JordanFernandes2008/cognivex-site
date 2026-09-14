@@ -82,8 +82,14 @@
      and the hero lost its background entirely — light grey type on white paper,
      unreadable, on exactly the modest devices that get the fallback. */
   var visible = -1;
-  var rooms = [".hero__void", ".tuesday--dark"]
-    .map(function (s) { return document.querySelector(s); })
+  /* ONE ROOM: THE WHOLE PAGE. It used to be two - the hero and the dark
+     morning - with the page's light sections opaque between them. That made
+     the scene a thing you saw twice, and it also made the scroll animation
+     nearly pointless: the streaks only existed in the two places you were
+     least likely to be moving fast through. With every section translucent
+     over the layer, the corridor runs the length of the document and the
+     motion has somewhere to happen. */
+  var rooms = [document.querySelector("[data-void-room]") || document.body]
     .filter(Boolean);
 
   function measureRooms() {

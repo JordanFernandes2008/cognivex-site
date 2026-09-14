@@ -1633,3 +1633,99 @@ html.lenis, html.lenis body { height: auto; }
 @media (prefers-reduced-motion: reduce) {
   .nw__row { transition: none; }
 }
+
+/* ============================================================================
+   THE VOID PAGE
+
+   The homepage only - the other pages share this stylesheet and stay light,
+   which is why every rule here is scoped to .void-page.
+
+   The scene is a FIXED layer the document scrolls through, so whether it is
+   visible is decided entirely by whether the sections on top of it are opaque.
+   They were: the page was white, the layer showed in two places, and the
+   hyperspace streaks only existed in the two rooms you were least likely to
+   be moving quickly through. Making the whole page translucent over the layer
+   is what gives the scroll animation somewhere to happen.
+
+   OPACITIES ARE THE LEGIBILITY BUDGET, not a style choice. A streak can put a
+   255-value pixel anywhere in the frame, so every panel is sized against that
+   worst case rather than against the dark the scene sits at most of the time:
+   at 82% over #090b0f a white pixel composites to 53, which is where the body
+   text still clears AA. Opening these up is possible; it costs contrast, and
+   the number to check is the composite, never the token.
+   ========================================================================== */
+.void-page {
+  --paper:  rgb(9 11 15 / 82%);
+  --alt:    rgb(5 7 10 / 88%);
+
+  --ink:    #eef0f2;
+  --muted:  #b2b9c2;
+  --dim:    #b6bcc4;
+  --edge:   #858c95;
+
+  --line:   rgb(255 255 255 / 11%);
+  --line-2: rgb(255 255 255 / 19%);
+
+  /* The orange had to move. #963f06 is 6.98 on white and 1.9 on this ground -
+     an accent chosen for a light page is not an accent, it is a dark smudge. */
+  --accent-text: #ff9d52;
+
+  /* Shadows do nothing on a dark ground except muddy the edges. */
+  --shadow-sm: none;
+  --shadow-lg: 0 30px 80px -40px rgb(0 0 0 / 80%);
+
+  color-scheme: dark;
+  background: #05070a;
+  color: var(--ink);
+}
+/* The root, not the body. html carries background: var(--paper) from the base
+   rules and .void-page is on the BODY, so --paper resolves light up there and
+   the root painted white behind everything - visible on overscroll. */
+html:has(.void-page) { background: #05070a; }
+
+/* Chrome that used --ink as a BACKGROUND rather than as text. Flipping the
+   token would have made these light panels with light text on them. */
+.void-page .statusbar { background: rgb(8 10 14 / 90%); }
+.void-page .foot      { background: rgb(5 7 10 / 88%); }
+.void-page .ticker    { background: rgb(9 11 15 / 86%); }
+.void-page .masthead  { background: rgb(8 10 14 / 82%); }
+
+/* Sections that hardcoded a light value instead of taking a token. */
+.void-page .nightwork { background: var(--paper); }
+.void-page .position  { background: rgb(24 15 9 / 84%); }  /* the warm band, inverted */
+
+/* The one step that asks something of the reader is tinted with the brand
+   warm. #fff3e8 on a dark page put 18px accent text at 1.89 and its body copy
+   at 1.81 - the only two failures in 162 text nodes, and both from a tint that
+   had been written as a literal instead of taken from a token. */
+.void-page .step--you { background: rgb(38 23 11 / 82%); }
+.void-page .loop      { background: var(--paper); }
+.void-page .ledger    { background: var(--alt); }
+.void-page .closing   { background: var(--alt); }
+
+/* ---------------------------------------------------------------------------
+   THE PRODUCT SURFACE STAYS LIGHT.
+
+   It is the one thing on the page that is not scenery - it is meant to read as
+   real chrome, a genuine application, and a real application is what it is
+   rather than whatever the page around it happens to be. A light panel lit
+   from behind by the starfield also gives the hero the only hard-edged object
+   in the composition, which is what stops the whole page being atmosphere.
+
+   So the tokens are re-asserted at its boundary and everything inside it -
+   cards, rail, drafts, the ghost row - inherits the light set unchanged.
+   ------------------------------------------------------------------------- */
+.void-page .app {
+  --paper:  #ffffff;
+  --alt:    #f5f4f1;
+  --ink:    #14161a;
+  --muted:  #55595f;
+  --dim:    #53585f;
+  --edge:   #b9b5ad;
+  --line:   #e6e4e0;
+  --line-2: #d8d5cf;
+  --accent-text: #963f06;
+  --shadow-sm: 0 1px 2px rgb(20 22 26 / 6%), 0 4px 12px -6px rgb(20 22 26 / 10%);
+  color-scheme: light;
+  color: var(--ink);
+}
