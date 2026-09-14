@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=2eed4bb0">
+<link rel="stylesheet" href="site.css?v=caca8d01">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -272,6 +272,28 @@
     </div>
   </section>
 
+  <!-- ── The singularity ────────────────────────────────────── -->
+  <!-- The one chapter here that is an image rather than an argument. See
+       singularity.js for what it is doing and site.css for why it is three
+       screens tall. The still underneath is a designed state: it is what shows
+       without WebGL, on a modest device, under reduced motion, and for the
+       second before the scene has loaded. This section is never an empty box. -->
+  <section class="singularity" data-singularity aria-labelledby="sing-h">
+    <div class="singularity__stage">
+      <div class="singularity__still" aria-hidden="true"></div>
+      <canvas class="singularity__canvas" aria-hidden="true"></canvas>
+
+      <div class="wrap singularity__copy">
+        <div class="singularity__beats">
+          <h2 class="sbeat" id="sing-h" data-sbeat>Forty-one things arrived before you opened the laptop.</h2>
+          <p class="sbeat" data-sbeat>Thirty-eight of them were never going to need you.</p>
+          <p class="sbeat" data-sbeat><em>Three were.</em></p>
+        </div>
+        <p class="singularity__tag mono">Nothing leaves without you</p>
+      </div>
+    </div>
+  </section>
+
   <!-- ── The loop ─────────────────────────────────────────────────────────── -->
   <section class="loop" id="loop">
     <div class="wrap">
@@ -426,6 +448,7 @@
 <script src="vendor/SplitText.min.js"></script>
 <script src="vendor/lenis.min.js"></script>
 <script src="site.js?v=1032b88e"></script>
+<script src="singularity.js?v=f3ef3d5c"></script>
 <script src="motion.js?v=bc725647"></script>
 </body>
 </html>
