@@ -1993,10 +1993,10 @@ html:has(.void-page) { background: #05070a; }
      own left edge - a softer step, but the same step. 54% x 56% puts the
      transparent stop essentially on the edge, so the residue there is under a
      tenth and there is nothing to see. */
-  -webkit-mask-image: radial-gradient(ellipse 54% 56% at 50% 50%,
+  -webkit-mask-image: radial-gradient(ellipse 48% 50% at 50% 50%,
     #000 0%, #000 40%, rgb(0 0 0 / 55%) 70%,
     rgb(0 0 0 / 15%) 88%, transparent 100%);
-  mask-image: radial-gradient(ellipse 54% 56% at 50% 50%,
+  mask-image: radial-gradient(ellipse 48% 50% at 50% 50%,
     #000 0%, #000 40%, rgb(0 0 0 / 55%) 70%,
     rgb(0 0 0 / 15%) 88%, transparent 100%);
   opacity: var(--void-scene, 1);
@@ -2037,3 +2037,27 @@ html:has(.void-page) { background: #05070a; }
    measure pulls that line back rather than moving the subject again, and 46ch
    is the better measure for this size regardless. */
 .void-page .hero__void .hero__lede { max-width: 46ch; }
+
+/* NARROW DESKTOP WINDOWS. Below about 1100px the hero collapses to one column,
+   the copy runs the full width, and the hole - placed for a two-column frame -
+   lands directly on it. Measured at 799px: the headline's third line fell to
+   2.03:1 and the lede's first to 1.10:1.
+
+   There is no second column to put it beside, so it goes BELOW and steps back,
+   which is the same rule portrait already follows. film.js now reads these
+   values rather than its own, so the enhancement starts from whichever
+   composition applies. */
+@media (max-width: 1100px) {
+  .singularity__film {
+    --film-s: .82; --film-x: 8%; --film-y: 46%;
+    /* AND IT STEPS BACK. Placement alone cannot solve this width: the copy is
+       single-column and full-bleed, the film's arms are full-bleed, and there
+       is no empty band to drop the hole into - at 950px the lede's last line
+       still measured 1.10:1 with the hole pushed as low as it can go.
+
+       brightness() rather than opacity, because film.js animates opacity on
+       entry and the two would fight over the same property. The words win at
+       this size; the film is atmosphere. */
+    filter: brightness(.5);
+  }
+}

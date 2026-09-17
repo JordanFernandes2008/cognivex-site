@@ -44,16 +44,27 @@
        here with the stylesheet's own numbers produces a different matrix - it
        put the hole's centre at 109% of the viewport, off screen entirely.
        Animating the inputs to the one CSS declaration cannot disagree with it. */
+    /* READ THE RESTING COMPOSITION OFF THE STYLESHEET rather than repeating
+       it here. Hardcoding it meant a media query could never move the film -
+       GSAP's inline values won - so the narrow-window composition, where the
+       hole otherwise lands on top of the copy, had no way to differ. */
+    var cs0 = getComputedStyle(film);
+    var S0 = parseFloat(cs0.getPropertyValue("--film-s")) || 0.95;
+    var X0 = (cs0.getPropertyValue("--film-x") || "31%").trim();
+    var Y0 = (cs0.getPropertyValue("--film-y") || "26%").trim();
+
     gsap.fromTo(film,
-      { opacity: 0, "--film-s": 0.90 },
-      { opacity: 1, "--film-s": 0.95, duration: 1.5, ease: "power2.out" });
+      { opacity: 0, "--film-s": S0 * 0.95 },
+      { opacity: 1, "--film-s": S0, duration: 1.5, ease: "power2.out" });
 
     /* Toward the middle and up as the hero is left behind, so leaving reads as
        travelling past the thing rather than as it scrolling away. */
     gsap.fromTo(film,
-      { "--film-s": 0.95, "--film-x": "31%", "--film-y": "26%" },
+      { "--film-s": S0, "--film-x": X0, "--film-y": Y0 },
       {
-        "--film-s": 1.16, "--film-x": "17%", "--film-y": "2%",
+        "--film-s": S0 * 1.22,
+        "--film-x": (parseFloat(X0) * 0.55).toFixed(1) + "%",
+        "--film-y": (parseFloat(Y0) * 0.08).toFixed(1) + "%",
         ease: "none",
         scrollTrigger: {
           trigger: hero,
