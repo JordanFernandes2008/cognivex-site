@@ -1163,7 +1163,19 @@ html.lenis, html.lenis body { height: auto; }
      and a height that grows with the content it is used to lay out oscillates:
      measure, enlarge the gap, grow the box, measure again. Fixing the box ends
      the loop, and the gap is then solved to fit inside it. */
-  height: clamp(440px, calc(94svh - 150px), 900px);
+  /* TALLER, because the arithmetic never worked at the old height.
+
+     At 94svh - 150px the void was 527px on a 720px screen. The copy block -
+     pill, four headline lines, three lede lines, the button row - is about
+     400px of that on its own, leaving roughly 127px for a subject whose ring
+     alone wants 250. Every placement tried against that simply pushed the hole
+     off the bottom: the last one put its CENTRE at 108% of the viewport, and
+     the contrast check passed only because the subject was not on screen.
+
+     A hero that is the full height of the window and a little more is the
+     normal shape for a cinematic one. The copy holds the top, the hole owns
+     the lower half, and neither is negotiating for the same pixels. */
+  height: clamp(680px, calc(118svh - 140px), 1180px);
   display: flex;
   /* TOP, not centre. Centred, the copy's last row — the button and the hint
      beside it — landed in the middle of the frame, which is exactly where the
@@ -1942,7 +1954,11 @@ html:has(.void-page) { background: #05070a; }
      gradient, no edge anywhere - the type is simply not standing on the light.
 
      Which means the composition is doing the work, not a treatment over it. */
-  transform: scale(1.56) translate(7%, 37%);
+  /* Scaled DOWN, not up. Cover already fills the box; upscaling past that
+     only threw the subject off the bottom edge. 0.95 with a 23% drop puts the
+     hole's centre near 72% of the hero - low enough to clear the copy, high
+     enough that the whole ring is on screen rather than a sliver of its arc. */
+  transform: scale(0.95) translate(31%, 26%);
   transform-origin: center;
   /* A VERTICAL fade, and the direction is the whole point.
 
@@ -1992,4 +2008,10 @@ html:has(.void-page) { background: #05070a; }
    the film's outer glow it measured 2.94:1. Brightening the TEXT is the honest
    fix here rather than dimming the footage further: the last attempt at that
    bought no contrast at all and hid the subject. */
-.void-page .hero__void .hero__lede { color: #dfe3e8; }
+.void-page .hero__void .hero__lede { color: #f2f4f6; }
+
+/* The lede's longest line was the only thing still reaching the disk's left
+   arm - 4.19:1 against its tip while every other line cleared 15. Capping the
+   measure pulls that line back rather than moving the subject again, and 46ch
+   is the better measure for this size regardless. */
+.void-page .hero__void .hero__lede { max-width: 46ch; }
