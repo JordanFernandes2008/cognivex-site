@@ -1969,23 +1969,36 @@ html:has(.void-page) { background: #05070a; }
   transform: scale(var(--film-s, 0.95))
              translate(var(--film-x, 31%), var(--film-y, 26%));
   transform-origin: center;
-  /* A VERTICAL fade, and the direction is the whole point.
+  /* FADED AT ITS OWN EDGES, radially, centred on the hole.
 
-     The diagonal mask read as a wedge because its boundary ran ACROSS the
-     composition. This one runs WITH it: the light rises out of the bottom of
-     the frame, which is how the footage is lit anyway, so the ramp has nothing
-     to cut. It also hides the clip's own top edge, which the downward offset
-     brings into view - keeping that edge off-screen by transform alone would
-     need scale 2.9 on a 1080p source, which is mush.
+     The element is transformed, so its edges sit INSIDE the viewport -
+     measured, the left edge lands at 31.6% and the top at 27.2%. With
+     mix-blend-mode: screen that is a step: everything to one side of the line
+     receives the film's light and everything to the other receives none. Those
+     were the hard vertical and horizontal seams down the page.
 
-     Copy lives in the top two thirds where both the footage and the ramp leave
-     it black. */
-  -webkit-mask-image: linear-gradient(to bottom,
-    transparent 0%, transparent 30%, rgb(0 0 0 / 22%) 44%,
-    rgb(0 0 0 / 70%) 58%, #000 72%);
-  mask-image: linear-gradient(to bottom,
-    transparent 0%, transparent 30%, rgb(0 0 0 / 22%) 44%,
-    rgb(0 0 0 / 70%) 58%, #000 72%);
+     A linear ramp was tried twice and both times its boundary ran ACROSS the
+     composition, which is what made it legible as a wedge. A radial fall-off
+     centred on the subject runs WITH it - it is the direction the light
+     already falls off - so it reaches zero before the element's edges and
+     there is no boundary left to find. It also thins the far arm over the copy
+     column for free, which is the other thing that kept needing solving.
+
+     Opaque out to 38%, which keeps the whole ring and the bright inner arms at
+     full strength; the taper past that is the arms ending, which is what they
+     do in the footage anyway. */
+  /* The ellipse's RADIUS has to be smaller than the distance to the element's
+     edge, or the fade never finishes. At 64% x 68% the ending shape reached
+     past the box and left roughly a quarter of the film still showing at its
+     own left edge - a softer step, but the same step. 54% x 56% puts the
+     transparent stop essentially on the edge, so the residue there is under a
+     tenth and there is nothing to see. */
+  -webkit-mask-image: radial-gradient(ellipse 54% 56% at 50% 50%,
+    #000 0%, #000 40%, rgb(0 0 0 / 55%) 70%,
+    rgb(0 0 0 / 15%) 88%, transparent 100%);
+  mask-image: radial-gradient(ellipse 54% 56% at 50% 50%,
+    #000 0%, #000 40%, rgb(0 0 0 / 55%) 70%,
+    rgb(0 0 0 / 15%) 88%, transparent 100%);
   opacity: var(--void-scene, 1);
   pointer-events: none;
   /* The clip is black-on-black, so SCREEN drops its background out entirely and
