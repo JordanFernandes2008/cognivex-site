@@ -265,7 +265,11 @@
         /* Relativistic beaming: the limb rotating toward the viewer is
            brighter. Without it the disk is symmetrical and wrong. */
         "  float beam = cos(a - 1.5707963);",
-        "  band *= 1.0 + 1.15 * beam;",
+        /* 1.15 swung the band from 2.15x on the approaching limb to 0.0 on the
+           receding one, which left one long arm and one stub. The reference has
+           BOTH arms lit and reaching the frame edge, the left merely brighter -
+           so the asymmetry is real but nothing like that strong. */
+        "  band *= 1.0 + 0.50 * beam;",
         /* Position along the measured ramp: hot at the inner edge, red at the
            outer. Doppler pushes the approaching limb up the ramp toward white,
            which is colour as well as brightness — beaming the intensity alone
@@ -304,7 +308,8 @@
            disk runs 85% of the frame's width as a band only a few per cent of
            its height, with the texture reading as clumps rather than as a
            gradient. Squash drops from 0.135 to 0.098 to get that. */
-        "  col += disk(q, 0.098, 1.30, " + HOLE.diskIn.toFixed(3) + ", " + HOLE.diskOut.toFixed(3) + ", 0.55);",
+        "  vec3 blade = disk(q, 0.098, 1.62, " + HOLE.diskIn.toFixed(3) + ", " + HOLE.diskOut.toFixed(3) + ", 0.55);",
+        "  col += blade;",
         /* THE EINSTEIN RING - the disk's far side, lensed up over the top of
            the shadow and down under the bottom, closing a vertical loop.
 
@@ -333,7 +338,11 @@
            times the shadow radius. Thin, the brightest thing in frame, and
            carrying a halo — a hairline alone aliases to a dotted circle at
            small sizes and reads as a drawn stroke at large ones. */
-        "  float rw = rs * 0.085;",
+        /* THICKER. Measured on the reference frame the bright loop is a BAND
+           roughly a twelfth of the shadow's diameter, not a hairline - at
+           0.085 it read as a drawn stroke around a circle rather than as the
+           brightest object in the picture. */
+        "  float rw = rs * 0.165;",
         "  float core = smoothstep(rw, 0.0, abs(r - ring));",
         "  float halo = exp(-abs(r - ring) / (rs * 0.55));",
         /* Brighter than it looks like it should be. The ring is the brightest
@@ -349,8 +358,33 @@
         "  float bloom = exp(-abs(r - ring) / (rs * 2.6)) * max(1.0 - abs(p.x) * 0.55, 0.0);",
         "  col += ramp(0.30) * bloom * 0.18;",
 
-        /* The shadow. Nothing comes out, so nothing is added. */
-        "  col *= smoothstep(rs, rs + 0.006, r);",
+        /* The shadow. Nothing comes out of it, so everything BEHIND it is cut. */
+        "  float shade = smoothstep(rs, rs + 0.006, r);",
+        "  col *= shade;",
+
+        /* ...BUT THE NEAR SIDE OF THE DISK IS IN FRONT OF THE HOLE.
+
+           This is the thing that was most wrong, and it is a depth mistake
+           rather than a lighting one. The mask above removes every photon
+           inside the shadow radius - including the half of the disk that is
+           between the viewer and the hole, which nothing is occluding. On the
+           reference the red band visibly crosses the LOWER part of the black
+           disc; cutting it there is what left this reading as a bright ring
+           with a dot sitting on it instead of as an object with a disk through
+           it.
+
+           Re-added only where the mask took it - (1.0 - shade) is 1 inside the
+           shadow and 0 outside - so nothing is counted twice. p.y is negative
+           downward in clip space, which is where the near side falls at this
+           tilt. */
+        /* Its own inner radius, and that is the whole reason the first attempt
+           at this drew nothing. The blade's inner edge is 0.20 while the
+           shadow is 0.115, so in the squashed metric the blade is ALREADY zero
+           everywhere inside the shadow - re-adding it there added zero. The
+           near arm has to reach in to 0.02 to actually cross the disc. */
+        "  vec3 nearArm = disk(q, 0.098, 1.62, 0.020, " + HOLE.diskOut.toFixed(3) + ", 0.55);",
+        "  float nearSide = smoothstep(0.02, -0.06, q.y);",
+        "  col += nearArm * nearSide * (1.0 - shade);",
 
         /* Fade the quad's own edge so it never shows as a rectangle. */
         "  float vig = 1.0 - smoothstep(0.86, 1.0, r);",
