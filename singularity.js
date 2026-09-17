@@ -199,16 +199,20 @@
            what makes the outer disk read as matter instead of as a fade. */
         "vec3 ramp(float t){",
         "  t = clamp(t, 0.0, 1.0);",
-        /* LIGHT GREY, not white. This stop is additive and the photon ring
-           multiplied it by 3.10, so it resolved to (3.00, 3.08, 2.92) and hard
-           clipped - every pixel near the ring was pure #ffffff with no
-           gradient left in it, which is what read as blown out. Dropping the
-           stop alone would not have fixed it; the multiplier had to come down
-           too, or the grey would just clip to white again. */
-        "  vec3 w = vec3(0.784, 0.804, 0.784);",
-        "  vec3 y = vec3(0.969, 0.894, 0.537);",
-        "  vec3 o = vec3(0.941, 0.639, 0.376);",
-        "  vec3 d = vec3(0.863, 0.275, 0.302);",
+        /* SAMPLED OFF THE REFERENCE, not invented. The two brightest pixels in
+           the mp4 measure (255, 235, 192) and (255, 209, 131) - a warm cream
+           and an amber, never a neutral white. The outer arms run deep red.
+
+           These were flattened to grey in an earlier pass because the ring was
+           clipping to #ffffff and reading as blown out. Desaturating was the
+           wrong fix for that: the reference is warmer than what was clipping,
+           not cooler. The real fix is the tone map at the end of main(), which
+           rolls highlights off instead of letting them hit the ceiling - so
+           the colour can go back to being warm AND stop blowing out. */
+        "  vec3 w = vec3(1.000, 0.925, 0.780);",
+        "  vec3 y = vec3(1.000, 0.820, 0.510);",
+        "  vec3 o = vec3(0.970, 0.520, 0.240);",
+        "  vec3 d = vec3(0.820, 0.190, 0.130);",
         "  if (t < 0.22) return mix(w, y, t / 0.22);",
         "  if (t < 0.52) return mix(y, o, (t - 0.22) / 0.30);",
         "  return mix(o, d, (t - 0.52) / 0.48);",
@@ -244,11 +248,10 @@
            wide, a ratio of about one to eight, which is what squash encodes.
            That narrowness is the entire reason this object can sit behind a
            headline — it leaves most of the frame genuinely empty. */
-        "vec3 disk(vec2 q, float squash, float gain){",
+        "vec3 disk(vec2 q, float squash, float gain, float inner, float outer, float feather){",
         "  vec2 d = q * vec2(1.0, 1.0 / squash);",
         "  float r = length(d);",
-        "  float inner = " + HOLE.diskIn.toFixed(3) + ", outer = " + HOLE.diskOut.toFixed(3) + ";",
-        "  float band = smoothstep(inner, inner + 0.03, r) * (1.0 - smoothstep(outer - 0.55, outer, r));",
+        "  float band = smoothstep(inner, inner + 0.03, r) * (1.0 - smoothstep(outer - feather, outer, r));",
         /* Early-out before any noise: most of the quad is outside the annulus,
            and this is what keeps the shader affordable. */
         "  if (band <= 0.002) return vec3(0.0);",
@@ -268,7 +271,7 @@
            which is colour as well as brightness — beaming the intensity alone
            leaves an evenly orange band with a bright patch on it, and that
            reads as a lighting mistake rather than as relativity. */
-        "  float t = smoothstep(inner, outer * 0.78, r) - max(beam, 0.0) * 0.22;",
+        "  float t = smoothstep(inner, mix(inner, outer, 0.78), r) - max(beam, 0.0) * 0.22;",
         "  return ramp(t) * band * gain;",
         "}",
 
@@ -297,13 +300,33 @@
 
         "  vec3 col = vec3(0.0);",
         /* The disk proper, lying almost flat. */
-        "  col += disk(q, 0.135, 1.25);",
-        /* Its far side, lensed up over the top and down under the bottom. THIS
-           IS WHAT CLOSES THE RING around the shadow, and the previous build had
-           it at a fifth of the strength it needed — without it you get a bright
-           band with a black dot sitting on it, rather than a hole with light
-           bent the whole way around it. */
-        "  col += disk(q, 1.30, 0.70);",
+        /* THE BLADE. Edge-on and thin: measured off the reference at 1.6s, the
+           disk runs 85% of the frame's width as a band only a few per cent of
+           its height, with the texture reading as clumps rather than as a
+           gradient. Squash drops from 0.135 to 0.098 to get that. */
+        "  col += disk(q, 0.098, 1.30, " + HOLE.diskIn.toFixed(3) + ", " + HOLE.diskOut.toFixed(3) + ", 0.55);",
+        /* THE EINSTEIN RING - the disk's far side, lensed up over the top of
+           the shadow and down under the bottom, closing a vertical loop.
+
+           THIS is what was missing, and it is the single thing that separates
+           the reference from what this looked like before. The previous pass
+           called the SAME disk at squash 1.30 - meaning it inherited the
+           blade's full radial extent, 0.20 out to 0.92 - so instead of an arc
+           hugging the shadow it painted a broad round haze the width of the
+           whole disk. A haze behind a black dot is not lensing; it reads as a
+           glow someone put behind a circle.
+
+           The far side is an ANNULUS, and a tight one: measured on the
+           reference frame the loop's outer edge sits at 1.40x the shadow
+           radius against the shadow's own 1.0, so it is a narrow band, not a
+           field. Round (squash 1.0) because the far side is lensed back to
+           circular regardless of how edge-on the near side is - that is the
+           whole optical point.
+
+           Two passes: a bright core arc, and a wider dimmer one under it so
+           the loop has falloff instead of an edge. */
+        "  col += disk(q, 1.00, 1.55, ring * 1.01, ring * 1.62, ring * 0.52);",
+        "  col += disk(q, 1.02, 0.42, ring * 0.99, ring * 2.35, ring * 1.45);",
 
         /* ---- the photon ring ---------------------------------------------
            Light that orbited the hole before escaping, at the MEASURED 1.38
@@ -317,14 +340,14 @@
            thing in the reference by a wide margin — measured at luminance 248
            against 167 for the hottest part of the disk — and at parity it
            stops reading as the thing the light is bending around. */
-        "  col += ramp(0.0) * core * 1.06;",
-        "  col += ramp(0.14) * halo * 0.50;",
+        "  col += ramp(0.0) * core * 2.60;",
+        "  col += ramp(0.14) * halo * 0.85;",
 
         /* A soft vertical bloom above and below the ring, which is the
            atmosphere the reference has and a bare ring does not. Narrowed
            toward the sides so it does not wash the whole band out. */
         "  float bloom = exp(-abs(r - ring) / (rs * 2.6)) * max(1.0 - abs(p.x) * 0.55, 0.0);",
-        "  col += ramp(0.30) * bloom * 0.11;",
+        "  col += ramp(0.30) * bloom * 0.18;",
 
         /* The shadow. Nothing comes out, so nothing is added. */
         "  col *= smoothstep(rs, rs + 0.006, r);",
@@ -337,6 +360,28 @@
            opaque black rectangle over everything it covers — and it covers more
            than the frame. Alpha is the luminance: as much of the page is hidden
            as there is light to hide it. */
+        /* TONE MAP, and this is what makes the brightness safe to spend.
+
+           Additive passes stack well past 1.0 around the photon ring. Clamping
+           throws that away channel by channel, and because red saturates first
+           and blue last, a clipped warm highlight walks up the hue toward pure
+           white - which is exactly the flat #ffffff that looked blown out.
+
+           Reinhard against the LUMINANCE rather than per channel: every channel
+           is divided by the same number, so the ratio between them - the hue -
+           survives the compression. A ring core at 2.6 lands near 0.72 as a
+           warm cream instead of clipping to white, and the deep red arms are
+           barely touched because their luminance is low. */
+        "  float lw = max(max(col.r, col.g), col.b);",
+        /* EXTENDED Reinhard, with a white point. Plain x/(1+x) never reaches 1,
+           so the ring core landed at 0.72 - #B8AA8F, visibly duller than the
+           reference, whose hottest pixel measures (255, 235, 192). The white
+           point lets a value at or above W finish at 1.0 while everything below
+           it still rolls off, so the ring reads hot and the mid-tones are not
+           dragged up with it. All three channels are scaled by the SAME factor,
+           which is what keeps the warmth instead of walking the hue to white. */
+        "  const float W = 2.8;",
+        "  col *= (1.0 + lw / (W * W)) / (1.0 + lw);",
         "  float lum = clamp(max(max(col.r, col.g), col.b), 0.0, 1.0);",
         "  gl_FragColor = vec4(col * vig * uPresence, lum * vig * uPresence);",
         "}"

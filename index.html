@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=a869204e">
+<link rel="stylesheet" href="site.css?v=7b9052b7">
 </head>
 <body class="void-page" data-void-room>
 <a class="skip" href="#main">Skip to content</a>
@@ -313,6 +313,239 @@
        surface, dark morning, light everything-else, dark close. That alternation
        is the rhythm, and it is what stops eight consecutive sections of cream
        reading as one very long section. -->
+  <!-- ── The walkthrough ────────────────────────────────────────
+       The queue above shows ONE MOMENT. The question people actually have is
+       about range - what happens to a complaint as against an invoice as
+       against junk - and a single screenshot cannot answer that.
+
+       So: six panels, one per kind of work, and a control that moves between
+       them. Scripted, fixed copy, no model behind it, and the page says so
+       rather than implying a live account.
+
+       Every panel answers the same three things in the same order - what came
+       in, why it was handled this way, what is sitting there now - because the
+       reasoning being visible IS the product claim.
+       ──────────────────────────────────────────────────────────── -->
+  <section class="walk" aria-labelledby="walk-h">
+    <div class="wrap">
+      <p class="cap mono"><span>See it work</span><b>6 kinds of item</b></p>
+      <h2 class="walk__h" id="walk-h" data-rise>One night, item by item. <em>Click through what it actually did.</em></h2>
+
+      <div class="walk__player" data-walk data-rise data-rise-delay="60">
+        <div class="walk__tabs" role="tablist" aria-label="Kinds of item">
+          <button class="walk__tab mono" data-walk-tab role="tab" type="button"
+                  id="wt-0" aria-controls="wp-0" aria-selected="true" tabindex="0">
+            <span class="walk__tabn">01</span>Email reply
+          </button>
+          <button class="walk__tab mono" data-walk-tab role="tab" type="button"
+                  id="wt-1" aria-controls="wp-1" aria-selected="false" tabindex="-1">
+            <span class="walk__tabn">02</span>Invoice
+          </button>
+          <button class="walk__tab mono" data-walk-tab role="tab" type="button"
+                  id="wt-2" aria-controls="wp-2" aria-selected="false" tabindex="-1">
+            <span class="walk__tabn">03</span>Social post
+          </button>
+          <button class="walk__tab mono" data-walk-tab role="tab" type="button"
+                  id="wt-3" aria-controls="wp-3" aria-selected="false" tabindex="-1">
+            <span class="walk__tabn">04</span>Complaint
+          </button>
+          <button class="walk__tab mono" data-walk-tab role="tab" type="button"
+                  id="wt-4" aria-controls="wp-4" aria-selected="false" tabindex="-1">
+            <span class="walk__tabn">05</span>Repeat question
+          </button>
+          <button class="walk__tab mono" data-walk-tab role="tab" type="button"
+                  id="wt-5" aria-controls="wp-5" aria-selected="false" tabindex="-1">
+            <span class="walk__tabn">06</span>Noise
+          </button>
+        </div>
+
+        <div class="walk__stage">
+        <article class="walk__panel" data-walk-panel role="tabpanel" tabindex="-1"
+                 id="wp-0" aria-labelledby="wt-0">
+          <p class="walk__kind mono">EMAIL REPLY</p>
+
+          <div class="walk__grid">
+            <div class="walk__lane">
+              <p class="walk__lab mono">What arrived</p>
+              <p class="walk__who">Priya Nair &middot; supplier</p>
+              <p class="walk__sub">&ldquo;Invoice 0142 &mdash; still showing unpaid&rdquo;</p>
+              <p class="walk__meta mono">2nd chase &middot; 18 days overdue</p>
+            </div>
+
+            <div class="walk__lane">
+              <p class="walk__lab mono">Why this, and not something else</p>
+              <p class="walk__why">Invoice 0142 is 18 days past its due date and Priya replied on the last thread, so this stays in that conversation rather than starting a new one. The transfer reference comes from your own records.</p>
+            </div>
+
+            <div class="walk__lane walk__lane--out">
+              <p class="walk__lab mono">What it prepared</p>
+              <div class="walk__draft">Hi Priya &mdash; checking in on invoice 0142 from 3 March. It is still showing unpaid on my side. If it has already gone out, ignore this and I will chase my bank. If not, I have attached it again. Thanks.</div>
+            </div>
+          </div>
+
+          <p class="walk__foot">
+            <span class="walk__st walk__st--you mono">Needs you</span>
+            <span class="walk__note">Money is involved, so it does not move without you.</span>
+          </p>
+        </article>
+
+        <article class="walk__panel" data-walk-panel role="tabpanel" tabindex="-1"
+                 id="wp-1" aria-labelledby="wt-1">
+          <p class="walk__kind mono">INVOICE</p>
+
+          <div class="walk__grid">
+            <div class="walk__lane">
+              <p class="walk__lab mono">What arrived</p>
+              <p class="walk__who">Fairlane Studio &middot; September retainer</p>
+              <p class="walk__sub">Monthly retainer, same terms as August</p>
+              <p class="walk__meta mono">Due in 30 days &middot; recurring</p>
+            </div>
+
+            <div class="walk__lane">
+              <p class="walk__lab mono">Why this, and not something else</p>
+              <p class="walk__why">August&rsquo;s invoice to the same client cleared without edits, so this one is built from it: same line items, same terms, the date and the number moved on. Nothing new was invented.</p>
+            </div>
+
+            <div class="walk__lane walk__lane--out">
+              <p class="walk__lab mono">What it prepared</p>
+              <div class="walk__draft">INVOICE 0147 &middot; Fairlane Studio<br>September retainer &mdash; design and build<br>net 30 &middot; due 17 October</div>
+            </div>
+          </div>
+
+          <p class="walk__foot">
+            <span class="walk__st mono">Drafted</span>
+            <span class="walk__note">Prepared and sitting in Drafted. Not issued.</span>
+          </p>
+        </article>
+
+        <article class="walk__panel" data-walk-panel role="tabpanel" tabindex="-1"
+                 id="wp-2" aria-labelledby="wt-2">
+          <p class="walk__kind mono">SOCIAL POST</p>
+
+          <div class="walk__grid">
+            <div class="walk__lane">
+              <p class="walk__lab mono">What arrived</p>
+              <p class="walk__who">Draft &middot; the walnut bench</p>
+              <p class="walk__sub">Queued for Friday</p>
+              <p class="walk__meta mono">From this week&rsquo;s photos</p>
+            </div>
+
+            <div class="walk__lane">
+              <p class="walk__lab mono">Why this, and not something else</p>
+              <p class="walk__why">You photographed the walnut bench on Tuesday and it has not been posted. Friday is when your posts get the most replies, so it is queued there rather than pushed out now.</p>
+            </div>
+
+            <div class="walk__lane walk__lane--out">
+              <p class="walk__lab mono">What it prepared</p>
+              <div class="walk__draft">The walnut bench, finished this week. Solid oiled walnut, through-wedged tenons, no screws anywhere in it. Made to order &mdash; six weeks at the moment.</div>
+            </div>
+          </div>
+
+          <p class="walk__foot">
+            <span class="walk__st mono">Drafted</span>
+            <span class="walk__note">Queued, not published. You approve the post itself.</span>
+          </p>
+        </article>
+
+        <article class="walk__panel" data-walk-panel role="tabpanel" tabindex="-1"
+                 id="wp-3" aria-labelledby="wt-3">
+          <p class="walk__kind mono">COMPLAINT</p>
+
+          <div class="walk__grid">
+            <div class="walk__lane">
+              <p class="walk__lab mono">What arrived</p>
+              <p class="walk__who">Order 2213 &middot; wrong item shipped</p>
+              <p class="walk__sub">&ldquo;This is not what I ordered&rdquo;</p>
+              <p class="walk__meta mono">Received 6:12am &middot; first contact</p>
+            </div>
+
+            <div class="walk__lane">
+              <p class="walk__lab mono">Why this, and not something else</p>
+              <p class="walk__why">The order record shows the wrong piece was picked, so this is your error and the reply says so plainly. A replacement is drawn up at no charge. It is flagged to you because an apology in your name is yours to make.</p>
+            </div>
+
+            <div class="walk__lane walk__lane--out">
+              <p class="walk__lab mono">What it prepared</p>
+              <div class="walk__draft">I am sorry &mdash; we sent the wrong piece. That is our mistake. A replacement is going out today at no charge, and there is a prepaid label attached for the one you have.</div>
+            </div>
+          </div>
+
+          <p class="walk__foot">
+            <span class="walk__st walk__st--you mono">Needs you</span>
+            <span class="walk__note">An apology in your name is never sent for you.</span>
+          </p>
+        </article>
+
+        <article class="walk__panel" data-walk-panel role="tabpanel" tabindex="-1"
+                 id="wp-4" aria-labelledby="wt-4">
+          <p class="walk__kind mono">THE SAME QUESTION, THREE TIMES</p>
+
+          <div class="walk__grid">
+            <div class="walk__lane">
+              <p class="walk__lab mono">What arrived</p>
+              <p class="walk__who">Three people &middot; separately</p>
+              <p class="walk__sub">&ldquo;What time do you open?&rdquo;</p>
+              <p class="walk__meta mono">6:40am, 7:15am, 8:02am</p>
+            </div>
+
+            <div class="walk__lane">
+              <p class="walk__lab mono">Why this, and not something else</p>
+              <p class="walk__why">All three want one fact that is already in your opening hours. The answer is the same, so it is written once and addressed three times. This is the category that quietly eats a morning.</p>
+            </div>
+
+            <div class="walk__lane walk__lane--out">
+              <p class="walk__lab mono">What it prepared</p>
+              <div class="walk__draft">We open at 10am, Tuesday to Sunday. Closed Mondays. If you are coming for a specific piece, message ahead and I will have it out on the floor for you.</div>
+            </div>
+          </div>
+
+          <p class="walk__foot">
+            <span class="walk__st mono">Drafted</span>
+            <span class="walk__note">Three replies, one decision from you.</span>
+          </p>
+        </article>
+
+        <article class="walk__panel" data-walk-panel role="tabpanel" tabindex="-1"
+                 id="wp-5" aria-labelledby="wt-5">
+          <p class="walk__kind mono">NOTHING TO DO</p>
+
+          <div class="walk__grid">
+            <div class="walk__lane">
+              <p class="walk__lab mono">What arrived</p>
+              <p class="walk__who">Newsletters &times;6, promotions &times;14</p>
+              <p class="walk__sub">Filed, unread</p>
+              <p class="walk__meta mono">20 of the morning&rsquo;s 41 items</p>
+            </div>
+
+            <div class="walk__lane">
+              <p class="walk__lab mono">Why this, and not something else</p>
+              <p class="walk__why">None of these need an answer, a decision or a record. They are filed where you can still find them and are not counted as work. Deciding what does NOT need you is most of the job.</p>
+            </div>
+
+            <div class="walk__lane walk__lane--out">
+              <p class="walk__lab mono">What it prepared</p>
+              <div class="walk__draft">&mdash;</div>
+            </div>
+          </div>
+
+          <p class="walk__foot">
+            <span class="walk__st walk__st--quiet mono">Filed</span>
+            <span class="walk__note">Nothing deleted. Nothing needed you.</span>
+          </p>
+        </article>
+        </div>
+
+        <div class="walk__bar">
+          <button class="walk__nav" data-walk-prev type="button">Back</button>
+          <span class="walk__pos mono" data-walk-pos aria-live="polite">01 / 06</span>
+          <button class="walk__nav walk__nav--go" data-walk-next type="button">Next kind of item</button>
+        </div>
+
+        <p class="walk__disc mono">Scripted walkthrough &middot; fixed example copy &middot; not connected to a live account</p>
+      </div>
+    </div>
+  </section>
+
   <section class="tuesday tuesday--dark">
     <div class="wrap">
       <p class="cap mono"><span>The morning</span><b>41 things</b></p>
@@ -563,7 +796,8 @@
 <script src="vendor/lenis.min.js"></script>
 <script src="site.js?v=1032b88e"></script>
 <script src="cursor.js?v=f97330b9"></script>
-<script src="singularity.js?v=cda12602"></script>
+<script src="singularity.js?v=b1c72894"></script>
+<script src="walk.js?v=e324178f"></script>
 <script src="motion.js?v=bc725647"></script>
 </body>
 </html>

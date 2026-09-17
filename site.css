@@ -1736,3 +1736,163 @@ html:has(.void-page) { background: #05070a; }
 .nf__list li { color: var(--muted); font-size: .95rem; line-height: 1.55; }
 .nf__list a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .nf__list a:hover { color: var(--accent-text); }
+
+/* ============================================================================
+   THE WALKTHROUGH
+
+   Six panels, one per kind of item, and a control that moves between them.
+   Styled as an instrument rather than a slideshow: fixed height so the page
+   does not jump as you click, monospace labels so the three lanes read as
+   fields rather than as prose, and the status borrowed from the catalogue so
+   the same three words mean the same three things everywhere on the page.
+   ========================================================================== */
+.walk { padding-block: clamp(3.5rem, 9vw, 7rem); background: var(--alt); }
+.walk__h {
+  font-size: var(--t-h2); line-height: var(--lh-h2);
+  letter-spacing: -.032em; max-width: 24ch;
+}
+.walk__h em { font-style: normal; color: var(--accent-text); }
+
+.walk__player {
+  margin-top: clamp(2rem, 5vw, 3.2rem);
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  background: var(--paper);
+  overflow: hidden;
+}
+
+/* --- the type selector --------------------------------------------------- */
+.walk__tabs {
+  display: flex; flex-wrap: wrap; gap: 0;
+  border-bottom: 1px solid var(--line);
+}
+.walk__tab {
+  flex: 1 1 auto;
+  display: inline-flex; align-items: center; gap: .5rem;
+  min-height: 44px;                    /* the hit-area floor, same as the nav */
+  padding: .75rem 1rem;
+  background: none; border: 0;
+  border-right: 1px solid var(--line);
+  font: inherit; font-size: var(--t-micro);
+  font-weight: var(--w-do);
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--dim); cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--t-micro) var(--ease-out),
+              color var(--t-micro) var(--ease-out);
+}
+.walk__tab:last-child { border-right: 0; }
+.walk__tabn { color: var(--edge); font-variant-numeric: tabular-nums; }
+@media (hover: hover) { .walk__tab:hover { background: var(--alt); color: var(--ink); } }
+.walk__tab.is-on { color: var(--ink); background: var(--alt); box-shadow: inset 0 -2px 0 var(--accent-fill); }
+.walk__tab.is-on .walk__tabn { color: var(--accent-text); }
+
+/* --- the stage ----------------------------------------------------------- */
+/* A floor, not a fixed height: the panels differ in length and a hard height
+   would either clip the longest or strand the shortest in whitespace. The floor
+   is set to roughly the tallest so the page still does not jump much. */
+.walk__stage { padding: clamp(1.2rem, 3vw, 2rem); min-height: 20rem; }
+
+/* THE ENHANCEMENT SWITCH. Panels are visible in the markup and only become
+   hideable once walk.js has attached - so a script that never arrives leaves
+   six readable panels rather than an empty box with a dead button under it. */
+.walk__player.is-enhanced .walk__panel[hidden] { display: none; }
+.walk__panel { outline: none; }
+.walk__panel + .walk__panel { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+.walk__player.is-enhanced .walk__panel + .walk__panel { margin-top: 0; padding-top: 0; border-top: 0; }
+
+.walk__panel.is-in { animation: walkIn 420ms var(--ease-out) both; }
+@keyframes walkIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.walk__kind {
+  font-size: var(--t-micro); letter-spacing: .16em; text-transform: uppercase;
+  color: var(--accent-text); margin: 0 0 1.1rem;
+}
+
+.walk__grid {
+  display: grid; gap: clamp(1.1rem, 3vw, 2.2rem);
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr) minmax(0, 1.2fr);
+  align-items: start;
+}
+.walk__lab {
+  font-size: var(--t-micro); letter-spacing: .13em; text-transform: uppercase;
+  color: var(--dim); margin: 0 0 .55rem;
+}
+.walk__who  { margin: 0; color: var(--ink); font-size: var(--t-small); font-weight: var(--w-do); }
+.walk__sub  { margin: .3rem 0 0; color: var(--muted); font-size: var(--t-small); line-height: 1.5; }
+.walk__meta { margin: .45rem 0 0; color: var(--edge); font-size: var(--t-micro); }
+.walk__why  { margin: 0; color: var(--muted); font-size: var(--t-small); line-height: var(--lh-body); }
+
+.walk__draft {
+  padding: .85rem .95rem;
+  border-radius: 3px 8px 8px 3px;
+  border-left: 2px solid var(--accent-fill);
+  background: var(--alt);
+  color: var(--ink);
+  font-size: var(--t-small); line-height: 1.6;
+}
+
+.walk__foot {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem 1rem;
+  margin: 1.4rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line);
+}
+/* The same three words as the catalogue, and SENT is still not one of them. */
+.walk__st {
+  font-size: var(--t-micro); letter-spacing: .13em; text-transform: uppercase;
+  color: var(--muted);
+}
+.walk__st--you   { color: var(--accent-text); }
+.walk__st--quiet { color: var(--edge); }
+.walk__note { color: var(--dim); font-size: var(--t-small); }
+
+/* --- the control bar ----------------------------------------------------- */
+.walk__bar {
+  display: flex; align-items: center; gap: 1rem;
+  padding: .8rem clamp(1.2rem, 3vw, 2rem);
+  border-top: 1px solid var(--line);
+  background: var(--alt);
+}
+.walk__nav {
+  min-height: 44px; padding: .6rem 1.1rem;
+  border: 1px solid var(--line-2); border-radius: 999px;
+  background: var(--paper); color: var(--ink);
+  font: inherit; font-size: var(--t-small); font-weight: var(--w-do);
+  cursor: pointer;
+  transition: border-color var(--t-micro) var(--ease-out),
+              background-color var(--t-micro) var(--ease-out);
+}
+@media (hover: hover) { .walk__nav:hover { border-color: var(--edge); } }
+.walk__nav--go {
+  margin-left: auto;
+  background: var(--accent-fill); border-color: var(--accent-fill);
+  color: var(--on-accent);
+}
+.walk__pos { color: var(--dim); font-size: var(--t-micro); font-variant-numeric: tabular-nums; }
+
+.walk__disc {
+  margin: 0; padding: .7rem clamp(1.2rem, 3vw, 2rem);
+  border-top: 1px solid var(--line);
+  color: var(--edge); font-size: var(--t-micro);
+  letter-spacing: .08em; text-transform: uppercase;
+}
+
+/* Narrow: the three lanes stack, and the tabs scroll sideways rather than
+   wrapping into a six-row block that pushes the panel off the screen. */
+@media (max-width: 860px) {
+  .walk__grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .walk__tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .walk__tabs::-webkit-scrollbar { display: none; }
+  .walk__tab { flex: 0 0 auto; }
+  .walk__bar { flex-wrap: wrap; }
+  .walk__nav--go { margin-left: 0; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walk__panel.is-in { animation: none; }
+  .walk__tab, .walk__nav { transition: none; }
+}
