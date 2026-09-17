@@ -1958,7 +1958,16 @@ html:has(.void-page) { background: #05070a; }
      only threw the subject off the bottom edge. 0.95 with a 23% drop puts the
      hole's centre near 72% of the hero - low enough to clear the copy, high
      enough that the whole ring is on screen rather than a sliver of its arc. */
-  transform: scale(0.95) translate(31%, 26%);
+  /* Through VARIABLES, so the composition has one owner.
+
+     film.js animates these three rather than writing a transform of its own.
+     That matters because GSAP composes as translate-then-scale while CSS here
+     composes scale-then-translate: handing GSAP the same three numbers
+     reproduced a DIFFERENT matrix and put the hole's centre at 109% of the
+     viewport - off screen, with the contrast check passing because the subject
+     was absent. Animating the inputs to this one declaration cannot drift. */
+  transform: scale(var(--film-s, 0.95))
+             translate(var(--film-x, 31%), var(--film-y, 26%));
   transform-origin: center;
   /* A VERTICAL fade, and the direction is the whole point.
 
