@@ -165,7 +165,14 @@
                              this used to stop at.                            */
     };
 
-    var uniforms = { uTime: { value: 0 }, uPresence: { value: 0 } };
+    var uniforms = {
+      uTime: { value: 0 }, uPresence: { value: 0 },
+      /* The copy column in NDC, and the drawing-buffer size to turn
+         gl_FragCoord back into NDC. Shared with the starfield below - one
+         object, so one update feeds both materials and they cannot drift. */
+      uCopy: { value: new THREE.Vector4(-1, -1, -1, -1) },
+      uRes:  { value: new THREE.Vector2(1, 1) }
+    };
 
     var VERT = [
       "varying vec2 vUv;",
@@ -192,6 +199,8 @@
         "precision highp float;",
         "varying vec2 vUv;",
         "uniform float uTime, uPresence;",
+        "uniform vec4 uCopy;",
+        "uniform vec2 uRes;",
 
         /* ---- the measured ramp -------------------------------------------
            t = 0 at the hottest part of the ring, 1 at the far edge of the
@@ -260,8 +269,11 @@
            makes the disk shear instead of turning like a plate. */
         "  float orbit = uTime * (0.62 / max(r, 0.20));",
         "  float turb = fbm(vec2(a * 4.2 + orbit, r * 9.0 - orbit * 0.3));",
-        "  turb = turb * turb * 1.85;",
-        "  band *= 0.22 + 1.15 * turb;",
+        /* Harder clumping. The reference's band is not a smooth gradient - it
+           is lumpy, with visibly brighter knots riding along it. One squaring
+           gave a gentle variation that averaged to a wash at this scale. */
+        "  turb = turb * turb * turb * 2.60;",
+        "  band *= 0.14 + 1.55 * turb;",
         /* Relativistic beaming: the limb rotating toward the viewer is
            brighter. Without it the disk is symmetrical and wrong. */
         "  float beam = cos(a - 1.5707963);",
@@ -308,7 +320,7 @@
            disk runs 85% of the frame's width as a band only a few per cent of
            its height, with the texture reading as clumps rather than as a
            gradient. Squash drops from 0.135 to 0.098 to get that. */
-        "  vec3 blade = disk(q, 0.098, 1.62, " + HOLE.diskIn.toFixed(3) + ", " + HOLE.diskOut.toFixed(3) + ", 0.55);",
+        "  vec3 blade = disk(q, 0.132, 2.35, " + HOLE.diskIn.toFixed(3) + ", " + HOLE.diskOut.toFixed(3) + ", 0.55);",
         "  col += blade;",
         /* THE EINSTEIN RING - the disk's far side, lensed up over the top of
            the shadow and down under the bottom, closing a vertical loop.
@@ -382,7 +394,7 @@
            shadow is 0.115, so in the squashed metric the blade is ALREADY zero
            everywhere inside the shadow - re-adding it there added zero. The
            near arm has to reach in to 0.02 to actually cross the disc. */
-        "  vec3 nearArm = disk(q, 0.098, 1.62, 0.020, " + HOLE.diskOut.toFixed(3) + ", 0.55);",
+        "  vec3 nearArm = disk(q, 0.132, 2.35, 0.020, " + HOLE.diskOut.toFixed(3) + ", 0.55);",
         "  float nearSide = smoothstep(0.02, -0.06, q.y);",
         "  col += nearArm * nearSide * (1.0 - shade);",
 
@@ -416,6 +428,24 @@
            which is what keeps the warmth instead of walking the hue to white. */
         "  const float W = 2.8;",
         "  col *= (1.0 + lw / (W * W)) / (1.0 + lw);",
+        /* HOLD OFF THE WORDS. The disk is 115% of the frame's width and tilted
+           eight degrees, so its left arm RISES as it travels and lands in the
+           copy column - measured, the headline's third line fell to 1.89:1 and
+           the lede's first to 1.03:1 against an arm at (185,139,88).
+
+           Dimming the whole scene would undo the size that makes it work, and
+           a panel behind the text was rejected outright. So the scene is held
+           back only inside the rectangle the copy actually occupies, measured
+           off the DOM each frame - the same mask the starfield already uses,
+           and per FRAGMENT rather than per vertex for the same reason: a long
+           bright arm crossing the boundary would otherwise carry its
+           brightness in with it. */
+        "  vec2 ndc = (gl_FragCoord.xy / uRes) * 2.0 - 1.0;",
+        "  float cmx = 1.0 - smoothstep(uCopy.z, uCopy.z + 0.22, ndc.x);",
+        "  float cmy = smoothstep(uCopy.y - 0.16, uCopy.y, ndc.y)",
+        "            * (1.0 - smoothstep(uCopy.w, uCopy.w + 0.16, ndc.y));",
+        "  float keep = 1.0 - 0.90 * cmx * cmy;",
+        "  col *= keep;",
         "  float lum = clamp(max(max(col.r, col.g), col.b), 0.0, 1.0);",
         "  gl_FragColor = vec4(col * vig * uPresence, lum * vig * uPresence);",
         "}"
@@ -509,9 +539,10 @@
       /* the hole's world x/y, so the streaks point at wherever it has drifted */
       uAxis:     { value: new THREE.Vector2(0, 0) },
       /* the copy column in NDC: xMin, yMin, xMax, yMax */
-      uCopy:     { value: new THREE.Vector4(-1, -1, -1, -1) },
-      /* drawing-buffer size, so gl_FragCoord can be turned back into NDC */
-      uRes:      { value: new THREE.Vector2(1, 1) },
+      /* THE SAME OBJECTS as the glow material above, not copies - so the one
+         measurement in the frame loop drives both and they cannot disagree. */
+      uCopy:     uniforms.uCopy,
+      uRes:      uniforms.uRes,
       /* the same object, not a copy - the stars fade with the scene */
       uPresence: uniforms.uPresence
     };
@@ -802,7 +833,12 @@
          40rem - 33% at 1920 - so the glow and the words never meet, and the
          right arm bleeds 11% off the edge so the object reads as continuing
          past the frame rather than as a sticker centred in it. */
-      var diskSpan = portrait ? 0.80 : 0.64;
+      /* BIG, AND IT RUNS OFF BOTH EDGES. 0.64 fitted the disk neatly inside
+         the frame with room to spare, which is exactly what made it read as a
+         small ornament parked in a corner. The reference's disk spans ~85% of
+         a frame it is CENTRED in and its arms leave the picture; an object the
+         eye has to complete reads as bigger than the window. */
+      var diskSpan = portrait ? 0.95 : 1.15;
       var hs = (diskSpan * frameW) / (2 * HOLE.diskOut);
 
       camera.position.set(0, 0, 6);
@@ -843,9 +879,14 @@
            hero reads as moving past the thing rather than as it fading. The
            drift is eased, not linear - a constant slide would race the scroll
            and arrive before you do. */
+        /* Right of centre but no longer hiding at the edge, and DROPPED so the
+           band crosses beneath the copy rather than through it. The disk is
+           vertically thin, so a low band splits the hero into a readable strip
+           above and a lit one below instead of fighting the headline. It still
+           travels on scroll, back toward the middle and up. */
         var ease = scrollP * scrollP * (3 - 2 * scrollP);
-        hole.position.x += frameW * (0.34 - 0.30 * ease);
-        hole.position.y -= frameH * (0.02 - 0.20 * ease);
+        hole.position.x += frameW * (0.20 - 0.18 * ease);
+        hole.position.y -= frameH * (0.33 - 0.38 * ease);
       }
       /* DEAD CENTRE, and the layout is what moves instead.
 
