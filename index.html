@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=7b9052b7">
+<link rel="stylesheet" href="site.css?v=b05547bf">
 </head>
 <body class="void-page" data-void-room>
 <a class="skip" href="#main">Skip to content</a>
@@ -43,8 +43,21 @@
      layer up. -->
 <div class="singularity" data-singularity aria-hidden="true">
   <div class="singularity__ground"></div>
-  <div class="singularity__still"></div>
-  <canvas class="singularity__canvas"></canvas>
+  <!-- THE REAL FOOTAGE.
+
+       This was a hand-written GLSL approximation for several rounds and it was
+       never going to win: the target is a produced render, and a shader that
+       reimplements it from analytic lensing lands in the uncanny middle -
+       structurally correct, visibly synthetic. The actual clip is 497KB, which
+       is less than the three.js runtime it replaces.
+
+       muted + playsinline + autoplay is the only combination browsers will
+       start without a gesture; the poster carries the first paint and is also
+       what reduced-motion users keep. -->
+  <video class="singularity__film" autoplay muted loop playsinline
+         preload="auto" poster="media/singularity-poster.jpg" aria-hidden="true">
+    <source src="media/singularity.mp4" type="video/mp4">
+  </video>
 </div>
 
 <!-- The ticker. A running status line rather than two fixed labels: this is an
@@ -796,7 +809,6 @@
 <script src="vendor/lenis.min.js"></script>
 <script src="site.js?v=1032b88e"></script>
 <script src="cursor.js?v=f97330b9"></script>
-<script src="singularity.js?v=1f6870c6"></script>
 <script src="walk.js?v=e324178f"></script>
 <script src="motion.js?v=bc725647"></script>
 </body>

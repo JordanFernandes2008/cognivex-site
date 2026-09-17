@@ -1683,6 +1683,20 @@ html.lenis, html.lenis body { height: auto; }
    the root painted white behind everything - visible on overscroll. */
 html:has(.void-page) { background: #05070a; }
 
+/* THE AURORA WAS BUILT FOR A WHITE PAGE.
+
+   .aurora::before is a 100deg gradient running through rgba(255,255,255,0.72)
+   and rgba(255,236,214,0.8) on a skew - a soft sheen across a light ground. On
+   this dark ground it is a glaring white diagonal wedge across the hero, and it
+   is what I twice mistook for my own mask cutting the footage. Three separate
+   mask geometries were tried against a wedge that was never the mask.
+
+   The white sheen and the flat white wash both go. The coloured orbs stay, well
+   down, because they are what keeps the dark from being flat. */
+.void-page .aurora::before,
+.void-page .aurora::after { display: none; }
+.void-page .aurora { opacity: .42; }
+
 /* Chrome that used --ink as a BACKGROUND rather than as text. Flipping the
    token would have made these light panels with light text on them. */
 .void-page .statusbar { background: rgb(8 10 14 / 90%); }
@@ -1896,3 +1910,86 @@ html:has(.void-page) { background: #05070a; }
   .walk__panel.is-in { animation: none; }
   .walk__tab, .walk__nav { transition: none; }
 }
+
+/* ============================================================================
+   THE FILM
+
+   The hero's black hole is the reference footage itself, not a reimplementation
+   of it. Placed so the hole sits right of centre and its band crosses LOW,
+   which is what keeps the copy column dark - the clip is centred in its own
+   frame, so it has to be scaled up and pushed to land where the layout needs
+   it rather than where it was shot.
+   ========================================================================== */
+.singularity__film {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  /* Scaled past the frame and offset: the hole lands around 72% across and 68%
+     down, so the headline sits above the band and left of the glow. */
+  /* THE COPY SITS WHERE THE FOOTAGE IS BLACK.
+
+     Two masking attempts failed for the same reason, and it is worth stating
+     so it is not tried a third time: light grey text over a bright orange arm
+     cannot reach AA at any opacity. Measured, the arm behind "finished work."
+     read (252,108,92) - a 1.33:1 contrast - and feathering the film only
+     traded that for a visible diagonal wedge across the hero, which is the
+     same edge the scrim was removed for.
+
+     The reference answers this itself: everything above and below its band is
+     PURE BLACK - corners measured (0,0,0). So the band goes into the lower
+     third and the copy occupies the black upper two thirds. No mask, no
+     gradient, no edge anywhere - the type is simply not standing on the light.
+
+     Which means the composition is doing the work, not a treatment over it. */
+  transform: scale(1.56) translate(7%, 37%);
+  transform-origin: center;
+  /* A VERTICAL fade, and the direction is the whole point.
+
+     The diagonal mask read as a wedge because its boundary ran ACROSS the
+     composition. This one runs WITH it: the light rises out of the bottom of
+     the frame, which is how the footage is lit anyway, so the ramp has nothing
+     to cut. It also hides the clip's own top edge, which the downward offset
+     brings into view - keeping that edge off-screen by transform alone would
+     need scale 2.9 on a 1080p source, which is mush.
+
+     Copy lives in the top two thirds where both the footage and the ramp leave
+     it black. */
+  -webkit-mask-image: linear-gradient(to bottom,
+    transparent 0%, transparent 30%, rgb(0 0 0 / 22%) 44%,
+    rgb(0 0 0 / 70%) 58%, #000 72%);
+  mask-image: linear-gradient(to bottom,
+    transparent 0%, transparent 30%, rgb(0 0 0 / 22%) 44%,
+    rgb(0 0 0 / 70%) 58%, #000 72%);
+  opacity: var(--void-scene, 1);
+  pointer-events: none;
+  /* The clip is black-on-black, so SCREEN drops its background out entirely and
+     leaves only the light. Nothing to key, no rectangle edge, and the page's
+     own ground shows through the empty areas. */
+  mix-blend-mode: screen;
+}
+
+/* Reduced motion keeps the poster - the same frame, holding still. */
+@media (prefers-reduced-motion: reduce) {
+  .singularity__film { display: none; }
+  .singularity__ground {
+    background:
+      #05070a url("media/singularity-poster.jpg") center / cover no-repeat;
+    opacity: var(--void-scene, 1);
+  }
+}
+
+/* Portrait has no second column, so the film drops below the copy and steps
+   back, the same rule the shader followed. */
+@media (max-aspect-ratio: 1 / 1) {
+  .singularity__film {
+    transform: scale(1.5) translate(0, 22%);
+    opacity: .62;
+  }
+}
+
+/* The hero lede was --muted, #8d97a5 - a value chosen for dark-on-white. Over
+   the film's outer glow it measured 2.94:1. Brightening the TEXT is the honest
+   fix here rather than dimming the footage further: the last attempt at that
+   bought no contrast at all and hid the subject. */
+.void-page .hero__void .hero__lede { color: #dfe3e8; }
