@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=71271a5b">
+<link rel="stylesheet" href="site.css?v=b4e73a52">
 </head>
 <body class="void-page" data-void-room>
 <a class="skip" href="#main">Skip to content</a>
@@ -166,12 +166,36 @@
       <div class="app">
         <div class="app__bar">
           <span class="app__id"><i aria-hidden="true"></i>Cognivex</span>
+          <!-- The route this view lives at inside the app, not a domain. A
+               fabricated URL would read as a real product address on a site
+               whose whole point is that it is not available yet. -->
+          <span class="app__route mono" aria-hidden="true">/queue/today</span>
           <span class="app__ctx mono">Tuesday · 9:40am · Bandra</span>
           <span class="app__who" aria-hidden="true">SB</span>
         </div>
 
         <div class="app__body">
           <aside class="rail">
+            <!-- THE ARGUMENT, and it goes first.
+
+                 Forty-one things arrived and three need the owner. That ratio
+                 is the entire product, and it was previously spelled out only
+                 as two numbers buried in two separate lists - a "3" in a status
+                 row and a "41" in a group header - which asks the reader to do
+                 the arithmetic that IS the pitch. Stated once, plainly, as the
+                 most legible thing in the window. -->
+            <div class="rail__arg">
+              <p class="rail__arg-line">
+                <b class="rail__arg-n">41</b>
+                <span class="rail__arg-t">came in this morning</span>
+              </p>
+              <p class="rail__arg-line rail__arg-line--out">
+                <b class="rail__arg-n">3</b>
+                <span class="rail__arg-t">need a decision from you</span>
+              </p>
+              <p class="rail__arg-note mono">the other 38 were handled or filed</p>
+            </div>
+
             <p class="rail__group mono">Today</p>
             <ul class="rail__list">
               <li class="rail__item is-on"><span>Needs you</span><b>3</b></li>
@@ -807,7 +831,7 @@
 <script src="vendor/ScrollTrigger.min.js"></script>
 <script src="vendor/SplitText.min.js"></script>
 <script src="vendor/lenis.min.js"></script>
-<script src="site.js?v=1032b88e"></script>
+<script src="site.js?v=d3f3e002"></script>
 <script src="cursor.js?v=f97330b9"></script>
 <script src="walk.js?v=e324178f"></script>
 <script src="film.js?v=5bc8be4b"></script>

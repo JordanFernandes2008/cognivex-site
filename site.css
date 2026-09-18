@@ -1175,7 +1175,22 @@ html.lenis, html.lenis body { height: auto; }
      A hero that is the full height of the window and a little more is the
      normal shape for a cinematic one. The copy holds the top, the hole owns
      the lower half, and neither is negotiating for the same pixels. */
-  height: clamp(680px, calc(118svh - 140px), 1180px);
+  /* ONE SCREEN, no dead scroll. 118svh - 140px made the void 1134px on a
+     1080p display - taller than the window - so there was a stretch of empty
+     dark to scroll past before anything arrived. The subject does not live in
+     this box: .singularity is fixed and full-viewport, so the ring's size and
+     position are set by the WINDOW, not by the hero's height. Shortening this
+     therefore removes the dead space without shrinking the black hole at all.
+     Sized to end at the fold: the status bar and masthead above take ~110px. */
+  /* MEASURED, not guessed. Above this box sit the status bar (48px) and the
+     masthead (63px), and the hero section's own lead-in - 198px in total at
+     1440x900, where a 116px subtraction left 82px of the void hanging below
+     the fold. The lead-in scales with the viewport, so it is subtracted as the
+     same expression rather than as a fixed number. */
+  /* The lead-in is .hero's padding-block, clamp(3rem, 6vw, 5.5rem) - based on
+     VIEWPORT WIDTH, not height, so it is subtracted as that same expression.
+     A first attempt used 9vh here and was wrong at every width. */
+  height: clamp(520px, calc(100svh - 111px - clamp(3rem, 6vw, 5.5rem)), 1000px);
   display: flex;
   /* TOP, not centre. Centred, the copy's last row — the button and the hint
      beside it — landed in the middle of the frame, which is exactly where the
@@ -1465,14 +1480,8 @@ html.lenis, html.lenis body { height: auto; }
 
    Smaller, lower and dimmer: it becomes atmosphere under the type rather than
    an object competing with it. The type wins, which was always the rule. */
-@media (max-aspect-ratio: 1 / 1) {
-  .singularity__still {
-    height: 34svh;
-    left: 50%; top: 76%;
-    opacity: .42;
-  }
-  .singularity.is-live .singularity__still { opacity: 0; }
-}
+/* The .singularity__still portrait rules were removed with the element itself:
+   the CSS-gradient fallback was replaced by the video and its poster. */
 
 /* The morning lets the layer through. Translucent rather than opaque, so the
    same object that lit the hero is still there behind it. */
@@ -2021,8 +2030,16 @@ html:has(.void-page) { background: #05070a; }
    back, the same rule the shader followed. */
 @media (max-aspect-ratio: 1 / 1) {
   .singularity__film {
-    transform: scale(1.5) translate(0, 22%);
-    opacity: .62;
+    /* THROUGH THE VARIABLES. This block used to write `transform` directly,
+       left over from before the composition moved to custom properties - so on
+       any portrait screen it silently overrode the variable-driven placement
+       with scale(1.5) translate(0, 22%), a big centred hole whose arm crossed
+       the copy. Measured on a 390x844 phone: three lede lines at 3.39:1.
+
+       It also set `opacity`, which film.js animates on entry - two owners for
+       one property. brightness() steps the film back without that fight. */
+    --film-s: .58; --film-x: 0%; --film-y: 30%;
+    filter: brightness(.45);
   }
 }
 
@@ -2049,7 +2066,11 @@ html:has(.void-page) { background: #05070a; }
    composition applies. */
 @media (max-width: 1100px) {
   .singularity__film {
-    --film-s: .82; --film-x: 8%; --film-y: 46%;
+    /* Smaller AND higher. At .82/46% the centre landed near 88% of a 768px
+       tall window and the ring fell off the bottom, while the arm still
+       crossed the lede at 3.42:1. Shrinking the subject is what buys both:
+       a smaller ring fits above the fold, and its arms reach less far. */
+    --film-s: .60; --film-x: 6%; --film-y: 34%;
     /* AND IT STEPS BACK. Placement alone cannot solve this width: the copy is
        single-column and full-bleed, the film's arms are full-bleed, and there
        is no empty band to drop the hole into - at 950px the lede's last line
@@ -2060,4 +2081,112 @@ html:has(.void-page) { background: #05070a; }
        this size; the film is atmosphere. */
     filter: brightness(.5);
   }
+}
+
+/* ============================================================================
+   THE PRODUCT SURFACE, AS A WINDOW
+
+   This is the one hard-edged object on a page made of atmosphere, and the one
+   thing on it that behaves like software rather than describing software. It
+   has to survive being looked at closely.
+
+   No fake traffic lights. Three dots borrowed from another operating system
+   say "screenshot of someone else's app"; a hairline, one lit edge and a real
+   route say "this is the thing".
+   ========================================================================== */
+.app {
+  border: 1px solid var(--line-2);
+  /* ONE CRISP EDGE, and only one. A highlight along the top lip is how a
+     physical panel catches light - repeated on all four sides it stops being
+     light and becomes a stroke. Under it, a tight contact shadow and a wide
+     soft one: the tight shadow is what sets the object ON something, the wide
+     one is what gives it height above it. */
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 92%),
+    0 1px 2px rgb(20 22 26 / 6%),
+    0 40px 80px -40px rgb(20 22 26 / 30%);
+}
+
+/* The route this view lives at. Mono, quiet, and sized like metadata rather
+   than like a label - it should be readable when looked for and ignorable when
+   not, which is how a real address bar behaves. */
+.app__route {
+  font-size: var(--t-micro);
+  letter-spacing: .06em;
+  /* --dim, not --edge. --edge is #b9b5ad, a LINE colour: as text on --paper it
+     measures 2.04:1. Metadata still has to be readable. */
+  color: var(--dim);
+  padding: .2rem .5rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper);
+  white-space: nowrap;
+}
+
+/* --- the argument -------------------------------------------------------
+   41 in, 3 out. The numbers carry it, so they get the size and the text gets
+   out of the way. tabular-nums so they cannot shuffle width, and a fixed
+   number column so 41 and 3 align on their right edge - a ragged left column
+   reads as two unrelated facts instead of one ratio. */
+.rail__arg {
+  padding: .2rem .6rem 1rem;
+  margin-bottom: .9rem;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+.rail__arg-line { display: flex; align-items: baseline; gap: .65rem; margin: 0; }
+.rail__arg-line + .rail__arg-line { margin-top: .55rem; }
+.rail__arg-n {
+  flex: 0 0 auto;
+  min-width: 2.2ch;
+  text-align: right;
+  font-size: 1.85rem;
+  line-height: 1;
+  font-weight: var(--w-read);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  color: var(--ink);
+}
+.rail__arg-t { font-size: .84rem; line-height: 1.28; color: var(--muted); }
+
+/* The second line is the one that asks something of the reader, so it is the
+   only one that gets the accent. --accent-text, never --accent-fill: the fill
+   orange is 2.9:1 on this ground and is for surfaces, not words. */
+.rail__arg-line--out .rail__arg-n { color: var(--accent-text); }
+.rail__arg-line--out .rail__arg-t { color: var(--ink); }
+
+.rail__arg-note {
+  margin: .75rem 0 0;
+  font-size: var(--t-micro);
+  letter-spacing: .06em;
+  color: var(--dim);
+}
+
+/* --- narrow: a summary row, not a shrunken desktop ----------------------
+   Below 700px the rail sits under the queue, and the full morning feed -
+   ten rows of things that did NOT need the owner - becomes a long scroll
+   past the point it was making. The ratio is the point, so on a phone the
+   ratio is all that survives: the two numbers go side by side and the feed
+   and status lists are gone. */
+@media (max-width: 700px) {
+  .rail__list, .rail__feed, .rail > .rail__group { display: none; }
+  .rail { padding: .85rem .9rem; }
+  .rail__arg {
+    display: flex;
+    align-items: baseline;
+    gap: 1.4rem;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    flex-wrap: wrap;
+  }
+  .rail__arg-line + .rail__arg-line { margin-top: 0; }
+  .rail__arg-n { font-size: 1.45rem; min-width: 0; }
+  .rail__arg-t { font-size: .78rem; max-width: 9ch; }
+  .rail__arg-note { flex: 1 0 100%; margin-top: .55rem; }
+}
+
+/* The route label is the first thing to go when the bar runs out of room -
+   it is texture, and texture does not get to push the timestamp off. */
+@media (max-width: 560px) {
+  .app__route { display: none; }
 }

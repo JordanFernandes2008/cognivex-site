@@ -93,10 +93,18 @@
        stack ghosts at the same coordinates — each correct on its own, but a
        pile-up that reads as clutter. Fast-forwarding the previous one settles
        it instantly: by the time the next card departs, the last has gone. */
+    /* SYNCHRONOUSLY, and that is the whole point of the change.
+
+       This used to call finish() on the outgoing animation and rely on its
+       onfinish handler to remove the node. The Web Animations API fires finish
+       ASYNCHRONOUSLY - so during a rapid burst the next ghost() ran before the
+       previous handler had, found a node it had already "settled", and left it
+       behind. Measured: five rapid Approve clicks left two ghosts in the DOM
+       permanently. Cancel and remove in the same tick; oncancel then removes a
+       node that is already gone, which is harmless. */
     root.querySelectorAll(".ghost").forEach(function (old) {
-      var running = old.getAnimations();
-      if (running.length) running.forEach(function (a) { a.finish(); });
-      else old.remove();
+      old.getAnimations().forEach(function (a) { a.cancel(); });
+      old.remove();
     });
 
     var host = root.getBoundingClientRect();
@@ -234,6 +242,7 @@
     addRecord(card, outcome);
     refresh(true);
     say(message);
+    settleSoon();
   }
 
   function sendToBack(card) {
@@ -243,6 +252,7 @@
     flip(all, function () { stack.appendChild(card); });
     refresh(true);
     say("Moved to the back of the queue. Nothing was sent.");
+    settleSoon();
   }
 
   /* --- Interaction -------------------------------------------------------- */
@@ -304,6 +314,24 @@
      A backgrounded tab freezes requestAnimationFrame, so an in-flight animation
      neither finishes nor cancels and its cleanup never runs. Reconcile forces
      the resting state back to correct without waiting on any animation. */
+  /* A debounced settle. reconcile() existed but only ever ran on
+     visibilitychange, so nothing reasserted the truth after a burst of
+     approvals - and refresh() counts cards() while the departing card is STILL
+     in the DOM, because it is removed inside the FLIP callback. Every roll was
+     therefore one high, and the queue finished reading "1" with zero cards
+     left. Measured, on three approvals.
+
+     560ms is past the longest thing that can still be running: the ghost is
+     330ms and a FLIP is 320ms plus up to 150ms of stagger. */
+  var settleTimer = null;
+  function settleSoon() {
+    if (settleTimer) window.clearTimeout(settleTimer);
+    settleTimer = window.setTimeout(function () {
+      settleTimer = null;
+      reconcile();
+    }, 560);
+  }
+
   function reconcile() {
     root.querySelectorAll(".ghost").forEach(function (g) { g.remove(); });
     var track = counter && counter.querySelector(".roller__track");

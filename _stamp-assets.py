@@ -25,7 +25,7 @@ def digest(name):
         return hashlib.sha256(fh.read()).hexdigest()[:8]
 
 
-ASSETS = ['site.css', 'site.js', 'motion.js', 'singularity.js', 'cursor.js', 'walk.js', 'film.js']
+ASSETS = ['site.css', 'site.js', 'motion.js', 'cursor.js', 'walk.js', 'film.js']
 
 stamps = {}
 for name in ASSETS:

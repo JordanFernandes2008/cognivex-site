@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=71271a5b">
+<link rel="stylesheet" href="site.css?v=b4e73a52">
 </head>
 <!--
   THE 404.
@@ -23,10 +23,16 @@
 
   DELIBERATELY SCRIPT-FREE. Every other page loads GSAP, ScrollTrigger, SplitText
   and Lenis; none of that earns its download on the page you land on by mistake.
-  That has two consequences handled below: no [data-rise] attributes, since those
-  are only revealed by motion.js and would otherwise sit at opacity 0 forever,
-  and no burger button, since the menu it opens is wired up by script. The nav is
-  laid out plainly instead, so nothing here is an affordance that cannot work.
+  One consequence handled below: no burger button, since the menu it opens is
+  wired up by script. The nav is laid out plainly instead, so nothing here is an
+  affordance that cannot work.
+
+  An earlier version of this note also claimed [data-rise] elements would sit at
+  opacity 0 without motion.js. That was wrong and worth correcting rather than
+  copying forward: the CSS only hides [data-rise].is-armed, and .is-armed is
+  added BY script - so with JS off nothing arms and nothing hides. Verified
+  against the served markup: zero is-armed, zero inline styles, 91 data-rise
+  elements across the site, all of them visible.
 -->
 <body>
 <a class="skip" href="#main">Skip to content</a>
