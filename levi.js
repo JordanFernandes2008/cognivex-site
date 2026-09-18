@@ -381,7 +381,13 @@
   }
 
   window.addEventListener("resize", function () {
-    if (!anyZoneUsable()) { leave(false); return; }
+    /* NARROWING MUST NOT BE FATAL. This used to call leave(), which removes the
+       nodes and sets done = true - permanently, for the rest of the visit. Any
+       resize that momentarily found no usable zone (opening devtools, dragging
+       across a breakpoint, a reflow during load) destroyed Levi, and widening
+       the window again never brought it back. Go quiet instead, and return when
+       a zone is usable again. */
+    if (!anyZoneUsable()) { goQuiet(); return; }
     readPosition();
     if (REDUCED) settleNow(); else run();
   });
