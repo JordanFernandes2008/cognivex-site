@@ -1,33 +1,33 @@
 /* ============================================================================
    LEVI — the homepage script.
 
-   SHORT, because length is what made this read as a tooltip. Measured on the
-   reference: its speech IS in a container - a 41x21px pill with a 72.7px
-   radius - and it does not read as UI because the text is two or three words,
-   so the container is barely larger than the words. Our lines were one to
-   three sentences, which no amount of removing the box was going to fix.
+   SPOKEN, NOT TELEGRAPHED. The two-word version fixed the tooltip problem and
+   created a new one: "The rest, handled." is not how a person talks, it is how
+   a status bar talks. These are five to ten words each, the length of somebody
+   turning their screen toward you and saying one thing about it.
 
-   Levi does not introduce itself any more. The paragraph about what it is
-   belongs to the page, once, where the product is described - not to a
-   character standing in front of you saying it.
+   Flat and unhurried. No exclamation marks, no adjectives doing sales work.
 
-   VOICE. Flat and quiet. No exclamation marks, no adjectives doing sales work.
-   It states what is on the screen and stops.
+   EVERY FACT HERE IS ALREADY ON THE PAGE. The previous draft had Levi saying
+   "This ran at 3am" - there is no 3am anywhere in the night-work section, or
+   any time at all; it was invented, and it is gone. What the page really
+   carries is 41 in, 3 needing a decision, 38 handled, 0 sent without you, and
+   the four kinds of work in the ledger.
 
-   Each stop names a ZONE, not a selector to point at. The page declares where
-   the light may be; if a section has no zone, Levi is not there for it.
+   Each stop names a ZONE. The page declares where the light may be; a section
+   with no usable zone simply has no line.
    ========================================================================== */
 window.LEVI_SCRIPT = [
-  { zone: "hero",      say: "Forty-one came in." },
-  { zone: "walk",      say: "Three needed you." },
-  { zone: "tuesday",   say: "The rest, handled." },
-  { zone: "nightwork", say: "This ran at 3am." },
-  { zone: "loop",      say: "Drafted, not sent." },
-  { zone: "ledger",    say: "Nothing left without you." },
-  { zone: "position",  say: "Other tools wait to be told." },
-  { zone: "closing",   say: "You approved three things." }
+  { zone: "hero",      say: "Forty-one came in overnight. Three of them need you." },
+  { zone: "walk",      say: "Here is each one, and what happened to it." },
+  { zone: "tuesday",   say: "This is the morning as it would actually arrive." },
+  { zone: "nightwork", say: "Everything from one night, and what was prepared." },
+  { zone: "loop",      say: "Three steps, and you are the third one." },
+  { zone: "ledger",    say: "Four kinds of work, each leaving a record." },
+  { zone: "position",  say: "Other tools wait to be told what to do." },
+  { zone: "closing",   say: "That is all of it. Nothing went without you." }
 ];
 
 /* What it says when you stop. A timer, and the line says only what a timer
-   knows - it does not claim to be watching. */
-window.LEVI_IDLE = ["Still here."];
+   knows - it does not claim to be watching you. */
+window.LEVI_IDLE = ["Still here whenever you are."];

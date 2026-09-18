@@ -2250,8 +2250,8 @@ html:has(.void-page) { background: #05070a; }
 .levi__star {
   position: absolute;
   left: 0; top: 0;
-  width: 124px; height: 124px;
-  margin: -62px 0 0 -62px;
+  width: 104px; height: 104px;
+  margin: -52px 0 0 -52px;
   padding: 0; border: 0; border-radius: 50%;
   background: none;
   pointer-events: auto;
@@ -2263,7 +2263,7 @@ html:has(.void-page) { background: #05070a; }
 .levi__shadow {
   position: absolute;
   left: 50%; top: 50%;
-  width: 300px; height: 96px;
+  width: 210px; height: 68px;
   transform: translate(-50%, -50%)
              translate(var(--levi-shx, 20px), var(--levi-shy, 52px))
              scale(var(--levi-shs, 1));
@@ -2272,6 +2272,23 @@ html:has(.void-page) { background: #05070a; }
     rgb(0 0 0 / 52%) 0%, rgb(0 0 0 / 30%) 38%, rgb(0 0 0 / 10%) 64%, transparent 84%);
   pointer-events: none;
 }
+
+/* The trail. Behind everything, additive, and gone the moment it stops. */
+.levi__trail {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle,
+    rgb(255 206 150 / 70%) 0%, rgb(255 150 60 / 34%) 42%, transparent 72%);
+  transform: translate(-50%, -50%)
+             translate(var(--tx, 0px), var(--ty, 0px))
+             scale(var(--ts, 1));
+  opacity: var(--to, 0);
+}
+@media (prefers-reduced-motion: reduce) { .levi__trail { display: none; } }
 
 .levi__core, .levi__corona, .levi__ring, .levi__flare {
   position: absolute;
@@ -2284,19 +2301,22 @@ html:has(.void-page) { background: #05070a; }
 
 /* The middle: white-hot, falling to the accent at its rim. */
 .levi__core {
-  width: 84px; height: 84px;
+  /* 72, not 84. It reserved a 300px radius while rendering 124, which pushed
+     it onto the film's bright band in the hero. The reserved radius now
+     matches what it actually occupies. */
+  width: 72px; height: 72px;
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(var(--levi-s, 1));
   background: radial-gradient(circle at 50% 42%,
     #fff 0%, #fff 30%, #ffeccd 44%, #ffc477 62%,
     var(--accent-fill) 80%, var(--accent-deep) 100%);
-  box-shadow: 0 0 60px rgb(255 198 130 / 96%), 0 0 140px rgb(255 140 40 / 62%);
+  box-shadow: 0 0 46px rgb(255 198 130 / 96%), 0 0 104px rgb(255 140 40 / 58%);
 }
 
 /* A thin bright ring just outside the core - the single strongest depth cue
    in the reference, because it gives the light an inside and an outside. */
 .levi__ring {
-  width: 170px; height: 170px;
+  width: 124px; height: 124px;
   border-radius: 50%;
   border: 2px solid rgb(255 214 150 / 60%);
   transform: translate(-50%, -50%)
@@ -2306,7 +2326,7 @@ html:has(.void-page) { background: #05070a; }
 }
 
 .levi__corona {
-  width: 300px; height: 300px;
+  width: 196px; height: 196px;
   border-radius: 50%;
   transform: translate(-50%, -50%)
              rotate(var(--levi-spin, 0deg))
@@ -2324,7 +2344,7 @@ html:has(.void-page) { background: #05070a; }
    ends, rotating slowly with the rest of the light. This is the shape the
    reference uses and it is what stops the thing reading as a circle. */
 .levi__flare {
-  width: 520px; height: 520px;
+  width: 340px; height: 340px;
   transform: translate(-50%, -50%)
              rotate(var(--levi-spin, 0deg))
              scale(var(--levi-s, 1));
@@ -2406,13 +2426,12 @@ body:not(.void-page) .levi__ring {
 .levi.is-boot, .levi-say.is-boot { visibility: hidden; }
 
 /* --- the footnote --------------------------------------------------------- */
+/* IN THE FOOTER, IN THE FLOW. Fixed at the bottom-left it landed on the hero
+   lede at ordinary window heights - measured at (32, 765) over the paragraph.
+   It is a footnote; it does not need to float. */
 .levi-note {
-  position: fixed;
-  left: clamp(1rem, 2.4vw, 2rem);
-  bottom: clamp(.7rem, 1.5vw, 1.05rem);
-  z-index: 59;
-  margin: 0;
-  max-width: 38ch;
+  margin: 1.1rem 0 0;
+  max-width: 62ch;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: var(--t-micro);
   letter-spacing: .01em;
@@ -2424,13 +2443,13 @@ body:not(.void-page) .levi__ring {
 }
 
 @media (max-width: 700px) {
-  .levi__star { width: 96px; height: 96px; margin: -48px 0 0 -48px; }
-  .levi__core { width: 62px; height: 62px;
-    box-shadow: 0 0 44px rgb(255 198 130 / 92%), 0 0 100px rgb(255 140 40 / 56%); }
-  .levi__ring { width: 124px; height: 124px; }
-  .levi__corona { width: 220px; height: 220px; }
-  .levi__flare { width: 380px; height: 380px; }
-  .levi__shadow { width: 210px; height: 68px; }
+  .levi__star { width: 84px; height: 84px; margin: -42px 0 0 -42px; }
+  .levi__core { width: 58px; height: 58px;
+    box-shadow: 0 0 36px rgb(255 198 130 / 92%), 0 0 78px rgb(255 140 40 / 54%); }
+  .levi__ring { width: 98px; height: 98px; }
+  .levi__corona { width: 156px; height: 156px; }
+  .levi__flare { width: 260px; height: 260px; }
+  .levi__shadow { width: 168px; height: 54px; }
   .levi__speech { width: 16rem; min-width: 16rem; }
   .levi-note { max-width: 30ch; bottom: .6rem; }
 }
@@ -2576,39 +2595,46 @@ html.is-cold-film .singularity { z-index: 9001; }
    A zone reserves star + line + 48px of clearance. 300px is that arithmetic:
    the light is 204px across at its largest state, plus 48 above and below.
    ========================================================================== */
+/* ZERO LAYOUT HEIGHT. These were static blocks in the normal flow: seven of
+   them at 396px injected about 2,770px of empty space and took the document to
+   11,870px. That is what read as "bugging out" - dead gaps down the whole
+   page. Every zone is absolute now and contributes nothing to layout; the
+   sections it sits in are the positioning context. */
 .levi-zone {
   display: block;
-  /* 2 x 48 clearance + 2 x 150 for the light's visible mass. It grew when the
-     light did; the rule is move Levi, never shrink it. */
-  min-height: 396px;
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 0;
+  height: 270px;          /* 2 x 40 clearance + 2 x 95 of visible light */
   pointer-events: none;
 }
+section { position: relative; }
 
 /* The hero is pinned to one screen by design, so it cannot grow a band. Its
    zone goes in the empty right half instead, beside the copy rather than under
    it. Below 1100px the hero is one column and that half no longer exists, so
    the zone is withdrawn and the hero simply has no Levi. */
 .hero__void { position: relative; }
-/* NOT THE RIGHT MARGIN. That is where it was exiled to and where it could not
-   be found. The hero's open dark area is the band BELOW the copy column and to
-   the LEFT of the film's bright arm, so that is where the zone goes: anchored
-   to the bottom-left of the hero, clear of both. */
+/* The hero's dark area is ABOVE the copy and left of the ring - the band
+   between the masthead and the eyebrow. Not over the ring, which is where the
+   previous version put it. */
 .levi-zone--hero {
-  position: absolute;
-  left: 52%; top: 0;
-  width: 46%;
-  height: 396px;
-  min-height: 0;
+  /* The dark half beside the headline, high enough to clear the ring. The band
+     above the copy is only 70px measured - it cannot hold the light - and the
+     band below is the same, so this is the one place in the hero with room.
+     Sitting at the top of that half keeps it off the film bright band, which
+     starts around 56% of the hero height. */
+  left: 50%; right: 0;
+  top: 3%; bottom: auto;
+  height: 270px;
 }
+@media (max-width: 1100px) { .levi-zone--hero { display: none; } }
 /* Measured at 1536x830: the hero has 70px above the copy, 70px below it and
    170px to the right of the copy BOX - none of which holds a 396px zone. The
    copy TEXT, though, stops around x 730 while its box runs to 1350, so the
    open dark half beside the headline is the only place in the hero that can
    take the light. Below 1200px the hero is one column and that half stops
    existing, so the hero simply has no zone there. */
-@media (max-width: 1200px) {
-  .levi-zone--hero { display: none; }
-}
 @media (max-width: 1100px) {
   .levi-zone--hero { display: none; }
 }

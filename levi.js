@@ -45,14 +45,16 @@
 
   var K = 150, D = 17, MAX_DT = 1 / 30;
   var CURSOR_PULL = 30, CURSOR_REACH = 460;
-  var PAD = 48;
+  var PAD = 40;
   var IDLE_MS = 22000;
-  var SETTLE_MS = 160;          /* how long the scroll must stop before it speaks */
-  var DOMINANT = 0.28;          /* of the viewport, before a section counts       */
+  var SETTLE_MS = 150;          /* how long the scroll must stop before it speaks */
 
   function phone() { return window.innerWidth <= 700; }
-  /* The light's visible mass, not the flare's faint reach. */
-  function starR() { return phone() ? 110 : 150; }
+  /* What it ACTUALLY occupies. The corona is 196 across and transparent by 84%
+     of its radius, so the light reaches about 82 from centre; 95 covers it with
+     the flare's bright inner third. It used to reserve 150 while rendering 124,
+     which is what pushed it onto the film's bright band. */
+  function starR() { return phone() ? 78 : 95; }
   function lineW() { return phone() ? 256 : 304; }
   function gapW() { return phone() ? 26 : 38; }
 
@@ -108,11 +110,27 @@
   host.appendChild(root);
   document.body.appendChild(say);
 
+  /* IN THE FOOTER, IN THE FLOW - not fixed over the hero copy. */
   var note = document.createElement("p");
   note.className = "levi-note";
   note.textContent =
     "Levi is in development. Its lines are scripted and the same for everyone.";
-  document.body.appendChild(note);
+  var footHome = document.querySelector(".foot .wrap") ||
+                 document.querySelector(".foot") || document.body;
+  footHome.appendChild(note);
+
+  /* A SHORT TRAIL. A chain of followers, each lagging the one before it, shown
+     only while it is actually travelling - transform and opacity only, and it
+     decays within a few hundred ms of arriving. It is drawn behind the star and
+     does not widen the reserved area. */
+  var TRAIL = 6, trail = [];
+  for (var ti = 0; ti < TRAIL; ti++) {
+    var d = document.createElement("i");
+    d.className = "levi__trail";
+    d.setAttribute("aria-hidden", "true");
+    root.insertBefore(d, star);
+    trail.push({ el: d, x: 0, y: 0 });
+  }
 
   var sayEl = speech.querySelector("[data-levi-say]");
   var IDLE_LINES = window.LEVI_IDLE || ["Still here."];
@@ -137,19 +155,48 @@
   }
 
   /* ---- which section is the visitor actually looking at ---------------------
-     Visible fraction of the viewport, largest wins. A zone whose section is
-     barely on screen is not where they are. */
+     AN OBSERVER, NOT A POLL WITH A FLOOR. The previous version needed a section
+     to cover 28% of the viewport before it counted, so short sections never won
+     and were silently skipped - measured, at y=1000 the line was still the
+     hero's and "walk" never came up at all. That is what read as "it does not
+     work when I scroll".
+
+     Now every zone's section is observed and whichever has the highest
+     intersection ratio wins, with no floor: a section that is on screen at all
+     is reachable. */
+  var ratio = {};
+
   function dominantZone() {
-    var vh = document.documentElement.clientHeight;
-    var best = null, bestCover = DOMINANT;
+    var best = null, bestR = 0;
     for (var i = 0; i < script.length; i++) {
-      var el = zoneEl(script[i].zone);
+      var name = script[i].zone;
+      var el = zoneEl(name);
       if (!zoneUsable(el)) continue;
-      var r = sectionOf(el).getBoundingClientRect();
-      var cover = (Math.min(r.bottom, vh) - Math.max(r.top, 0)) / vh;
-      if (cover > bestCover) { bestCover = cover; best = { el: el, name: script[i].zone, say: script[i].say }; }
+      var rr = ratio[name] || 0;
+      if (rr > bestR) { bestR = rr; best = { el: el, name: name, say: script[i].say }; }
     }
     return best;
+  }
+
+  var io = null;
+  if (window.IntersectionObserver) {
+    io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        var z = e.target.querySelector("[data-levi-zone]");
+        var name = z && z.getAttribute("data-levi-zone");
+        if (name) ratio[name] = e.intersectionRatio;
+      });
+      readPosition();
+    }, { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] });
+  }
+
+  function observeZones() {
+    if (!io) return;
+    io.disconnect();
+    for (var i = 0; i < script.length; i++) {
+      var el = zoneEl(script[i].zone);
+      if (el) io.observe(sectionOf(el));
+    }
   }
 
   /* ---- placement, which is arithmetic -------------------------------------- */
@@ -212,6 +259,24 @@
 
     spin = (spin + dt * 6 + Math.sin(now / 5200) * dt * 8) % 360;
     var lift = Math.min(1, Math.abs(v.y) / 900);
+
+    /* The trail: each point chases the one in front, and the whole thing is
+       only visible while there is real speed to leave a mark. */
+    if (!REDUCED) {
+      var speed = Math.hypot(v.x, v.y);
+      var vis = Math.min(1, Math.max(0, (speed - 120) / 900));
+      for (var k = 0; k < TRAIL; k++) {
+        var lead = k === 0 ? p : trail[k - 1];
+        var f = Math.min(1, dt * (16 - k * 1.6));
+        trail[k].x += (lead.x - trail[k].x) * f;
+        trail[k].y += (lead.y - trail[k].y) * f;
+        var st = trail[k].el.style;
+        st.setProperty("--tx", (trail[k].x - p.x).toFixed(1) + "px");
+        st.setProperty("--ty", (trail[k].y - p.y).toFixed(1) + "px");
+        st.setProperty("--ts", (1 - k * 0.12).toFixed(2));
+        st.setProperty("--to", (vis * (1 - k / TRAIL) * 0.55).toFixed(3));
+      }
+    }
 
     write(p.x, p.y);
     root.style.setProperty("--levi-spin", spin.toFixed(1) + "deg");
@@ -388,6 +453,7 @@
        the window again never brought it back. Go quiet instead, and return when
        a zone is usable again. */
     if (!anyZoneUsable()) { goQuiet(); return; }
+    observeZones();
     readPosition();
     if (REDUCED) settleNow(); else run();
   });
@@ -433,6 +499,7 @@
       reason: "no [data-levi-zone] is large enough here (needs " +
               (2 * PAD + 2 * starR()) + "px tall)",
       zones: function () { return table; },
+      ratios: function () { return {}; },
       restingPoint: function () { return null; },
       stats: function () { return { unavailable: true }; },
       dismiss: function () {}, settle: function () { return null; },
@@ -443,7 +510,14 @@
 
   setState("idle");
   lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
+  observeZones();
   arrive(dominantZone());
+  /* THE OBSERVER'S FIRST CALLBACK LANDS AFTER THIS LINE, so at init every ratio
+     is still 0, no zone wins and Levi starts quiet - measured, it stayed silent
+     at y0 until the visitor scrolled, which is the worst possible first
+     impression. Read again once the observer has actually reported. */
+  window.setTimeout(function () { if (!zoneName) arrive(dominantZone()); }, 260);
+  window.setTimeout(function () { if (!zoneName) arrive(dominantZone()); }, 900);
   if (zone) { retarget(); p.x = goal.x; p.y = goal.y; write(p.x, p.y); }
 
   if (BOOTING) {
@@ -464,6 +538,7 @@
   window.cognivexLevi = {
     root: root, say: say, star: star, speech: speech, note: note,
     zones: zoneTable,
+    ratios: function () { return ratio; },
     gesture: function () { gesture(); },
     forceIdle: function () { lastActivity = -1e9; checkIdle(1e9); },
     /* Read the position immediately, skipping the debounce - for verification
