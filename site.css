@@ -2190,3 +2190,28 @@ html:has(.void-page) { background: #05070a; }
 @media (max-width: 560px) {
   .app__route { display: none; }
 }
+
+/* ============================================================================
+   WHERE THE RING CANNOT CLEAR THE COPY
+
+   Two viewports where placement is not a solution and the arithmetic says so.
+   At 1024x768 the ring is 188px across and the gap below the copy is 168px; at
+   390x844 it is 200px against 154px. There is no offset that both clears the
+   type and keeps the ring on screen, because the ring does not fit in the gap.
+
+   So the film overlaps, and brightness is the only lever left. Solved to a
+   target rather than nudged: for #f2f4f6 text the background has to sit at or
+   below L 0.154 to clear 4.5:1, which works out at brightness .30 for the
+   short landscape case and .38 for a phone. Set a little under each.
+
+   768x1024 is deliberately NOT included - it already measures 9.31 at .45, and
+   dimming it further would cost contrast it does not need.
+   ========================================================================== */
+@media (max-width: 1100px) and (max-height: 820px) {
+  /* .26 took the worst line from 1.78 to 4.33 - the right lever, one step
+     short of the 4.5 floor. .21 closes it with margin. */
+  .singularity__film { filter: brightness(.21); }
+}
+@media (max-aspect-ratio: 1 / 1) and (max-width: 520px) {
+  .singularity__film { filter: brightness(.34); }
+}
