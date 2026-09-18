@@ -101,6 +101,15 @@
   var SPEECH_PAD = 34;
 
   /* ---- markup ------------------------------------------------------------- */
+  /* TWO LAYERS, ONE POSITION. The star goes inside <main> so it stacks at
+     z-index 1 - in front of the film and every section panel, BEHIND the
+     display type at z-index 2, which is the occlusion that makes it read as an
+     object rather than a sprite on the glass. The speech goes on body above
+     everything, because a line you cannot read is not speech.
+
+     Both are driven by --levi-x / --levi-y written once per frame. Same
+     discipline as the film: one owner, one declaration. */
+  var host = document.querySelector("main") || document.body;
   var root = document.createElement("div");
   root.className = "levi";
   root.setAttribute("data-levi", "");
@@ -116,22 +125,31 @@
   star.innerHTML = '<i class="levi__corona" aria-hidden="true"></i>' +
                    '<i class="levi__core" aria-hidden="true"></i>';
 
-  var pos = document.createElement("span");
-  pos.className = "levi__pos";
-  pos.setAttribute("data-levi-pos", "");
-  pos.setAttribute("aria-hidden", "true");
+  /* Its footprint. A light does not cast a shadow, but the depth cue is most
+     of why the reference reads as real, so it gets one anyway - offset, wide,
+     riding under the light in the same layer. */
+  var shadow = document.createElement("i");
+  shadow.className = "levi__shadow";
+  shadow.setAttribute("aria-hidden", "true");
+
+  /* No counter. No skip button. One small instruction, which leaves once it
+     has been followed. */
+  var say = document.createElement("div");
+  say.className = "levi-say";
+  say.setAttribute("data-levi-say-layer", "");
 
   var speech = document.createElement("div");
   speech.className = "levi__speech";
   speech.setAttribute("data-levi-speech", "");
   speech.innerHTML =
     '<p class="levi__line" data-levi-say></p>' +
-    '<button class="levi__skip" type="button" data-levi-skip>skip the tour</button>';
+    '<span class="levi__hint" data-levi-hint>(Click Levi)</span>';
 
+  root.appendChild(shadow);
   root.appendChild(star);
-  root.appendChild(pos);
-  root.appendChild(speech);
-  document.body.appendChild(root);
+  say.appendChild(speech);
+  host.appendChild(root);
+  document.body.appendChild(say);
 
   /* The disclaimer is NOT part of what Levi says. One quiet line at the page
      edge, sentence case. */
@@ -142,13 +160,15 @@
   document.body.appendChild(note);
 
   var sayEl = speech.querySelector("[data-levi-say]");
-  var skipEl = speech.querySelector("[data-levi-skip]");
+  var hintEl = speech.querySelector("[data-levi-hint]");
+  var IDLE_LINES = window.LEVI_IDLE || ["Still there? I will wait."];
 
   /* ---- state -------------------------------------------------------------- */
   var STATES = ["is-idle", "is-speaking", "is-pointing", "is-approved"];
   function setState(n) {
-    STATES.forEach(function (c) { root.classList.remove(c); });
+    STATES.forEach(function (c) { root.classList.remove(c); say.classList.remove(c); });
     root.classList.add("is-" + n);
+    say.classList.add("is-" + n);
   }
 
   var at = 0, target = null, done = false, dismissed = false, frozen = false;
@@ -157,6 +177,9 @@
   var mouse = { x: 0, y: 0, fresh: 0 };
   var lastT = 0, raf = null, flareTimer = null, retargetAt = 0;
   var placed = { starOK: true, spOK: true };
+  var spin = 0, glow = 1, lastScrollY = 0, lastActivity = 0;
+  var idleSpoken = false, savedLine = null, lure = null, clicked = false;
+  var IDLE_MS = 25000;
 
   /* ---- what it must not stand on ------------------------------------------
      Every text run and every control, once, in DOCUMENT co-ordinates - which
@@ -374,8 +397,13 @@
     }
 
     goal.x = best.x; goal.y = best.y; side = best.side;
-    root.style.setProperty("--levi-tx", (side > 0 ? gap : -gap - sw) + "px");
-    root.style.setProperty("--levi-ty", best.sy + "px");
+    /* ON documentElement, NOT on the star layer. The speech lives in a sibling
+       subtree now so it can sit above the display type while the star sits
+       behind it - and a custom property set on one sibling does not reach the
+       other. Set on the root, both layers read it. */
+    var d = document.documentElement.style;
+    d.setProperty("--levi-tx", (side > 0 ? gap : -gap - sw) + "px");
+    d.setProperty("--levi-ty", best.sy + "px");
     placed = { starOK: best.starOK, spOK: best.spOK };
 
     if (tr) {
@@ -392,35 +420,62 @@
     lastT = now;
 
     if (retargetAt) { retargetAt = 0; retarget(); }
+    checkIdle(now);
 
-    /* Idle drift: two slow sines whose periods do not divide, so it never
-       visibly repeats. Damped right down while it is speaking. */
-    var amp = root.classList.contains("is-idle") ? 11 : 5;
+    /* IT NEVER PARKS. The previous version damped the drift to 5px while it
+       was speaking, which meant that for most of the tour it held a position -
+       and holding a position is what a widget does. Two slow sines whose
+       periods do not divide, running the whole time. */
+    var amp = root.classList.contains("is-idle") ? 12 : 9;
     var dx = Math.sin(now / 2600) * amp + Math.sin(now / 4300) * amp * 0.5;
     var dy = Math.cos(now / 3100) * amp * 0.8 + Math.sin(now / 5700) * amp * 0.4;
 
     /* The cursor: a pull that falls off with distance and fades once the
        pointer goes still. */
-    var cx = 0, cy = 0;
+    var cx = 0, cy = 0, near = 0;
     if (mouse.fresh > 0 && !phone()) {
       var mx = mouse.x - p.x, my = mouse.y - p.y;
       var dist = Math.hypot(mx, my) || 1;
-      var inf = Math.max(0, 1 - dist / CURSOR_REACH) * CURSOR_PULL * mouse.fresh;
+      near = Math.max(0, 1 - dist / CURSOR_REACH);
+      var inf = near * CURSOR_PULL * mouse.fresh;
       cx = mx / dist * inf; cy = my / dist * inf;
       mouse.fresh = Math.max(0, mouse.fresh - dt / 1.2);
     }
+    /* It brightens as the cursor nears, and decays back. */
+    var wantGlow = 1 + near * mouse.fresh * 0.55;
+    glow += (wantGlow - glow) * Math.min(1, dt * 6);
 
-    var gx = goal.x + dx + cx, gy = goal.y + dy + cy;
+    /* A gesture overrides the tour's placement for as long as it lasts. */
+    var g = lure || goal;
+    var gx = g.x + dx + cx, gy = g.y + dy + cy;
 
     var ax = (gx - p.x) * K - v.x * D;
     var ay = (gy - p.y) * K - v.y * D;
     v.x += ax * dt; v.y += ay * dt;
     p.x += v.x * dt; p.y += v.y * dt;
 
-    root.style.transform =
-      "translate3d(" + p.x.toFixed(1) + "px," + p.y.toFixed(1) + "px,0)";
+    /* A slow tumble on its own axis, plus a wobble so it is never uniform. */
+    spin = (spin + dt * 7 + Math.sin(now / 5200) * dt * 9) % 360;
+
+    /* The shadow lags the light and squashes as it rises - the two together
+       are what read as height off the ground. */
+    var lift = Math.min(1, Math.abs(v.y) / 900);
+    write(p.x, p.y);
+    root.style.setProperty("--levi-spin", spin.toFixed(1) + "deg");
+    root.style.setProperty("--levi-glow", glow.toFixed(3));
+    root.style.setProperty("--levi-shx", (16 + v.x * 0.012).toFixed(1) + "px");
+    root.style.setProperty("--levi-shy", (30 + lift * 14).toFixed(1) + "px");
+    root.style.setProperty("--levi-shs", (1 + lift * 0.22).toFixed(3));
 
     raf = requestAnimationFrame(step);
+  }
+
+  /* ONE WRITER. Both layers read these two properties, so the star and the
+     line can live in different stacking contexts and still be one object. */
+  function write(x, y) {
+    var d = document.documentElement.style;
+    d.setProperty("--levi-x", x.toFixed(1) + "px");
+    d.setProperty("--levi-y", y.toFixed(1) + "px");
   }
 
   function run() {
@@ -434,9 +489,9 @@
      where it needs to be, and the tour still advances. */
   function settleNow() {
     retarget();
-    p.x = goal.x; p.y = goal.y; v.x = 0; v.y = 0;
-    root.style.transform =
-      "translate3d(" + Math.round(p.x) + "px," + Math.round(p.y) + "px,0)";
+    var g = lure || goal;
+    p.x = g.x; p.y = g.y; v.x = 0; v.y = 0;
+    write(p.x, p.y);
   }
 
   /* ---- the tour ----------------------------------------------------------- */
@@ -455,8 +510,7 @@
     if (!target && at < script.length - 1) return show(at + 1);
 
     sayEl.textContent = stop.say;
-    pos.textContent = pad(at + 1) + "/" + pad(script.length);
-    skipEl.textContent = (at >= script.length - 1) ? "done" : "skip the tour";
+    savedLine = null; idleSpoken = false;
 
     if (target && !inView(target)) {
       var trr = target.getBoundingClientRect();
@@ -499,8 +553,8 @@
     setState("idle");
     target = null;
     sayEl.textContent = "";
-    pos.textContent = "";
     root.classList.add("is-done");
+    say.classList.add("is-done");
     if (REDUCED) settleNow();
   }
 
@@ -509,11 +563,13 @@
     dismissed = true;
     try { window.sessionStorage.setItem(KEY, "1"); } catch (e) {}
     root.classList.add("is-gone");
+    say.classList.add("is-gone");
     note.style.opacity = "0";
     window.setTimeout(function () {
       done = true;
       if (raf) cancelAnimationFrame(raf);
       if (root.parentNode) root.parentNode.removeChild(root);
+      if (say.parentNode) say.parentNode.removeChild(say);
       if (note.parentNode) note.parentNode.removeChild(note);
     }, REDUCED ? 0 : 280);
   }
@@ -521,11 +577,76 @@
   /* ---- input ---------------------------------------------------------------
      No button row. Advancing is a click on the star or the line, or the right
      arrow. The only other affordance is one small word, and Escape. */
-  star.addEventListener("click", function (e) { e.preventDefault(); advance(); });
-  sayEl.addEventListener("click", advance);
-  skipEl.addEventListener("click", function (e) {
-    e.preventDefault(); e.stopPropagation(); endTour();
+  /* THE ONE DISCOVERED INTERACTION. Clicking the character does the product's
+     only real gesture: Levi flies to the nearest thing awaiting approval,
+     flares, and approves it - the queue's counter drops and the item leaves.
+     Where there is nothing to approve it darts to whatever it is currently
+     talking about and lights that instead, which is the same gesture - drawing
+     your eye to one item - without inventing any state.
+
+     The LINE advances the tour. Splitting the two is what lets the star have a
+     reward of its own instead of being a Next button in a costume. */
+  star.addEventListener("click", function (e) { e.preventDefault(); gesture(); });
+  speech.addEventListener("click", function (e) {
+    if (e.target === hintEl) return;
+    advance();
   });
+
+  function onScreenEl(el) {
+    var r = el.getBoundingClientRect();
+    var vh = document.documentElement.clientHeight;
+    var vw = document.documentElement.clientWidth;
+    return r.width > 2 && r.bottom > 60 && r.top < vh - 60 && r.right > 0 && r.left < vw;
+  }
+
+  function gesture() {
+    if (dismissed || lure) return;
+    noteActivity();
+    if (!clicked) { clicked = true; document.documentElement.style.setProperty("--levi-hint", "0"); }
+
+    var btn = null, all = document.querySelectorAll("[data-approve]");
+    for (var i = 0; i < all.length; i++) {
+      if (onScreenEl(all[i])) { btn = all[i]; break; }
+    }
+    var to = btn || target;
+    if (!to) return;
+
+    var r = to.getBoundingClientRect();
+    lure = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    run();
+
+    /* Long enough that you watch it go, rather than the item just blinking. */
+    window.setTimeout(function () {
+      setState("approved");
+      if (btn) { try { btn.click(); } catch (e) {} }
+    }, 430);
+    window.setTimeout(function () {
+      lure = null;
+      buildRects(); retargetAt = 1; run();
+      setState(root.classList.contains("is-done") ? "idle" : "speaking");
+    }, 1050);
+  }
+
+  /* ---- when you stop -------------------------------------------------------
+     A timer, and the line says only what a timer knows. It does not claim to
+     be watching you. */
+  function noteActivity() {
+    lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
+    if (idleSpoken && savedLine !== null) {
+      sayEl.textContent = savedLine;
+      savedLine = null; idleSpoken = false;
+    }
+  }
+
+  function checkIdle(now) {
+    if (idleSpoken || dismissed || REDUCED) return;
+    if (root.classList.contains("is-done")) return;
+    if (now - lastActivity < IDLE_MS) return;
+    idleSpoken = true;
+    savedLine = sayEl.textContent;
+    sayEl.textContent = IDLE_LINES[Math.floor(Math.random() * IDLE_LINES.length)];
+    setState("speaking");
+  }
 
   root.addEventListener("keydown", function (e) {
     if (e.key === "ArrowRight") { e.preventDefault(); advance(); }
@@ -534,7 +655,10 @@
 
   document.addEventListener("pointermove", function (e) {
     mouse.x = e.clientX; mouse.y = e.clientY; mouse.fresh = 1;
+    noteActivity();
   }, { passive: true });
+  document.addEventListener("keydown", noteActivity, true);
+  document.addEventListener("click", noteActivity, true);
 
   /* Approved: one flare, then back. Listens on the document so the queue demo
      keeps its own logic and Levi simply reacts to it. */
@@ -556,8 +680,20 @@
   /* Debounced to scroll-END. Re-solving mid-scroll makes it chase the page;
      it should hold its place while you move and then decide once. */
   var scrollT = null;
+  lastScrollY = window.pageYOffset || 0;
   window.addEventListener("scroll", function () {
+    noteActivity();
     if (REDUCED) return;
+    /* IT MOVES WHEN YOU SCROLL. The page sliding under it shoves the light and
+       the spring carries the lurch and settles it, so scrolling is something
+       that happens TO the object rather than something it ignores. Capped, or
+       one flick of the wheel would fling it off screen. */
+    var y = window.pageYOffset || 0;
+    var d = y - lastScrollY;
+    lastScrollY = y;
+    v.y += Math.max(-820, Math.min(820, -d * 7));
+    v.x += Math.max(-260, Math.min(260, -d * 1.1));
+    run();
     if (scrollT) window.clearTimeout(scrollT);
     scrollT = window.setTimeout(function () {
       buildRects(); retargetAt = 1; run();
@@ -578,6 +714,7 @@
     dismissed = true; done = true;
     if (raf) { cancelAnimationFrame(raf); raf = null; }
     if (root.parentNode) root.parentNode.removeChild(root);
+    if (say.parentNode) say.parentNode.removeChild(say);
     if (note.parentNode) note.parentNode.removeChild(note);
   }
 
@@ -585,6 +722,7 @@
   if (!tourPossible()) {
     /* Leave nothing behind: no star, no line, no footnote. */
     if (root.parentNode) root.parentNode.removeChild(root);
+    if (say.parentNode) say.parentNode.removeChild(say);
     if (note.parentNode) note.parentNode.removeChild(note);
     window.cognivexLevi = {
       unavailable: true,
@@ -606,13 +744,17 @@
   retarget();
   /* Start where it belongs rather than springing in from the origin. */
   p.x = goal.x; p.y = goal.y;
-  root.style.transform = "translate3d(" + p.x + "px," + p.y + "px,0)";
+  write(p.x, p.y);
+
+  lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
 
   if (BOOTING) {
     root.classList.add("is-boot");
+    say.classList.add("is-boot");
     note.style.opacity = "0";
     window.addEventListener("cognivex:cold-start-done", function () {
       root.classList.remove("is-boot");
+      say.classList.remove("is-boot");
       note.style.opacity = "";
       show(0);
     }, { once: true });
@@ -626,7 +768,9 @@
      a measurement taken then is of a subject that was not drawn. This forces
      the settled state so the keep-out can be measured honestly. */
   window.cognivexLevi = {
-    root: root, star: star, speech: speech, note: note,
+    root: root, say: say, star: star, speech: speech, note: note,
+    gesture: function () { gesture(); },
+    forceIdle: function () { lastActivity = -1e9; checkIdle(1e9); },
     stops: script.length,
     /* Settle AND stop. Without the stop the loop kept integrating between the
        stats() call and the screenshot, so the two disagreed by 400px and the

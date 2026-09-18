@@ -2217,52 +2217,68 @@ html:has(.void-page) { background: #05070a; }
 }
 
 /* ============================================================================
-   LEVI — a star, not a panel.
+   LEVI — a light with depth, not a layer pasted on top.
 
-   The first version of this was a 550px bordered card with a title bar, a
-   button row, a step counter, a close button and the disclaimer inside it.
-   That is a cookie banner wearing a character's name. Everything structural
-   about it is gone: there is no box, no border, no background fill, no header,
-   and no button row anywhere in this block.
+   THE LAYERING IS THE POINT. Measured off the reference: the object reads as
+   real because it sits BETWEEN things - in front of the ground, behind the big
+   display type, casting onto what is under it. A sprite on top of everything
+   is a cursor decoration no matter how well it moves.
 
-   WHAT IS LEFT IS THE LIGHT AND WHAT IT SAYS. The star is the character and
-   the label both - which is why nothing writes "LEVI" above the line any more.
-   The speech is text on the page with a soft local darkening behind it; that
-   darkening fades to transparent well inside its own box, so it has no edge to
-   find and reads as atmosphere rather than as a plate. It is the same trick
-   the hero film's mask already uses on this site, for the same reason.
+   The page's own stacking, read off this file:
+       .singularity (the film)  z-index 0, fixed
+       main                     z-index 1, relative  <- creates a context
+       .hero__intro             z-index 2            <- the display type
+       .masthead / .statusbar   z-index 40 / 41
 
-   POSITION HAS ONE OWNER. levi.js runs a spring integrator and writes a single
-   translate on .levi every frame. Nothing here animates position, so the
-   physics can never fight a transition - the lesson the film's composition
-   already paid for twice.
+   So the STAR goes inside main at z-index 1: above the film and above every
+   section panel, below the headline. Where they overlap, the headline occludes
+   it, which is the whole depth cue. The SPEECH goes on body at z-index 60,
+   because a line you cannot read is not speech.
+
+   Two layers, ONE position: levi.js writes --levi-x / --levi-y once per frame
+   on documentElement and both layers read them. Same discipline as the film's
+   composition - one owner, one declaration, no second transform.
    ========================================================================== */
-.levi {
+.levi,
+.levi-say {
   position: fixed;
   left: 0; top: 0;
-  z-index: 60;
-  pointer-events: none;          /* only the star and the skip take input */
+  width: 0; height: 0;
+  pointer-events: none;
+  transform: translate3d(var(--levi-x, 50vw), var(--levi-y, 50vh), 0);
   will-change: transform;
 }
+.levi    { z-index: 1; }    /* inside main: behind the display type */
+.levi-say { z-index: 60; }  /* on body: always readable            */
 
-/* --- the star -------------------------------------------------------------
-   A real box rather than a 0x0 point, because it has to be clickable and it
-   has to be able to show a focus ring. The light is drawn centred inside it. */
+/* --- the star ------------------------------------------------------------- */
 .levi__star {
   position: absolute;
   left: 0; top: 0;
-  width: 72px; height: 72px;
-  margin: -36px 0 0 -36px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
+  width: 78px; height: 78px;
+  margin: -39px 0 0 -39px;
+  padding: 0; border: 0; border-radius: 50%;
   background: none;
   pointer-events: auto;
   cursor: pointer;
 }
-.levi__star:focus-visible {
-  outline: 2px solid var(--accent-fill);
-  outline-offset: 6px;
+.levi__star:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 8px; }
+
+/* THE SHADOW. A light does not literally cast one, but the depth cue is what
+   the reference gets its realism from, so it gets a footprint: a soft dark
+   pool offset down and behind, wider than it is tall, riding under the light
+   in the same layer. It is what stops the star floating in nothing. */
+.levi__shadow {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 190px; height: 66px;
+  transform: translate(-50%, -50%)
+             translate(var(--levi-shx, 16px), var(--levi-shy, 30px))
+             scale(var(--levi-shs, 1));
+  border-radius: 50%;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%,
+    rgb(0 0 0 / 46%) 0%, rgb(0 0 0 / 28%) 38%, rgb(0 0 0 / 10%) 64%, transparent 84%);
+  pointer-events: none;
 }
 
 .levi__core, .levi__corona {
@@ -2271,26 +2287,29 @@ html:has(.void-page) { background: #05070a; }
   border-radius: 50%;
   display: block;
   pointer-events: none;
-  transform: translate(-50%, -50%) rotate(var(--levi-lean, 0deg)) scale(var(--levi-s, 1));
+  transform: translate(-50%, -50%)
+             rotate(var(--levi-spin, 0deg))
+             scale(var(--levi-s, 1));
 }
 
-/* DARK IS THE DEFAULT, deliberately. The previous block made the LIGHT form
-   the unscoped default and overrode it for .void-page, which let the light
-   form's 1.5px ring and ring-shadow through into the dark one - the glow
-   rendered with a crisp orange outline around it, which is exactly what makes
-   a light read as a cursor trail. The page that actually uses this is dark, so
-   dark is what the bare selector draws. */
+/* Dark is the bare selector because the page that uses this is dark; making
+   the LIGHT form the default once let its ring bleed into the dark one. */
 .levi__core {
   width: 22px; height: 22px;
   background: radial-gradient(circle at 50% 45%,
     #fff 0%, #fff 34%, #ffd9b0 52%, var(--accent-fill) 74%, var(--accent-deep) 100%);
   mix-blend-mode: screen;
-  /* The bloom is what makes it read as a star rather than a dot. Screen
-     blending means this only ever adds light, so it cannot darken an edge. */
   box-shadow: 0 0 26px rgb(255 178 106 / 78%), 0 0 60px rgb(255 122 26 / 42%);
+  filter: brightness(var(--levi-glow, 1));
 }
+/* Elongated a touch on purpose: a perfectly radial gradient rotating is
+   invisible - there is nothing in it to see turn. 1.14 is enough that the
+   tumble reads and not enough to look like a comet. */
 .levi__corona {
   width: 168px; height: 168px;
+  transform: translate(-50%, -50%)
+             rotate(var(--levi-spin, 0deg))
+             scale(var(--levi-s, 1)) scaleX(1.14);
   background: radial-gradient(circle,
     rgb(255 214 170 / 58%) 0%,
     rgb(255 166 88 / 38%) 16%,
@@ -2299,11 +2318,8 @@ html:has(.void-page) { background: #05070a; }
     rgb(229 106 13 / 3%) 70%,
     transparent 84%);
   mix-blend-mode: screen;
+  filter: brightness(var(--levi-glow, 1));
 }
-
-/* The light ground, for the pages that will use this later. Not the dark one
-   turned down: screen blending vanishes on white, so the core becomes a dense
-   opaque point and the corona becomes a thin warm ring. */
 body:not(.void-page) .levi__core {
   width: 13px; height: 13px;
   background: radial-gradient(circle at 50% 40%,
@@ -2320,9 +2336,9 @@ body:not(.void-page) .levi__corona {
 }
 
 /* --- what it says ---------------------------------------------------------
-   Text, and nothing else. The darkening behind it is a wide radial that is
-   already transparent before it reaches its own box, so there is no boundary
-   anywhere - atmosphere, not a plate. */
+   Text, and nothing else. No panel, no border, no title, no counter, no button
+   row. The darkening is already transparent before it reaches its own box, so
+   there is no boundary to find - atmosphere rather than a plate. */
 .levi__speech {
   position: absolute;
   left: 0; top: 0;
@@ -2334,11 +2350,6 @@ body:not(.void-page) .levi__corona {
 .levi__speech::before {
   content: "";
   position: absolute;
-  /* KEPT TIGHT ON PURPOSE. The first version reached 20% left and 70% above
-     its own box - about 67px of overhang at this size - and that overhang sat
-     on the hero headline and visibly dimmed it, while every boolean said the
-     speech was clear because only the TEXT box was being tested. The reach is
-     now small enough that levi.js can include it in the clearance test. */
   left: -9%; top: -32%;
   width: 118%; height: 164%;
   z-index: -1;
@@ -2350,97 +2361,47 @@ body:not(.void-page) .levi__corona {
     rgb(3 5 8 / 5%) 80%,
     transparent 92%);
 }
-
 .levi__line {
   margin: 0;
   font-size: var(--t-small);
   line-height: var(--lh-body);
   color: var(--ink);
-  /* One tight shadow for edges, one wide one for the glow it sits in. */
   text-shadow: 0 1px 2px rgb(0 0 0 / 74%), 0 0 18px rgb(0 0 0 / 62%);
 }
 
-/* --- the two things that are not the character ----------------------------
-   The counter sits beside the star as micro mono, and the skip is one small
-   low-contrast word under the line. Deliberately not a row, and deliberately
-   not the same weight as anything the page itself offers. */
-.levi__pos {
-  position: absolute;
-  left: 46px; top: -7px;
+/* THE ONLY INSTRUCTION. One small line, discovered rather than advertised.
+   It goes once the visitor has clicked, because an instruction you have
+   already followed is just noise. */
+.levi__hint {
+  display: block;
+  margin-top: .5rem;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: var(--t-micro);
-  letter-spacing: .1em;
+  letter-spacing: .04em;
   color: var(--dim);
-  opacity: .55;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  opacity: var(--levi-hint, .5);
+  transition: opacity 420ms var(--ease-out);
   text-shadow: 0 1px 2px rgb(0 0 0 / 74%);
   pointer-events: none;
 }
-.levi__skip {
-  display: inline-block;
-  margin-top: .55rem;
-  padding: .2rem 0;
-  border: 0;
-  background: none;
-  color: var(--dim);
-  font: inherit;
-  font-size: var(--t-micro);
-  letter-spacing: .04em;
-  opacity: .55;
-  cursor: pointer;
-  pointer-events: auto;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 74%);
-}
-.levi__skip:hover { opacity: .9; }
-.levi__skip:focus-visible {
-  outline: 2px solid var(--accent-fill);
-  outline-offset: 3px;
-  opacity: 1;
-}
 
-/* --- states ---------------------------------------------------------------
-   Drift and travel are physics now, so nothing here moves the group. These
-   only touch brightness and the corona's own shape. */
-.levi.is-idle .levi__core      { opacity: .66; }
-.levi.is-idle .levi__corona    { opacity: .44; }
-.levi.is-idle .levi__speech    { opacity: 0; pointer-events: none; }
+/* --- states --------------------------------------------------------------- */
+.levi.is-idle .levi__core      { opacity: .7; }
+.levi.is-idle .levi__corona    { opacity: .48; }
+.levi-say.is-idle .levi__speech { opacity: 0; pointer-events: none; }
 
-.levi.is-speaking .levi__core   { opacity: 1; animation: leviBreathe 3.6s ease-in-out infinite; }
-.levi.is-speaking .levi__corona { opacity: .88; animation: leviBreathe 3.6s ease-in-out infinite; }
-
+.levi.is-speaking .levi__core   { opacity: 1; }
+.levi.is-speaking .levi__corona { opacity: .9; }
 .levi.is-pointing .levi__core   { opacity: 1; }
-.levi.is-pointing .levi__corona { opacity: .94; }
-
-.levi.is-approved .levi__core   { opacity: 1; animation: leviFlare 640ms var(--ease-out) 1; }
-.levi.is-approved .levi__corona { opacity: 1; animation: leviFlare 640ms var(--ease-out) 1; }
+.levi.is-pointing .levi__corona { opacity: .95; }
+.levi.is-approved .levi__core   { opacity: 1; }
+.levi.is-approved .levi__corona { opacity: 1; }
 
 .levi__speech { transition: opacity 320ms var(--ease-out); }
-.levi.is-paused .levi__core,
-.levi.is-paused .levi__corona { animation-play-state: paused; }
-.levi.is-gone { opacity: 0; transition: opacity 260ms var(--ease-out); }
+.levi.is-gone, .levi-say.is-gone { opacity: 0; transition: opacity 260ms var(--ease-out); }
+.levi.is-boot, .levi-say.is-boot { visibility: hidden; }
 
-@keyframes leviBreathe {
-  0%, 100% { transform: translate(-50%, -50%) rotate(var(--levi-lean, 0deg)) scale(var(--levi-s, 1)); }
-  50%      { transform: translate(-50%, -50%) rotate(var(--levi-lean, 0deg)) scale(calc(var(--levi-s, 1) * 1.06)); }
-}
-@keyframes leviFlare {
-  0%   { transform: translate(-50%, -50%) rotate(var(--levi-lean, 0deg)) scale(var(--levi-s, 1)); filter: brightness(1); }
-  26%  { transform: translate(-50%, -50%) rotate(var(--levi-lean, 0deg)) scale(calc(var(--levi-s, 1) * 1.22)); filter: brightness(2.2); }
-  100% { transform: translate(-50%, -50%) rotate(var(--levi-lean, 0deg)) scale(var(--levi-s, 1)); filter: brightness(1); }
-}
-
-/* Held back until the cold start hands over. Hidden rather than absent, so its
-   resting position can still be measured - the sequence has to know where it
-   is travelling to. */
-.levi.is-boot { visibility: hidden; }
-
-/* --- the disclaimer, which is not part of what Levi says -------------------
-   A footnote at the page edge, sentence case. It is deliberately NOT .mono,
-   because .mono uppercases and a permanent line shouting in caps is not a
-   footnote. It goes when Levi goes: with no Levi there is nothing to disclaim. */
+/* --- the footnote, which is not part of what Levi says --------------------- */
 .levi-note {
   position: fixed;
   left: clamp(1rem, 2.4vw, 2rem);
@@ -2458,29 +2419,24 @@ body:not(.void-page) .levi__corona {
   text-shadow: 0 1px 2px rgb(0 0 0 / 70%);
 }
 
-/* --- phones ---------------------------------------------------------------
-   The same object, smaller, with the same behaviour - not a shrunken panel.
-   The star's hit area stays past 44px because it is the primary control. */
 @media (max-width: 700px) {
   .levi__star { width: 56px; height: 56px; margin: -28px 0 0 -28px; }
-  .levi__core {
-    width: 17px; height: 17px;
-    box-shadow: 0 0 18px rgb(255 178 106 / 74%), 0 0 42px rgb(255 122 26 / 38%);
-  }
+  .levi__core { width: 17px; height: 17px;
+    box-shadow: 0 0 18px rgb(255 178 106 / 74%), 0 0 42px rgb(255 122 26 / 38%); }
   .levi__corona { width: 118px; height: 118px; }
-  .levi__pos { left: 36px; top: -6px; }
+  .levi__shadow { width: 128px; height: 46px; }
   .levi__speech { width: var(--levi-w, 15rem); }
   .levi-note { max-width: 30ch; bottom: .6rem; }
 }
 
 /* --- reduced motion -------------------------------------------------------
-   Levi appears exactly where it is needed and the tour still advances. What
-   goes is the spring, the idle drift, the cursor reaction and the travel -
+   It appears where it is needed and the tour still advances. What goes is the
+   spring, the drift, the tumble, the cursor reaction and the scroll impulse -
    levi.js writes the settled position directly and never integrates. */
 @media (prefers-reduced-motion: reduce) {
   .levi__core, .levi__corona { animation: none !important; }
   .levi__speech { transition: none; }
-  .levi.is-gone { transition: none; }
+  .levi.is-gone, .levi-say.is-gone { transition: none; }
 }
 
 /* ============================================================================

@@ -63,3 +63,14 @@ window.LEVI_SCRIPT = [
          "says so rather than collecting your email."
   }
 ];
+
+/* ---------------------------------------------------------------------------
+   WHAT IT SAYS WHEN YOU STOP. Same rules as the tour lines: plain, no
+   exclamation marks, and nothing that claims Levi is watching or learning -
+   it is a timer, and the line is allowed to say only what a timer knows.
+   NEW WORDS, not yet approved.
+   ------------------------------------------------------------------------- */
+window.LEVI_IDLE = [
+  "Still there? I will wait.",
+  "You have gone quiet. Nothing moves until you come back."
+];
