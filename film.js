@@ -35,6 +35,28 @@
   var hero = document.querySelector(".hero__void");
   var hasGsap = window.gsap && window.ScrollTrigger;
 
+  /* ---- the cold start owns the composition first -------------------------
+     boot.js animates the same three variables from a collapsed point out to
+     this stylesheet's resting values, so nothing here may run beside it.
+     ScrollTrigger is the sharper edge of the two: created during the sequence
+     it would apply its start values immediately and snap the film to its
+     resting composition mid-flight.
+
+     The entry tween is not deferred, it is DROPPED when the sequence ran - its
+     job is to stop the first frame being a hard cut from the poster, and the
+     cold start has just done that at length. Replaying it would fade the film
+     out and back in again the moment the page arrived. */
+  var cold = window.__coldStart;
+  if (cold && cold.pending) {
+    window.addEventListener("cognivex:cold-start-done", function () {
+      setup(true);
+    }, { once: true });
+  } else {
+    setup(false);
+  }
+
+  function setup(afterColdStart) {
+
   /* ---- 1 + 3. drift and settle ------------------------------------------ */
   if (hasGsap && hero) {
     gsap.registerPlugin(ScrollTrigger);
@@ -53,9 +75,11 @@
     var X0 = (cs0.getPropertyValue("--film-x") || "31%").trim();
     var Y0 = (cs0.getPropertyValue("--film-y") || "26%").trim();
 
-    gsap.fromTo(film,
-      { opacity: 0, "--film-s": S0 * 0.95 },
-      { opacity: 1, "--film-s": S0, duration: 1.5, ease: "power2.out" });
+    if (!afterColdStart) {
+      gsap.fromTo(film,
+        { opacity: 0, "--film-s": S0 * 0.95 },
+        { opacity: 1, "--film-s": S0, duration: 1.5, ease: "power2.out" });
+    }
 
     /* Toward the middle and up as the hero is left behind, so leaving reads as
        travelling past the thing rather than as it scrolling away. */
@@ -73,6 +97,7 @@
           scrub: 0.7
         }
       });
+  }
   }
 
   /* ---- 2. rate from velocity -------------------------------------------- */
