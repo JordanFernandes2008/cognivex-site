@@ -14,7 +14,11 @@
      <body> exists so the black is on the first paint rather than a flash of
      the page and then a cover. It builds its own markup, so with JavaScript
      off there is no overlay and this tag does nothing at all. -->
-<script src="boot.js?v=790d62fd"></script>
+<script src="boot.js?v=da7668fc"></script>
+<!-- The sequence itself, DEFERRED: it must never block parsing, least of
+     all on a visit where it will not play. boot.js above is the only part
+     that has to be blocking, and it is small for exactly that reason. -->
+<script src="cold.js?v=d1adf3e9" defer></script>
 </head>
 <body class="void-page" data-void-room>
 <a class="skip" href="#main">Skip to content</a>
