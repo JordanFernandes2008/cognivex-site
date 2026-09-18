@@ -41,9 +41,10 @@
                 window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* The cap is a promise to the visitor, so it is measured from the moment the
-     black goes up - not from when the timeline happens to start. */
+     black goes up - not from when the timeline happens to start. Raised with
+     the timeline when the sequence was lengthened on request. */
   var tHead = (window.performance && performance.now) ? performance.now() : Date.now();
-  var CAP = 2500;
+  var CAP = 4600;
 
   /* film.js, levi.js and cold.js all read this synchronously when they load. */
   var cs = window.__coldStart = {

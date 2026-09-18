@@ -89,7 +89,7 @@
      transparent by 84% of its radius, and the flare takes it to 1.22: the
      corona is 168 across on desktop and 118 on a phone, so the light really
      reaches 86 and 60 from centre at its largest. */
-  function starR() { return phone() ? 60 : 86; }
+  function starR() { return phone() ? 70 : 102; }
   var EDGE = 14;      /* never closer than this to a viewport edge             */
 
   /* CLEARANCE, not merely non-overlap. Zero overlap put the star and its line
@@ -533,6 +533,10 @@
     }
 
     setState(target ? "pointing" : "speaking");
+    /* ARRIVING IS AN EVENT. It flares as it lands on each stop and the glow
+       decays back through the same channel the cursor uses - so you see it
+       show up instead of having to go looking for it. */
+    glow = 2.8;
     buildRects();
     if (REDUCED) settleNow(); else { retargetAt = 1; run(); }
 

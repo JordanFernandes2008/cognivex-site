@@ -2294,28 +2294,31 @@ html:has(.void-page) { background: #05070a; }
 
 /* Dark is the bare selector because the page that uses this is dark; making
    the LIGHT form the default once let its ring bleed into the dark one. */
+/* BIGGER AND BRIGHTER, because "where is it" is a verdict. At 22px with a
+   soft bloom it was a highlight on a busy hero rather than a presence you
+   notice arriving. */
 .levi__core {
-  width: 22px; height: 22px;
+  width: 28px; height: 28px;
   background: radial-gradient(circle at 50% 45%,
-    #fff 0%, #fff 34%, #ffd9b0 52%, var(--accent-fill) 74%, var(--accent-deep) 100%);
+    #fff 0%, #fff 38%, #ffe0bd 56%, var(--accent-fill) 76%, var(--accent-deep) 100%);
   mix-blend-mode: screen;
-  box-shadow: 0 0 26px rgb(255 178 106 / 78%), 0 0 60px rgb(255 122 26 / 42%);
+  box-shadow: 0 0 34px rgb(255 190 130 / 92%), 0 0 84px rgb(255 122 26 / 58%);
   filter: brightness(var(--levi-glow, 1));
 }
 /* Elongated a touch on purpose: a perfectly radial gradient rotating is
    invisible - there is nothing in it to see turn. 1.14 is enough that the
    tumble reads and not enough to look like a comet. */
 .levi__corona {
-  width: 168px; height: 168px;
+  width: 200px; height: 200px;
   transform: translate(-50%, -50%)
              rotate(var(--levi-spin, 0deg))
              scale(var(--levi-s, 1)) scaleX(1.14);
   background: radial-gradient(circle,
-    rgb(255 214 170 / 58%) 0%,
-    rgb(255 166 88 / 38%) 16%,
-    rgb(255 122 26 / 20%) 34%,
-    rgb(255 122 26 / 8%) 54%,
-    rgb(229 106 13 / 3%) 70%,
+    rgb(255 222 186 / 72%) 0%,
+    rgb(255 174 100 / 50%) 15%,
+    rgb(255 122 26 / 28%) 32%,
+    rgb(255 122 26 / 12%) 52%,
+    rgb(229 106 13 / 4%) 70%,
     transparent 84%);
   mix-blend-mode: screen;
   filter: brightness(var(--levi-glow, 1));
@@ -2421,9 +2424,9 @@ body:not(.void-page) .levi__corona {
 
 @media (max-width: 700px) {
   .levi__star { width: 56px; height: 56px; margin: -28px 0 0 -28px; }
-  .levi__core { width: 17px; height: 17px;
-    box-shadow: 0 0 18px rgb(255 178 106 / 74%), 0 0 42px rgb(255 122 26 / 38%); }
-  .levi__corona { width: 118px; height: 118px; }
+  .levi__core { width: 21px; height: 21px;
+    box-shadow: 0 0 24px rgb(255 190 130 / 88%), 0 0 56px rgb(255 122 26 / 52%); }
+  .levi__corona { width: 138px; height: 138px; }
   .levi__shadow { width: 128px; height: 46px; }
   .levi__speech { width: var(--levi-w, 15rem); }
   .levi-note { max-width: 30ch; bottom: .6rem; }

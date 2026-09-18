@@ -46,20 +46,24 @@
      performance.now() in one rAF loop rather than off CSS transitions,
      because a single clock that owns every value cannot desynchronise - and
      because the sequence has a hard cap it must be able to honour. */
+  /* LONGER, ON REQUEST. The original brief capped this at 1.5-2.5s; that has
+     been relaxed deliberately, so the beats now have room to be watched rather
+     than glimpsed. The ring holds, the collapse is slower, and the landing is
+     a full second. The hard cap moves with it. */
   var T = REDUCED ? {
     line: [0, 1], caret: 1,
-    orbIn: [260, 560],
-    cap: [380, 640],
-    out: [1050, 1500],
-    end: 1500
+    orbIn: [420, 900],
+    cap: [600, 1000],
+    out: [1700, 2300],
+    end: 2300
   } : {
-    line: [0, 340], caret: 360,      /* a. typed, not glitched                */
-    ring: [360, 660],                /* b. the ring, small and centred        */
-    collapse: [760, 1090],           /* c. the light collapses inward         */
-    stutter: 1090,                   /*    two frames, once, and never again  */
-    cap: [1130, 1300],               /* d. Levi. First model. In development. */
-    land: [1400, 1900],              /* e. travel out, film lands on the hero */
-    end: 1900
+    line: [0, 560], caret: 600,      /* a. typed, not glitched                */
+    ring: [600, 1150],               /* b. the ring, small and centred        */
+    collapse: [1450, 2050],          /* c. the light collapses inward         */
+    stutter: 2050,                   /*    two frames, once, and never again  */
+    cap: [2120, 2420],               /* d. Levi. First model. In development. */
+    land: [2700, 3900],              /* e. travel out, film lands on the hero */
+    end: 3900
   };
 
   var LINE = "COGNIVEX — COLD START";
@@ -276,7 +280,7 @@
     }
 
     /* c. the point forms as the light finishes collapsing. */
-    var born = seg(el, T.collapse[1] - 150, T.collapse[1]);
+    var born = seg(el, T.collapse[1] - 260, T.collapse[1]);
     var ox = innerWidth / 2, oy = innerHeight / 2;
     if (land > 0 && target) {
       var e3 = easeOut(land);
