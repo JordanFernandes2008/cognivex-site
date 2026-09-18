@@ -166,13 +166,30 @@
      is reachable. */
   var ratio = {};
 
+  /* GEOMETRY DECIDES, THE OBSERVER ONLY NUDGES. Depending on the observer to
+     supply the answer was the bug: its ratios were populated - hero at 0.43 -
+     while Levi sat at (14, 5) with opacity 0 and no zone, because nothing had
+     consumed them yet. IntersectionObserver delivery is tied to rendering and
+     can arrive whenever; getBoundingClientRect is correct the instant it is
+     asked. So the ratio is measured here, every time, and the observer is kept
+     purely as a cheap signal that something moved.
+
+     No coverage floor: whichever section is most on screen wins, even if that
+     is only a sliver, so no section can be silently skipped. */
+  function coverOf(el) {
+    var vh = document.documentElement.clientHeight;
+    var r = sectionOf(el).getBoundingClientRect();
+    var visible = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+    return Math.max(0, visible) / vh;
+  }
+
   function dominantZone() {
     var best = null, bestR = 0;
     for (var i = 0; i < script.length; i++) {
       var name = script[i].zone;
       var el = zoneEl(name);
       if (!zoneUsable(el)) continue;
-      var rr = ratio[name] || 0;
+      var rr = Math.max(coverOf(el), ratio[name] || 0);
       if (rr > bestR) { bestR = rr; best = { el: el, name: name, say: script[i].say }; }
     }
     return best;
@@ -511,7 +528,7 @@
   setState("idle");
   lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
   observeZones();
-  arrive(dominantZone());
+  arrive(dominantZone());   /* geometric, so this is correct straight away */
   /* THE OBSERVER'S FIRST CALLBACK LANDS AFTER THIS LINE, so at init every ratio
      is still 0, no zone wins and Levi starts quiet - measured, it stayed silent
      at y0 until the visitor scrolled, which is the worst possible first
