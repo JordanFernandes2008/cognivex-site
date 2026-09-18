@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=d6365fae">
+<link rel="stylesheet" href="site.css?v=9771e0a3">
 <!-- The cold start, in the head deliberately: it has to add its class before
      <body> exists so the black is on the first paint rather than a flash of
      the page and then a cover. It builds its own markup, so with JavaScript
@@ -146,6 +146,12 @@
          handing 603KB of three.js, under reduced motion, and for the second
          before the scene has loaded. The hero is never an empty black box. -->
     <div class="hero__void">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space. Levi exists only
+       inside one of these; where a section has no room for one it gets no
+       zone and Levi is simply not there for it. This replaces the runtime
+       rect-scanning that caused the opacity-0 hero, the dense stops and the
+       bright-band fallback - the page now says where the light may be. -->
+    <div class="levi-zone levi-zone--hero" data-levi-zone="hero" aria-hidden="true"></div>
     <div class="wrap hero__intro" data-par="-0.5">
       <p class="pill" data-rise><span class="pill__dot" aria-hidden="true"></span>Approval-first AI operations</p>
 
@@ -373,6 +379,12 @@
        reasoning being visible IS the product claim.
        ──────────────────────────────────────────────────────────── -->
   <section class="walk" aria-labelledby="walk-h">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space. Levi exists only
+       inside one of these; where a section has no room for one it gets no
+       zone and Levi is simply not there for it. This replaces the runtime
+       rect-scanning that caused the opacity-0 hero, the dense stops and the
+       bright-band fallback - the page now says where the light may be. -->
+  <div class="levi-zone" data-levi-zone="walk" aria-hidden="true"></div>
     <div class="wrap">
       <p class="cap mono"><span>See it work</span><b>6 kinds of item</b></p>
       <h2 class="walk__h" id="walk-h" data-rise>One night, item by item. <em>Click through what it actually did.</em></h2>
@@ -593,6 +605,12 @@
   </section>
 
   <section class="tuesday tuesday--dark">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space. Levi exists only
+       inside one of these; where a section has no room for one it gets no
+       zone and Levi is simply not there for it. This replaces the runtime
+       rect-scanning that caused the opacity-0 hero, the dense stops and the
+       bright-band fallback - the page now says where the light may be. -->
+  <div class="levi-zone" data-levi-zone="tuesday" aria-hidden="true"></div>
     <div class="wrap">
       <p class="cap mono"><span>The morning</span><b>41 things</b></p>
       <div class="tuesday__inner">
@@ -621,6 +639,12 @@
        nothing is sent without approval, so the table must not imply otherwise.
        ────────────────────────────────────────────────────────── -->
   <section class="nightwork" aria-labelledby="night-h">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space. Levi exists only
+       inside one of these; where a section has no room for one it gets no
+       zone and Levi is simply not there for it. This replaces the runtime
+       rect-scanning that caused the opacity-0 hero, the dense stops and the
+       bright-band fallback - the page now says where the light may be. -->
+  <div class="levi-zone" data-levi-zone="nightwork" aria-hidden="true"></div>
     <div class="wrap">
       <p class="cap mono"><span>The night&rsquo;s work</span><b>41 items</b></p>
       <h2 class="nightwork__h" id="night-h" data-rise>Everything that came in, <em>and what was ready for you.</em></h2>
@@ -686,6 +710,12 @@
 
   <!-- ── The loop ─────────────────────────────────────────────────────────── -->
   <section class="loop" id="loop">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space. Levi exists only
+       inside one of these; where a section has no room for one it gets no
+       zone and Levi is simply not there for it. This replaces the runtime
+       rect-scanning that caused the opacity-0 hero, the dense stops and the
+       bright-band fallback - the page now says where the light may be. -->
+  <div class="levi-zone" data-levi-zone="loop" aria-hidden="true"></div>
     <div class="wrap">
       <p class="cap mono"><span>The loop</span><b>3 steps</b></p>
       <h2 class="loop__title" data-rise>Three steps. <em>You are the third one.</em></h2>
@@ -710,6 +740,12 @@
 
   <!-- ── Capabilities ─────────────────────────────────────────────────────── -->
   <section class="ledger">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space. Levi exists only
+       inside one of these; where a section has no room for one it gets no
+       zone and Levi is simply not there for it. This replaces the runtime
+       rect-scanning that caused the opacity-0 hero, the dense stops and the
+       bright-band fallback - the page now says where the light may be. -->
+  <div class="levi-zone" data-levi-zone="ledger" aria-hidden="true"></div>
     <div class="wrap">
       <div class="ledger__top">
         <p class="cap mono"><span>What it does</span><b>4 things</b></p>
@@ -752,6 +788,12 @@
 
   <!-- ── The position ─────────────────────────────────────────────────────── -->
   <section class="position">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space. Levi exists only
+       inside one of these; where a section has no room for one it gets no
+       zone and Levi is simply not there for it. This replaces the runtime
+       rect-scanning that caused the opacity-0 hero, the dense stops and the
+       bright-band fallback - the page now says where the light may be. -->
+  <div class="levi-zone" data-levi-zone="position" aria-hidden="true"></div>
     <div class="wrap position__inner" data-par="0.8">
       <p class="cap mono"><span>The position</span><b>Not a setting</b></p>
       <h2 class="position__title" data-rise>Approval is not a safety setting. <em>It is the product.</em></h2>
@@ -760,6 +802,17 @@
           Every other AI tool sells you on how little you have to do. That holds
           right up to the moment the thing being automated is a message to the
           client who is deciding whether to pay you.
+        </p>
+
+        <!-- Levi introduced ONCE, by the page, in the place the product is
+             described. It used to introduce itself in a three-sentence line at
+             the first tour stop, which is what made the tour read as a tooltip:
+             a character standing in front of you reciting its own bio. -->
+        <p data-rise data-rise-delay="120">
+          Levi is the first model we are building. It reads what arrives
+          overnight and leaves the replies ready for you. It is not running
+          yet, and the light moving through this page is a scripted preview of
+          it rather than the thing itself.
         </p>
         <p data-rise data-rise-delay="140">
           Cognivex does an hour of work unprompted and then stops. The step where
@@ -781,6 +834,12 @@
 
   <!-- ── Closing ──────────────────────────────────────────────────────────── -->
   <section class="closing">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space. Levi exists only
+       inside one of these; where a section has no room for one it gets no
+       zone and Levi is simply not there for it. This replaces the runtime
+       rect-scanning that caused the opacity-0 hero, the dense stops and the
+       bright-band fallback - the page now says where the light may be. -->
+  <div class="levi-zone" data-levi-zone="closing" aria-hidden="true"></div>
     <div class="wrap closing__grid" data-par="0.6">
       <div class="closing__col" data-rise>
         <h2 class="closing__h closing__h--wall">You are the<br><em>operations department.</em></h2>
@@ -844,8 +903,8 @@
 <script src="cursor.js?v=f97330b9"></script>
 <script src="walk.js?v=e324178f"></script>
 <script src="film.js?v=5366d4e8"></script>
-<script src="levi-home.js?v=2debf6f3"></script>
-<script src="levi.js?v=35f63edd"></script>
+<script src="levi-home.js?v=11aa400c"></script>
+<script src="levi.js?v=4a5648d1"></script>
 <script src="motion.js?v=bc725647"></script>
 </body>
 </html>

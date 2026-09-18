@@ -1,39 +1,35 @@
 /* ============================================================================
-   LEVI — the object.
+   LEVI — a light the scroll moves.
 
-   Levi is the light. Not a light inside a card: there is no card in this file
-   any more, no title bar, no button row, no step-counter chip and no close
-   button. What is left is a star, a line of text near it, and two very quiet
-   affordances.
+   THERE IS NO TOUR IN HERE ANY MORE. No next, no step counter, no "1 of 9", no
+   completion. Levi speaks because the visitor arrived somewhere, not because
+   they pressed something: each zone owns one line, and whichever section is
+   the dominant thing in the viewport is the line you get. Scroll back up and
+   the earlier line comes back, because this is a POSITION, not a sequence.
 
-   HOW IT MOVES. A spring integrator, not a tween. Every frame it accelerates
-   toward a goal, overshoots it slightly and settles:
+   Scrolling fast past four sections must not queue four lines, so the read is
+   debounced to where the visitor actually stopped - it speaks for the place
+   they came to rest, and nothing for the places they flew through.
 
-       a = (goal - p) * K - v * D
-       v += a * dt ; p += v * dt
+   CLICK IS RESERVED. The one gesture is clicking the star to approve the
+   nearest pending item, which is the product's only real verb. Nothing else on
+   this object is clickable, and the line is not a button.
 
-   with K 150 and D 17, which is a damping ratio of 0.69 - under one, so there
-   IS an overshoot, and small enough that it reads as weight rather than as a
-   wobble. Nothing it does is linear and nothing is instantaneous. On top of
-   the spring it drifts on two slow incommensurate sines, so the idle never
-   visibly repeats, and it leans toward the cursor by up to 30px with the pull
-   decaying as the pointer goes still.
+   WHERE IT MAY BE. [data-levi-zone] bands declared in the markup and sized in
+   the layout to be genuinely empty. No rect scanning, no candidate scoring, no
+   fallback corner - all of that is what kept exiling it to the right margin,
+   where it was measured at 110px from the screen edge with a line box computing
+   to width 0. A section with no usable zone gets no Levi.
 
-   POSITION HAS EXACTLY ONE OWNER: this loop, writing one translate on .levi.
-   The stylesheet animates brightness and the corona's own shape and never
-   touches the group's transform. That separation is the thing this project has
-   already paid for twice - once on the film's composition, once on the orb.
+   THE LINE NEVER COMPRESSES. Fixed 19rem measure at body size. If it will not
+   fit beside the star inside the zone, the STAR moves and the line is laid out
+   below it - the text is never squeezed to make room for the light.
 
-   WHERE IT IS ALLOWED TO BE. Three things it must never stand on: rendered
-   page text, a control, and the film's bright band. The first two come from a
-   cache of real client rects; the third is computed from the film's own
-   geometry each time it moves, because the film is scrubbed by scroll and its
-   bright region travels with it. Measured off the footage across six sampled
-   frames at a luminance threshold of 0.045, that band is an ellipse of 0.394 x
-   0.172 of the drawn image, centred on the hole.
-
-   PROGRESSIVE ENHANCEMENT is unchanged: the markup is built here, so with
-   JavaScript off there is no Levi, no speech and no footnote - just the page.
+   DEPTH. Star inside <main> at z-index 1, so the display type at z-index 2
+   occludes it; speech on body above everything. Both read --levi-x/--levi-y,
+   written once per frame. It is a quieter effect here than on the reference -
+   our display type is ~64px against their 162px - and that is accepted rather
+   than compensated for by inflating either one.
    ========================================================================== */
 (function () {
   "use strict";
@@ -41,109 +37,70 @@
   var KEY = "cognivex.levi.dismissed";
   var script = window.LEVI_SCRIPT;
   if (!script || !script.length) return;
-
   try { if (window.sessionStorage.getItem(KEY) === "1") return; } catch (e) {}
 
   var REDUCED = window.matchMedia &&
                 window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var BOOTING = !!(window.__coldStart && window.__coldStart.pending);
 
-  /* ---- the physics -------------------------------------------------------- */
-  var K = 150;        /* stiffness                                             */
-  var D = 17;         /* damping - ratio 0.69, so it overshoots a little        */
-  var MAX_DT = 1 / 30;
-  var CURSOR_PULL = 30;    /* px, at most                                      */
-  var CURSOR_REACH = 420;  /* px, beyond which the cursor is ignored           */
-
-  /* The film's bright band, in units of the drawn image. Measured, not guessed
-     - see the header. A little margin over the 0.394 x 0.172 that was read off
-     the footage, because the sampler only resolved three distinct frames. */
-  var BRIGHT_RX = 0.40, BRIGHT_RY = 0.19;
+  var K = 150, D = 17, MAX_DT = 1 / 30;
+  var CURSOR_PULL = 30, CURSOR_REACH = 460;
+  var PAD = 48;
+  var IDLE_MS = 22000;
+  var SETTLE_MS = 160;          /* how long the scroll must stop before it speaks */
+  var DOMINANT = 0.28;          /* of the viewport, before a section counts       */
 
   function phone() { return window.innerWidth <= 700; }
+  /* The light's visible mass, not the flare's faint reach. */
+  function starR() { return phone() ? 110 : 150; }
+  function lineW() { return phone() ? 256 : 304; }
+  function gapW() { return phone() ? 26 : 38; }
 
-  /* ---- WHERE THE TOUR IS POSSIBLE AT ALL ----------------------------------
-     Levi needs a lane: a page margin outside the content measure wide enough
-     to stand in. .wrap is max-width 1180, so below roughly 1230px it fills the
-     viewport and there is no margin at all - measured, 0 and 15px at both 1024
-     and 768.
+  function zoneEl(name) { return document.querySelector('[data-levi-zone="' + name + '"]'); }
+  function sectionOf(el) { return el.closest("section") || el.parentElement || el; }
 
-     Forced to run there, the object has nowhere legal to be: 5 of 9 stops
-     failed the keep-out at 1024, 6 of 9 at 768, and at 390 the line printed
-     straight across the headline. That is the panel-over-content problem again
-     wearing a different shape, so the tour does not run there. The page is the
-     page, the footnote does not appear, and nothing is shrunk to fit.
-
-     Gated on the MEASURED margin rather than a width, so it stays correct if
-     the content measure ever changes. */
-  var LANE_MIN = 96;
-
-  function laneWidth() {
-    var wrap = document.querySelector(".hero__void .wrap, .wrap");
-    if (!wrap) return 0;
-    var r = wrap.getBoundingClientRect();
-    return Math.max(r.left, document.documentElement.clientWidth - r.right);
+  function zoneUsable(el) {
+    if (!el) return false;
+    var cs = getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden") return false;
+    var r = el.getBoundingClientRect();
+    var R = starR();
+    if (r.height < 2 * PAD + 2 * R) return false;
+    /* Beside, or stacked - either is fine, but it must hold one of them with
+       the line at full measure. */
+    var beside = (PAD + 2 * R + gapW() + lineW() + PAD) <= r.width;
+    var stacked = (PAD + Math.max(2 * R, lineW()) + PAD) <= r.width;
+    return beside || stacked;
   }
-  function tourPossible() { return laneWidth() >= LANE_MIN; }
-  /* The light's visible extent at its largest state. The corona's gradient is
-     transparent by 84% of its radius, and the flare takes it to 1.22: the
-     corona is 168 across on desktop and 118 on a phone, so the light really
-     reaches 86 and 60 from centre at its largest. */
-  function starR() { return phone() ? 70 : 102; }
-  var EDGE = 14;      /* never closer than this to a viewport edge             */
 
-  /* CLEARANCE, not merely non-overlap. Zero overlap put the star and its line
-     hard against the hero headline: every boolean passed and the render was
-     obviously wrong, because touching is not the same as clear. The star keeps
-     26px from anything rendered; the speech keeps 34px, which also covers the
-     overhang of the soft darkening behind it. */
-  var STAR_PAD = 26;
-  var SPEECH_PAD = 34;
-
-  /* ---- markup ------------------------------------------------------------- */
-  /* TWO LAYERS, ONE POSITION. The star goes inside <main> so it stacks at
-     z-index 1 - in front of the film and every section panel, BEHIND the
-     display type at z-index 2, which is the occlusion that makes it read as an
-     object rather than a sprite on the glass. The speech goes on body above
-     everything, because a line you cannot read is not speech.
-
-     Both are driven by --levi-x / --levi-y written once per frame. Same
-     discipline as the film: one owner, one declaration. */
+  /* ---- markup --------------------------------------------------------------
+     Built here, so with JavaScript off there is no star, no line, no footnote. */
   var host = document.querySelector("main") || document.body;
+
   var root = document.createElement("div");
   root.className = "levi";
   root.setAttribute("data-levi", "");
 
-  /* The star is the control. It is a button so it is focusable, announces
-     itself, and can show a focus ring; the light is drawn inside it. */
   var star = document.createElement("button");
   star.type = "button";
   star.className = "levi__star";
-  star.setAttribute("data-levi-star", "");
-  star.setAttribute("aria-label",
-    "Levi. Press Enter or Right Arrow for the next line, Escape to dismiss.");
-  star.innerHTML = '<i class="levi__corona" aria-hidden="true"></i>' +
-                   '<i class="levi__core" aria-hidden="true"></i>';
+  star.setAttribute("aria-label", "Levi. Approve the nearest pending item.");
+  star.innerHTML =
+    '<i class="levi__flare"  aria-hidden="true"></i>' +
+    '<i class="levi__corona" aria-hidden="true"></i>' +
+    '<i class="levi__ring"   aria-hidden="true"></i>' +
+    '<i class="levi__core"   aria-hidden="true"></i>';
 
-  /* Its footprint. A light does not cast a shadow, but the depth cue is most
-     of why the reference reads as real, so it gets one anyway - offset, wide,
-     riding under the light in the same layer. */
   var shadow = document.createElement("i");
   shadow.className = "levi__shadow";
   shadow.setAttribute("aria-hidden", "true");
 
-  /* No counter. No skip button. One small instruction, which leaves once it
-     has been followed. */
   var say = document.createElement("div");
-  say.className = "levi-say";
-  say.setAttribute("data-levi-say-layer", "");
+  say.className = "levi-say is-quiet";
 
   var speech = document.createElement("div");
   speech.className = "levi__speech";
-  speech.setAttribute("data-levi-speech", "");
-  speech.innerHTML =
-    '<p class="levi__line" data-levi-say></p>' +
-    '<span class="levi__hint" data-levi-hint>(Click Levi)</span>';
+  speech.innerHTML = '<p class="levi__line" data-levi-say></p>';
 
   root.appendChild(shadow);
   root.appendChild(star);
@@ -151,8 +108,6 @@
   host.appendChild(root);
   document.body.appendChild(say);
 
-  /* The disclaimer is NOT part of what Levi says. One quiet line at the page
-     edge, sentence case. */
   var note = document.createElement("p");
   note.className = "levi-note";
   note.textContent =
@@ -160,278 +115,82 @@
   document.body.appendChild(note);
 
   var sayEl = speech.querySelector("[data-levi-say]");
-  var hintEl = speech.querySelector("[data-levi-hint]");
-  var IDLE_LINES = window.LEVI_IDLE || ["Still there? I will wait."];
+  var IDLE_LINES = window.LEVI_IDLE || ["Still here."];
 
-  /* ---- state -------------------------------------------------------------- */
-  var STATES = ["is-idle", "is-speaking", "is-pointing", "is-approved"];
+  var STATES = ["is-idle", "is-speaking", "is-approved"];
   function setState(n) {
-    STATES.forEach(function (c) { root.classList.remove(c); say.classList.remove(c); });
+    STATES.forEach(function (c) { root.classList.remove(c); });
     root.classList.add("is-" + n);
-    say.classList.add("is-" + n);
   }
 
-  var at = 0, target = null, done = false, dismissed = false, frozen = false;
+  var zone = null, zoneName = null, done = false, dismissed = false, frozen = false;
   var p = { x: 0, y: 0 }, v = { x: 0, y: 0 }, goal = { x: 0, y: 0 };
-  var side = 1;                  /* +1 speech to the right, -1 to the left     */
   var mouse = { x: 0, y: 0, fresh: 0 };
-  var lastT = 0, raf = null, flareTimer = null, retargetAt = 0;
-  var placed = { starOK: true, spOK: true };
+  var lastT = 0, raf = null, flareTimer = null, settleT = null;
   var spin = 0, glow = 1, lastScrollY = 0, lastActivity = 0;
-  var idleSpoken = false, savedLine = null, lure = null, clicked = false;
-  var IDLE_MS = 25000;
+  var idleSpoken = false, savedLine = null, lure = null, stacked = false;
 
-  /* ---- what it must not stand on ------------------------------------------
-     Every text run and every control, once, in DOCUMENT co-ordinates - which
-     do not change as the page scrolls, so the cache survives a scroll and only
-     has to be rebuilt when the page changes shape. Fixed and sticky things are
-     excluded because they move independently; they are handled live. */
-  var FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])';
-  var rects = null, pinned = null;
-
-  function isPinned(el) {
-    for (var n = el; n && n !== document.body; n = n.parentElement) {
-      var q = getComputedStyle(n).position;
-      if (q === "fixed" || q === "sticky") return true;
-    }
-    return false;
-  }
-
-  function buildRects() {
-    var sx = window.pageXOffset, sy = window.pageYOffset, out = [];
-    function push(r) {
-      if (r.width < 2 || r.height < 2) return;
-      out.push([r.left + sx, r.top + sy, r.right + sx, r.bottom + sy]);
-    }
-    var wk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), n;
-    while ((n = wk.nextNode())) {
-      if (!n.nodeValue.trim()) continue;
-      var el = n.parentElement;
-      if (!el || root.contains(el) || el === note) continue;
-      var cs = getComputedStyle(el);
-      /* OPACITY 0 IS NOT FREE SPACE. This used to skip it, and the page's
-         reveal animation holds [data-rise] elements at opacity 0 until they
-         scroll in - so the whole hero was missing from the cache and Levi
-         cheerfully put its line on top of the eyebrow and the headline, with
-         every clearance boolean reporting true because the words were not
-         there YET. Caught by looking at the render, never by the numbers.
-
-         An element that occupies layout is occupied, whatever it is currently
-         painting. Only display:none and visibility:hidden take a thing out of
-         the page, and those are the only two that skip. */
-      if (cs.visibility === "hidden" || cs.display === "none") continue;
-      if (isPinned(el)) continue;
-      var rg = document.createRange();
-      rg.selectNodeContents(n);
-      var rcs = rg.getClientRects();
-      for (var i = 0; i < rcs.length; i++) push(rcs[i]);
-    }
-    var f = document.querySelectorAll(FOCUSABLE);
-    for (var j = 0; j < f.length; j++) {
-      if (root.contains(f[j]) || isPinned(f[j])) continue;
-      push(f[j].getBoundingClientRect());
-    }
-    rects = out;
-
-    var ps = [], all = document.body.getElementsByTagName("*");
-    var vh = document.documentElement.clientHeight;
-    for (var k = 0; k < all.length; k++) {
-      var e = all[k];
-      if (root.contains(e) || e === note) continue;
-      var q = getComputedStyle(e).position;
-      if (q !== "fixed" && q !== "sticky") continue;
-      var r2 = e.getBoundingClientRect();
-      /* A full-viewport fixed layer is the film's backdrop, not a bar. */
-      if (r2.height > vh * 0.6 || r2.width < 2) continue;
-      ps.push(e);
-    }
-    pinned = ps;
-  }
-
-  /* Is the box clear of every rendered thing? Boxes are viewport co-ordinates;
-     the cache is document co-ordinates, so the scroll offset bridges them. */
-  function clearOf(l, t, r, b) {
-    if (!rects) buildRects();
-    var sx = window.pageXOffset, sy = window.pageYOffset;
-    var L = l + sx, T = t + sy, R = r + sx, B = b + sy;
-    for (var i = 0; i < rects.length; i++) {
-      var q = rects[i];
-      if (q[2] > L && q[0] < R && q[3] > T && q[1] < B) return false;
-    }
-    for (var j = 0; j < pinned.length; j++) {
-      var pr = pinned[j].getBoundingClientRect();
-      if (pr.width < 2) continue;
-      if (pr.right > l && pr.left < r && pr.bottom > t && pr.top < b) return false;
-    }
-    return true;
-  }
-
-  /* ---- the film's bright band ---------------------------------------------
-     Recomputed from the film's live geometry, because scroll scrubs its scale
-     and offset and the band travels with it. */
-  var film = document.querySelector(".singularity__film");
-
-  function bright() {
-    if (!film || !film.videoWidth) return null;
-    var cs = getComputedStyle(film);
-    if (cs.display === "none" || parseFloat(cs.opacity) < 0.04) return null;
-    var r = film.getBoundingClientRect();
-    if (r.width < 2 || r.height < 2) return null;
-    var sc = Math.max(r.width / film.videoWidth, r.height / film.videoHeight);
-    var dw = film.videoWidth * sc, dh = film.videoHeight * sc;
-    return {
-      cx: r.left + r.width / 2,
-      cy: r.top + r.height / 2,
-      rx: BRIGHT_RX * dw,
-      ry: BRIGHT_RY * dh
-    };
-  }
-
-  /* A disc of radius rad at (x,y) against that ellipse, grown by the radius so
-     the test is disc-vs-ellipse rather than point-vs-ellipse. */
-  function inBright(x, y, rad, z) {
-    if (!z) return false;
-    var dx = (x - z.cx) / (z.rx + rad);
-    var dy = (y - z.cy) / (z.ry + rad);
-    return dx * dx + dy * dy < 1;
-  }
-
-  /* ---- where to stand ------------------------------------------------------
-     Candidates near the thing being described, then further out, then the
-     quiet edges of the screen. The first that clears text, controls and the
-     film's band wins; ties go to whichever is closest to the target. */
-  function retarget() {
-    var vw = document.documentElement.clientWidth;
-    var vh = document.documentElement.clientHeight;
-    var R = starR();
-    var z = bright();
-
-    var sr = speech.getBoundingClientRect();
-    var sw = sr.width || (phone() ? 240 : 336);
-    var sh = sr.height || 64;
-    var gap = phone() ? 30 : 42;
-    /* The darkening reaches 32% of the box's own height above and below it, so
-       a fixed 34px pad under-covers a tall line and lets the glow graze the
-       label above - visible in the render, invisible to the boolean. */
-    var spad = Math.max(SPEECH_PAD, Math.round(sh * 0.36));
-
-    var tr = target ? target.getBoundingClientRect() : null;
-    var tx = tr ? tr.left + tr.width / 2 : vw / 2;
-    var ty = tr ? tr.top + tr.height / 2 : vh / 2;
-
-    /* The page's own outer margin is where this belongs when there is one: it
-       is outside the content measure by definition, so it is the one column
-       that stays clear as the page gets denser. .app fills the viewport at the
-       product surface, and the first version had no margin candidate at all -
-       so it found nothing, fell into a fixed bottom-right corner, and that
-       corner was inside the film's bright band at 1.26:1. */
-    var wrap = document.querySelector(".hero__void .wrap, .wrap");
-    var colL = 0, colR = vw;
-    if (wrap) { var wr = wrap.getBoundingClientRect(); colL = wr.left; colR = wr.right; }
-
-    var xs = [];
-    if (colR < vw - 24) xs.push((colR + vw) / 2);
-    if (colL > 24) xs.push(colL / 2);
-    xs.push(vw - 62, 62, vw - 110, 110);
-    if (tr) xs.push(tr.right + R * 0.7, tr.left - R * 0.7);
-    xs.push(vw * 0.5, vw * 0.28, vw * 0.72);
-
-    var ys = [];
-    for (var y = 56; y <= vh - 56; y += 30) ys.push(y);
-
-    /* SCORED, not first-valid. Every candidate gets a cost and the cheapest
-       wins, so when nothing is perfect it degrades to the least bad instead of
-       falling off a cliff into a corner. The bright band is the one hard
-       filter: Levi is never allowed to stand in the film's light. */
-    var best = null;
-    for (var i = 0; i < xs.length; i++) {
-      for (var j = 0; j < ys.length; j++) {
-        /* The light may bleed a little past the edge - it is a soft gradient,
-           and clamping its CENTRE to R from the edge is what pushed it 100px
-           back into the content column in the first place. */
-        var x = Math.max(52, Math.min(vw - 52, xs[i]));
-        var y = Math.max(52, Math.min(vh - 52, ys[j]));
-        if (inBright(x, y, R * 0.7, z)) continue;
-
-        var starOK = clearOf(x - R - STAR_PAD, y - R - STAR_PAD,
-                             x + R + STAR_PAD, y + R + STAR_PAD);
-
-        /* THE SPEECH GETS ITS OWN SEARCH. A 336px line cannot fit a 123px
-           page margin, so pinning it beside the star at one fixed height meant
-           that at the dense stops - the product surface, the night grid, the
-           ledger - it had nowhere to go and simply landed on the page's words.
-           Both sides, four heights: level, centred, below, above. */
-        for (var s = 0; s < 2; s++) {
-          var sgn = s === 0 ? (x > vw * 0.55 ? -1 : 1) : (x > vw * 0.55 ? 1 : -1);
-          var sx0 = sgn > 0 ? x + gap : x - gap - sw;
-          if (sx0 < EDGE || sx0 + sw > vw - EDGE) continue;
-
-          var lifts = [y - 12, y - sh / 2, y + gap, y - sh - gap];
-          for (var q = 0; q < lifts.length; q++) {
-            var sy0 = lifts[q];
-            if (sy0 + sh > vh - EDGE) sy0 = vh - EDGE - sh;
-            if (sy0 < EDGE) sy0 = EDGE;
-
-            var spOK = clearOf(sx0 - spad, sy0 - spad,
-                               sx0 + sw + spad, sy0 + sh + spad);
-
-            var cost = Math.hypot(x - tx, y - ty)
-                     + ((x > colL && x < colR) ? 700 : 0)   /* prefer the margin */
-                     + (starOK ? 0 : 5000)
-                     + (spOK ? 0 : 2500)
-                     + q * 30;                              /* level reads best */
-
-            if (!best || cost < best.cost) {
-              best = { x: x, y: y, side: sgn, cost: cost, sy: sy0 - y,
-                       starOK: starOK, spOK: spOK };
-            }
-          }
-        }
-      }
-    }
-
-    if (!best) {
-      /* The band covers everything this candidate set looked at. Go high and
-         outside it rather than into it. */
-      best = { x: vw - 62, y: 72, side: -1, sy: -12, starOK: false, spOK: false };
-    }
-
-    goal.x = best.x; goal.y = best.y; side = best.side;
-    /* ON documentElement, NOT on the star layer. The speech lives in a sibling
-       subtree now so it can sit above the display type while the star sits
-       behind it - and a custom property set on one sibling does not reach the
-       other. Set on the root, both layers read it. */
+  function write(x, y) {
     var d = document.documentElement.style;
-    d.setProperty("--levi-tx", (side > 0 ? gap : -gap - sw) + "px");
-    d.setProperty("--levi-ty", best.sy + "px");
-    placed = { starOK: best.starOK, spOK: best.spOK };
+    d.setProperty("--levi-x", x.toFixed(1) + "px");
+    d.setProperty("--levi-y", y.toFixed(1) + "px");
+  }
 
-    if (tr) {
-      var ang = Math.atan2(ty - goal.y, tx - goal.x) * 180 / Math.PI;
-      root.style.setProperty("--levi-lean", ang.toFixed(1) + "deg");
+  /* ---- which section is the visitor actually looking at ---------------------
+     Visible fraction of the viewport, largest wins. A zone whose section is
+     barely on screen is not where they are. */
+  function dominantZone() {
+    var vh = document.documentElement.clientHeight;
+    var best = null, bestCover = DOMINANT;
+    for (var i = 0; i < script.length; i++) {
+      var el = zoneEl(script[i].zone);
+      if (!zoneUsable(el)) continue;
+      var r = sectionOf(el).getBoundingClientRect();
+      var cover = (Math.min(r.bottom, vh) - Math.max(r.top, 0)) / vh;
+      if (cover > bestCover) { bestCover = cover; best = { el: el, name: script[i].zone, say: script[i].say }; }
+    }
+    return best;
+  }
+
+  /* ---- placement, which is arithmetic -------------------------------------- */
+  function retarget() {
+    if (!zone) return;
+    var r = zone.getBoundingClientRect();
+    var R = starR(), gap = gapW(), lw = lineW();
+    var sh = speech.getBoundingClientRect().height || 26;
+
+    stacked = (PAD + 2 * R + gap + lw + PAD) > r.width;
+
+    var d = document.documentElement.style;
+    if (!stacked) {
+      goal.x = r.left + PAD + R;
+      goal.y = r.top + r.height / 2;
+      d.setProperty("--levi-tx", (R + gap) + "px");
+      d.setProperty("--levi-ty", (-sh / 2) + "px");
+    } else {
+      /* THE STAR MOVES, NOT THE TEXT. Star high in the zone, full-measure line
+         underneath it. */
+      goal.x = r.left + r.width / 2;
+      goal.y = r.top + PAD + R * 0.78;
+      d.setProperty("--levi-tx", (-lw / 2) + "px");
+      d.setProperty("--levi-ty", (R * 0.86 + gap) + "px");
     }
   }
 
-  /* ---- the loop ----------------------------------------------------------- */
+  /* ---- the loop ------------------------------------------------------------ */
   function step(now) {
     raf = null;
     if (done) return;
     var dt = Math.min(MAX_DT, (now - lastT) / 1000 || MAX_DT);
     lastT = now;
 
-    if (retargetAt) { retargetAt = 0; retarget(); }
+    retarget();
     checkIdle(now);
 
-    /* IT NEVER PARKS. The previous version damped the drift to 5px while it
-       was speaking, which meant that for most of the tour it held a position -
-       and holding a position is what a widget does. Two slow sines whose
-       periods do not divide, running the whole time. */
     var amp = root.classList.contains("is-idle") ? 12 : 9;
     var dx = Math.sin(now / 2600) * amp + Math.sin(now / 4300) * amp * 0.5;
     var dy = Math.cos(now / 3100) * amp * 0.8 + Math.sin(now / 5700) * amp * 0.4;
 
-    /* The cursor: a pull that falls off with distance and fades once the
-       pointer goes still. */
     var cx = 0, cy = 0, near = 0;
     if (mouse.fresh > 0 && !phone()) {
       var mx = mouse.x - p.x, my = mouse.y - p.y;
@@ -441,41 +200,27 @@
       cx = mx / dist * inf; cy = my / dist * inf;
       mouse.fresh = Math.max(0, mouse.fresh - dt / 1.2);
     }
-    /* It brightens as the cursor nears, and decays back. */
-    var wantGlow = 1 + near * mouse.fresh * 0.55;
-    glow += (wantGlow - glow) * Math.min(1, dt * 6);
+    var wantGlow = 1 + near * mouse.fresh * 0.5;
+    glow += (wantGlow - glow) * Math.min(1, dt * 5);
 
-    /* A gesture overrides the tour's placement for as long as it lasts. */
     var g = lure || goal;
     var gx = g.x + dx + cx, gy = g.y + dy + cy;
 
-    var ax = (gx - p.x) * K - v.x * D;
-    var ay = (gy - p.y) * K - v.y * D;
-    v.x += ax * dt; v.y += ay * dt;
+    v.x += ((gx - p.x) * K - v.x * D) * dt;
+    v.y += ((gy - p.y) * K - v.y * D) * dt;
     p.x += v.x * dt; p.y += v.y * dt;
 
-    /* A slow tumble on its own axis, plus a wobble so it is never uniform. */
-    spin = (spin + dt * 7 + Math.sin(now / 5200) * dt * 9) % 360;
-
-    /* The shadow lags the light and squashes as it rises - the two together
-       are what read as height off the ground. */
+    spin = (spin + dt * 6 + Math.sin(now / 5200) * dt * 8) % 360;
     var lift = Math.min(1, Math.abs(v.y) / 900);
+
     write(p.x, p.y);
     root.style.setProperty("--levi-spin", spin.toFixed(1) + "deg");
     root.style.setProperty("--levi-glow", glow.toFixed(3));
-    root.style.setProperty("--levi-shx", (16 + v.x * 0.012).toFixed(1) + "px");
-    root.style.setProperty("--levi-shy", (30 + lift * 14).toFixed(1) + "px");
-    root.style.setProperty("--levi-shs", (1 + lift * 0.22).toFixed(3));
+    root.style.setProperty("--levi-shx", (20 + v.x * 0.014).toFixed(1) + "px");
+    root.style.setProperty("--levi-shy", (52 + lift * 18).toFixed(1) + "px");
+    root.style.setProperty("--levi-shs", (1 + lift * 0.24).toFixed(3));
 
     raf = requestAnimationFrame(step);
-  }
-
-  /* ONE WRITER. Both layers read these two properties, so the star and the
-     line can live in different stacking contexts and still be one object. */
-  function write(x, y) {
-    var d = document.documentElement.style;
-    d.setProperty("--levi-x", x.toFixed(1) + "px");
-    d.setProperty("--levi-y", y.toFixed(1) + "px");
   }
 
   function run() {
@@ -485,8 +230,6 @@
     raf = requestAnimationFrame(step);
   }
 
-  /* Reduced motion: no spring, no drift, no cursor, no travel. It is simply
-     where it needs to be, and the tour still advances. */
   function settleNow() {
     retarget();
     var g = lure || goal;
@@ -494,146 +237,72 @@
     write(p.x, p.y);
   }
 
-  /* ---- the tour ----------------------------------------------------------- */
-  function pad(n) { return (n < 10 ? "0" : "") + n; }
-
-  function inView(el) {
-    var r = el.getBoundingClientRect();
-    var vh = document.documentElement.clientHeight;
-    return r.top >= 72 && r.bottom <= vh - 72;
-  }
-
-  function show(i) {
-    at = i;
-    var stop = script[at];
-    target = stop && document.querySelector(stop.at);
-    if (!target && at < script.length - 1) return show(at + 1);
-
-    sayEl.textContent = stop.say;
-    savedLine = null; idleSpoken = false;
-
-    if (target && !inView(target)) {
-      var trr = target.getBoundingClientRect();
-      var vhh = document.documentElement.clientHeight;
-      /* A TALL TARGET CENTRED LEAVES NO BAND TO SPEAK IN. Measured at 1440x900,
-         .app centred spans 103 to 797 - margins of 228 and 244 either side and
-         bands of 103 above and below, while the line needs 404 wide or 152
-         tall. Nothing fits anywhere on that screen, so the speech had to land
-         on the demo's own text. The tour owns the scroll, so it frames a tall
-         subject lower instead and opens the band it needs. */
-      if (trr.height > vhh * 0.55) {
-        window.scrollTo({
-          top: Math.max(0, window.pageYOffset + trr.top - 232),
-          behavior: REDUCED ? "auto" : "smooth"
-        });
-      } else {
-        target.scrollIntoView(REDUCED ? { block: "center" }
-                                      : { block: "center", behavior: "smooth" });
-      }
-    }
-
-    setState(target ? "pointing" : "speaking");
-    /* ARRIVING IS AN EVENT. It flares as it lands on each stop and the glow
-       decays back through the same channel the cursor uses - so you see it
-       show up instead of having to go looking for it. */
-    glow = 2.8;
-    buildRects();
-    if (REDUCED) settleNow(); else { retargetAt = 1; run(); }
-
-    window.setTimeout(function () {
-      if (!dismissed) setState("speaking");
-      buildRects();
-      if (REDUCED) settleNow();
-    }, REDUCED ? 0 : 560);
-  }
-
-  function advance() {
-    if (dismissed) return;
-    if (at >= script.length - 1) return endTour();
-    show(at + 1);
-  }
-
-  function endTour() {
+  /* ---- arriving somewhere -------------------------------------------------- */
+  /* NO ZONE MEANS NOT THERE. Levi may only exist inside a zone, so when no
+     section owns one - the hero below 1200px, for instance - the light goes
+     too. Without this it parked at the layer origin, which measured as a star
+     at (0,0) and a line 150px off the left edge of the screen. */
+  function goQuiet() {
+    zone = null; zoneName = null;
+    say.classList.add("is-quiet");
+    root.classList.add("is-quiet");
     setState("idle");
-    target = null;
-    sayEl.textContent = "";
-    root.classList.add("is-done");
-    say.classList.add("is-done");
-    if (REDUCED) settleNow();
   }
 
-  function dismiss() {
+  function arrive(z) {
+    if (!z) { goQuiet(); return; }
+    if (z.name === zoneName) return;          /* already here */
+    zone = z.el; zoneName = z.name;
+    root.classList.remove("is-quiet");
+    sayEl.textContent = z.say;
+    savedLine = null; idleSpoken = false;
+    say.classList.remove("is-quiet");
+    setState("speaking");
+    /* ARRIVAL IS VISIBLE. Peripheral vision catches a change in brightness,
+       not a dot that quietly exists. */
+    glow = 3.2;
+    if (REDUCED) settleNow(); else run();
+  }
+
+  /* Debounced to where they STOPPED. Flying past four sections speaks for none
+     of them; it speaks once, for the one they came to rest in. */
+  function readPosition() {
     if (dismissed) return;
-    dismissed = true;
-    try { window.sessionStorage.setItem(KEY, "1"); } catch (e) {}
-    root.classList.add("is-gone");
-    say.classList.add("is-gone");
-    note.style.opacity = "0";
-    window.setTimeout(function () {
-      done = true;
-      if (raf) cancelAnimationFrame(raf);
-      if (root.parentNode) root.parentNode.removeChild(root);
-      if (say.parentNode) say.parentNode.removeChild(say);
-      if (note.parentNode) note.parentNode.removeChild(note);
-    }, REDUCED ? 0 : 280);
+    if (settleT) window.clearTimeout(settleT);
+    settleT = window.setTimeout(function () {
+      arrive(dominantZone());
+    }, SETTLE_MS);
   }
 
-  /* ---- input ---------------------------------------------------------------
-     No button row. Advancing is a click on the star or the line, or the right
-     arrow. The only other affordance is one small word, and Escape. */
-  /* THE ONE DISCOVERED INTERACTION. Clicking the character does the product's
-     only real gesture: Levi flies to the nearest thing awaiting approval,
-     flares, and approves it - the queue's counter drops and the item leaves.
-     Where there is nothing to approve it darts to whatever it is currently
-     talking about and lights that instead, which is the same gesture - drawing
-     your eye to one item - without inventing any state.
-
-     The LINE advances the tour. Splitting the two is what lets the star have a
-     reward of its own instead of being a Next button in a costume. */
-  star.addEventListener("click", function (e) { e.preventDefault(); gesture(); });
-  speech.addEventListener("click", function (e) {
-    if (e.target === hintEl) return;
-    advance();
-  });
-
+  /* ---- the one gesture ----------------------------------------------------- */
   function onScreenEl(el) {
     var r = el.getBoundingClientRect();
-    var vh = document.documentElement.clientHeight;
-    var vw = document.documentElement.clientWidth;
-    return r.width > 2 && r.bottom > 60 && r.top < vh - 60 && r.right > 0 && r.left < vw;
+    return r.width > 2 && r.bottom > 60 &&
+           r.top < document.documentElement.clientHeight - 60;
   }
 
   function gesture() {
     if (dismissed || lure) return;
     noteActivity();
-    if (!clicked) { clicked = true; document.documentElement.style.setProperty("--levi-hint", "0"); }
-
     var btn = null, all = document.querySelectorAll("[data-approve]");
     for (var i = 0; i < all.length; i++) {
       if (onScreenEl(all[i])) { btn = all[i]; break; }
     }
-    var to = btn || target;
-    if (!to) return;
-
-    var r = to.getBoundingClientRect();
+    if (!btn) return;
+    var r = btn.getBoundingClientRect();
     lure = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     run();
-
-    /* Long enough that you watch it go, rather than the item just blinking. */
     window.setTimeout(function () {
       setState("approved");
-      if (btn) { try { btn.click(); } catch (e) {} }
+      glow = 3.4;
+      try { btn.click(); } catch (e) {}
     }, 430);
     window.setTimeout(function () {
-      lure = null;
-      buildRects(); retargetAt = 1; run();
-      setState(root.classList.contains("is-done") ? "idle" : "speaking");
+      lure = null; run();
+      setState(zone ? "speaking" : "idle");
     }, 1050);
   }
 
-  /* ---- when you stop -------------------------------------------------------
-     A timer, and the line says only what a timer knows. It does not claim to
-     be watching you. */
   function noteActivity() {
     lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
     if (idleSpoken && savedLine !== null) {
@@ -643,18 +312,17 @@
   }
 
   function checkIdle(now) {
-    if (idleSpoken || dismissed || REDUCED) return;
-    if (root.classList.contains("is-done")) return;
+    if (idleSpoken || dismissed || REDUCED || !zone) return;
     if (now - lastActivity < IDLE_MS) return;
     idleSpoken = true;
     savedLine = sayEl.textContent;
     sayEl.textContent = IDLE_LINES[Math.floor(Math.random() * IDLE_LINES.length)];
-    setState("speaking");
+    glow = 2.4;
   }
 
-  root.addEventListener("keydown", function (e) {
-    if (e.key === "ArrowRight") { e.preventDefault(); advance(); }
-    else if (e.key === "Escape") { e.stopPropagation(); dismiss(); }
+  star.addEventListener("click", function (e) { e.preventDefault(); gesture(); });
+  star.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { e.stopPropagation(); dismiss(); }
   });
 
   document.addEventListener("pointermove", function (e) {
@@ -664,93 +332,113 @@
   document.addEventListener("keydown", noteActivity, true);
   document.addEventListener("click", noteActivity, true);
 
-  /* Approved: one flare, then back. Listens on the document so the queue demo
-     keeps its own logic and Levi simply reacts to it. */
   document.addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("[data-approve]");
     if (!b || REDUCED || dismissed) return;
     setState("approved");
     if (flareTimer) window.clearTimeout(flareTimer);
     flareTimer = window.setTimeout(function () {
-      setState(root.classList.contains("is-done") ? "idle" : "speaking");
+      setState(zone ? "speaking" : "idle");
     }, 640);
   }, true);
+
+  lastScrollY = window.pageYOffset || 0;
+  window.addEventListener("scroll", function () {
+    noteActivity();
+    readPosition();
+    if (REDUCED) { settleNow(); return; }
+    var y = window.pageYOffset || 0, d = y - lastScrollY;
+    lastScrollY = y;
+    v.y += Math.max(-820, Math.min(820, -d * 7));
+    v.x += Math.max(-260, Math.min(260, -d * 1.1));
+    run();
+  }, { passive: true });
+
+  function anyZoneUsable() {
+    for (var i = 0; i < script.length; i++) {
+      if (zoneUsable(zoneEl(script[i].zone))) return true;
+    }
+    return false;
+  }
+
+  function leave(remember) {
+    if (dismissed) return;
+    dismissed = true; done = true;
+    if (remember) { try { window.sessionStorage.setItem(KEY, "1"); } catch (e) {} }
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    [root, say, note].forEach(function (n) {
+      if (n.parentNode) n.parentNode.removeChild(n);
+    });
+  }
+
+  function dismiss() {
+    if (dismissed) return;
+    root.classList.add("is-gone");
+    say.classList.add("is-gone");
+    note.style.opacity = "0";
+    window.setTimeout(function () { leave(true); }, REDUCED ? 0 : 280);
+    try { window.sessionStorage.setItem(KEY, "1"); } catch (e) {}
+  }
+
+  window.addEventListener("resize", function () {
+    if (!anyZoneUsable()) { leave(false); return; }
+    readPosition();
+    if (REDUCED) settleNow(); else run();
+  });
 
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) { if (raf) { cancelAnimationFrame(raf); raf = null; } }
     else run();
   });
 
-  /* Debounced to scroll-END. Re-solving mid-scroll makes it chase the page;
-     it should hold its place while you move and then decide once. */
-  var scrollT = null;
-  lastScrollY = window.pageYOffset || 0;
-  window.addEventListener("scroll", function () {
-    noteActivity();
-    if (REDUCED) return;
-    /* IT MOVES WHEN YOU SCROLL. The page sliding under it shoves the light and
-       the spring carries the lurch and settles it, so scrolling is something
-       that happens TO the object rather than something it ignores. Capped, or
-       one flick of the wheel would fling it off screen. */
-    var y = window.pageYOffset || 0;
-    var d = y - lastScrollY;
-    lastScrollY = y;
-    v.y += Math.max(-820, Math.min(820, -d * 7));
-    v.x += Math.max(-260, Math.min(260, -d * 1.1));
-    run();
-    if (scrollT) window.clearTimeout(scrollT);
-    scrollT = window.setTimeout(function () {
-      buildRects(); retargetAt = 1; run();
-    }, 140);
-  }, { passive: true });
-
-  window.addEventListener("resize", function () {
-    if (!tourPossible()) { dismissQuietly(); return; }
-    buildRects();
-    retargetAt = 1;
-    if (REDUCED) settleNow();
-  });
-
-  /* Narrowed past the gate mid-visit: leave, but do not record a dismissal -
-     widening the window again is not the visitor saying no. */
-  function dismissQuietly() {
-    if (dismissed) return;
-    dismissed = true; done = true;
-    if (raf) { cancelAnimationFrame(raf); raf = null; }
-    if (root.parentNode) root.parentNode.removeChild(root);
-    if (say.parentNode) say.parentNode.removeChild(say);
-    if (note.parentNode) note.parentNode.removeChild(note);
+  function zoneTable() {
+    var R = starR(), lw = lineW(), gap = gapW();
+    var vw = document.documentElement.clientWidth;
+    return script.map(function (s) {
+      var el = zoneEl(s.zone);
+      var cs = el && getComputedStyle(el);
+      var shown = !!(el && cs.display !== "none" && cs.visibility !== "hidden");
+      var r = el && el.getBoundingClientRect();
+      return {
+        zone: s.zone,
+        shown: shown,
+        bounds: r ? { l: Math.round(r.left), t: Math.round(r.top + (window.pageYOffset || 0)),
+                      w: Math.round(r.width), h: Math.round(r.height) } : null,
+        needsH: 2 * PAD + 2 * R,
+        needsWbeside: PAD + 2 * R + gap + lw + PAD,
+        fitsBeside: !!(r && shown && (PAD + 2 * R + gap + lw + PAD) <= r.width &&
+                       r.height >= 2 * PAD + 2 * R),
+        fitsStacked: !!(r && shown && (PAD + Math.max(2 * R, lw) + PAD) <= r.width &&
+                        r.height >= 2 * PAD + 2 * R),
+        usable: zoneUsable(el),
+        edgeGapIfPlaced: r ? Math.round(Math.min(r.left + PAD, vw - (r.left + PAD + 2 * R + gap + lw))) : null
+      };
+    });
   }
 
   /* ---- start --------------------------------------------------------------- */
-  if (!tourPossible()) {
-    /* Leave nothing behind: no star, no line, no footnote. */
-    if (root.parentNode) root.parentNode.removeChild(root);
-    if (say.parentNode) say.parentNode.removeChild(say);
-    if (note.parentNode) note.parentNode.removeChild(note);
+  if (!anyZoneUsable()) {
+    var table = zoneTable();
+    [root, say, note].forEach(function (n) {
+      if (n.parentNode) n.parentNode.removeChild(n);
+    });
     window.cognivexLevi = {
       unavailable: true,
-      reason: "no page margin wide enough for the tour (" +
-              Math.round(laneWidth()) + "px, needs " + LANE_MIN + ")",
+      reason: "no [data-levi-zone] is large enough here (needs " +
+              (2 * PAD + 2 * starR()) + "px tall)",
+      zones: function () { return table; },
       restingPoint: function () { return null; },
-      stats: function () {
-        return { unavailable: true, laneWidth: Math.round(laneWidth()),
-                 hasCard: false, present: !!document.querySelector(".levi") };
-      },
-      dismiss: function () {}, go: function () {}, advance: function () {},
-      finish: function () {}, settle: function () { return null; }
+      stats: function () { return { unavailable: true }; },
+      dismiss: function () {}, settle: function () { return null; },
+      readPosition: function () {}
     };
     return;
   }
 
   setState("idle");
-  buildRects();
-  retarget();
-  /* Start where it belongs rather than springing in from the origin. */
-  p.x = goal.x; p.y = goal.y;
-  write(p.x, p.y);
-
   lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
+  arrive(dominantZone());
+  if (zone) { retarget(); p.x = goal.x; p.y = goal.y; write(p.x, p.y); }
 
   if (BOOTING) {
     root.classList.add("is-boot");
@@ -760,94 +448,71 @@
       root.classList.remove("is-boot");
       say.classList.remove("is-boot");
       note.style.opacity = "";
-      show(0);
+      arrive(dominantZone());
+      run();
     }, { once: true });
   } else {
-    show(0);
+    run();
   }
 
-  /* ---- verification handle -------------------------------------------------
-     settle() exists because the preview pane freezes document.timeline and
-     starves rAF: a spring that is never integrated reads as "not moving", and
-     a measurement taken then is of a subject that was not drawn. This forces
-     the settled state so the keep-out can be measured honestly. */
   window.cognivexLevi = {
     root: root, say: say, star: star, speech: speech, note: note,
+    zones: zoneTable,
     gesture: function () { gesture(); },
     forceIdle: function () { lastActivity = -1e9; checkIdle(1e9); },
-    stops: script.length,
-    /* Settle AND stop. Without the stop the loop kept integrating between the
-       stats() call and the screenshot, so the two disagreed by 400px and the
-       numbers described a frame nobody photographed. A verification state that
-       keeps moving is not a verification state. */
+    /* Read the position immediately, skipping the debounce - for verification
+       only; a visitor always gets the debounced read. */
+    readNow: function () {
+      if (settleT) window.clearTimeout(settleT);
+      arrive(dominantZone());
+      return zoneName;
+    },
+    readPosition: readPosition,
     settle: function () {
       frozen = true;
       if (raf) { cancelAnimationFrame(raf); raf = null; }
-      buildRects();
       settleNow();
       return { x: Math.round(p.x), y: Math.round(p.y) };
     },
     unfreeze: function () { frozen = false; run(); },
     restingPoint: function () {
-      target = document.querySelector(script[0].at);
-      buildRects();
-      retarget();
+      var z = dominantZone();
+      if (!z) return null;
+      zone = z.el; retarget();
       return { x: Math.round(goal.x), y: Math.round(goal.y) };
     },
     stats: function () {
+      var r = zone ? zone.getBoundingClientRect() : null;
+      var sr = speech.getBoundingClientRect();
+      var cr = root.querySelector(".levi__core").getBoundingClientRect();
       var vw = document.documentElement.clientWidth;
       var vh = document.documentElement.clientHeight;
-      var R = starR();
-      var z = bright();
-      var sr = speech.getBoundingClientRect();
-      var cor = root.querySelector(".levi__corona").getBoundingClientRect();
       return {
         viewport: vw + "x" + vh,
+        zone: zoneName,
+        quiet: say.classList.contains("is-quiet"),
+        line: sayEl.textContent,
         state: STATES.filter(function (s) { return root.classList.contains(s); })[0] || null,
-        stop: at + 1, of: script.length,
+        zoneRect: r ? { l: Math.round(r.left), t: Math.round(r.top),
+                        w: Math.round(r.width), h: Math.round(r.height) } : null,
         starAt: { x: Math.round(p.x), y: Math.round(p.y) },
-        starRadius: R,
+        coreSize: Math.round(cr.width) + "x" + Math.round(cr.height),
+        starRadius: starR(),
         starOnScreen: p.x > 0 && p.x < vw && p.y > 0 && p.y < vh,
-        starRendering: cor.width > 0 &&
+        starRendering: cr.width > 0 &&
           parseFloat(getComputedStyle(root.querySelector(".levi__core")).opacity) > 0.05,
-        starClear: clearOf(p.x - R - STAR_PAD, p.y - R - STAR_PAD,
-                           p.x + R + STAR_PAD, p.y + R + STAR_PAD),
-        starInBrightBand: inBright(p.x, p.y, R * 0.7, z),
-        brightBand: z ? {
-          cx: Math.round(z.cx), cy: Math.round(z.cy),
-          rx: Math.round(z.rx), ry: Math.round(z.ry)
-        } : null,
-        speechRect: { l: Math.round(sr.left), t: Math.round(sr.top),
-                      r: Math.round(sr.right), b: Math.round(sr.bottom) },
-        speechClear: clearOf(sr.left - Math.max(SPEECH_PAD, sr.height * 0.36),
-                             sr.top - Math.max(SPEECH_PAD, sr.height * 0.36),
-                             sr.right + Math.max(SPEECH_PAD, sr.height * 0.36),
-                             sr.bottom + Math.max(SPEECH_PAD, sr.height * 0.36)),
-        speechOnScreen: sr.left >= 0 && sr.right <= vw && sr.top >= 0 && sr.bottom <= vh,
-        speechText: sayEl.textContent.slice(0, 40),
-        noteText: note.textContent,
+        lineBox: { l: Math.round(sr.left), t: Math.round(sr.top),
+                   w: Math.round(sr.width), h: Math.round(sr.height) },
+        lineFullMeasure: Math.round(sr.width) >= lineW() - 2,
+        distanceToNearestEdge: Math.round(Math.min(
+          sr.left, vw - sr.right, p.x - starR(), vw - (p.x + starR()))),
+        starInsideZone: !!(r && p.x - starR() >= r.left - 1 && p.x + starR() <= r.right + 1),
+        lineInsideZone: !!(r && sr.left >= r.left - 1 && sr.right <= r.right + 1),
+        layout: stacked ? "stacked" : "beside",
         hasCard: !!document.querySelector(".levi__card"),
-        placementCompromised: !placed.starOK || !placed.spOK,
+        hasCounter: !!document.querySelector(".levi__pos"),
         dismissed: dismissed
       };
-    },
-    /* Verification surface: how many rectangles the keep-out is actually
-       reasoning about, and a way to ask it about any box directly. A clearance
-       claim is only worth the cache behind it. */
-    rectCount: function () { if (!rects) buildRects(); return rects.length; },
-    probeClear: function (l, t, r, b) { return clearOf(l, t, r, b); },
-    nearestRects: function (l, t, r, b) {
-      if (!rects) buildRects();
-      var sx = window.pageXOffset, sy = window.pageYOffset, hits = [];
-      for (var i = 0; i < rects.length; i++) {
-        var q = rects[i];
-        if (q[2] > l + sx && q[0] < r + sx && q[3] > t + sy && q[1] < b + sy) {
-          hits.push([Math.round(q[0] - sx), Math.round(q[1] - sy),
-                     Math.round(q[2] - sx), Math.round(q[3] - sy)]);
-        }
-      }
-      return hits;
-    },
-    go: show, advance: advance, finish: endTour, dismiss: dismiss
+    }
   };
 })();

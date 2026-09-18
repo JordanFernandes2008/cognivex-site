@@ -2217,27 +2217,23 @@ html:has(.void-page) { background: #05070a; }
 }
 
 /* ============================================================================
-   LEVI — a light with depth, not a layer pasted on top.
+   LEVI — a light with mass.
 
-   THE LAYERING IS THE POINT. Measured off the reference: the object reads as
-   real because it sits BETWEEN things - in front of the ground, behind the big
-   display type, casting onto what is under it. A sprite on top of everything
-   is a cursor decoration no matter how well it moves.
+   IT WAS INVISIBLE. Measured at 1536x830 it was a 28px core parked 110px from
+   the right edge with a line box computing to width 0 - a 2mm dot with 9pt
+   text in the darkest corner of the screen. It rendered perfectly and could
+   not be found three times running. That is the only verdict that counts, so
+   everything below is sized against a 1080p screen at arm's length rather than
+   against a pixel value.
 
-   The page's own stacking, read off this file:
-       .singularity (the film)  z-index 0, fixed
-       main                     z-index 1, relative  <- creates a context
-       .hero__intro             z-index 2            <- the display type
-       .masthead / .statusbar   z-index 40 / 41
+   Core 84px, three times what it was. Corona 300. A ring and a four-beam flare
+   on top of that, which is where the depth comes from: a flat disc reads as a
+   sticker, and a core inside a ring inside a haze with beams crossing it reads
+   as something with a middle. All of it composited with screen, so it only
+   ever adds light and never draws an edge.
 
-   So the STAR goes inside main at z-index 1: above the film and above every
-   section panel, below the headline. Where they overlap, the headline occludes
-   it, which is the whole depth cue. The SPEECH goes on body at z-index 60,
-   because a line you cannot read is not speech.
-
-   Two layers, ONE position: levi.js writes --levi-x / --levi-y once per frame
-   on documentElement and both layers read them. Same discipline as the film's
-   composition - one owner, one declaration, no second transform.
+   THE LINE HAS A FIXED MEASURE and never compresses. When it cannot sit beside
+   the star, the STAR moves - the text is not squeezed to make room.
    ========================================================================== */
 .levi,
 .levi-say {
@@ -2248,163 +2244,168 @@ html:has(.void-page) { background: #05070a; }
   transform: translate3d(var(--levi-x, 50vw), var(--levi-y, 50vh), 0);
   will-change: transform;
 }
-.levi    { z-index: 1; }    /* inside main: behind the display type */
-.levi-say { z-index: 60; }  /* on body: always readable            */
+.levi     { z-index: 1; }    /* inside main: behind the display type */
+.levi-say { z-index: 60; }   /* on body: always readable            */
 
-/* --- the star ------------------------------------------------------------- */
 .levi__star {
   position: absolute;
   left: 0; top: 0;
-  width: 78px; height: 78px;
-  margin: -39px 0 0 -39px;
+  width: 124px; height: 124px;
+  margin: -62px 0 0 -62px;
   padding: 0; border: 0; border-radius: 50%;
   background: none;
   pointer-events: auto;
   cursor: pointer;
 }
-.levi__star:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 8px; }
+.levi__star:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 10px; }
 
-/* THE SHADOW. A light does not literally cast one, but the depth cue is what
-   the reference gets its realism from, so it gets a footprint: a soft dark
-   pool offset down and behind, wider than it is tall, riding under the light
-   in the same layer. It is what stops the star floating in nothing. */
+/* Its footprint on the ground. */
 .levi__shadow {
   position: absolute;
   left: 50%; top: 50%;
-  width: 190px; height: 66px;
+  width: 300px; height: 96px;
   transform: translate(-50%, -50%)
-             translate(var(--levi-shx, 16px), var(--levi-shy, 30px))
+             translate(var(--levi-shx, 20px), var(--levi-shy, 52px))
              scale(var(--levi-shs, 1));
   border-radius: 50%;
   background: radial-gradient(ellipse 50% 50% at 50% 50%,
-    rgb(0 0 0 / 46%) 0%, rgb(0 0 0 / 28%) 38%, rgb(0 0 0 / 10%) 64%, transparent 84%);
+    rgb(0 0 0 / 52%) 0%, rgb(0 0 0 / 30%) 38%, rgb(0 0 0 / 10%) 64%, transparent 84%);
   pointer-events: none;
 }
 
-.levi__core, .levi__corona {
+.levi__core, .levi__corona, .levi__ring, .levi__flare {
   position: absolute;
   left: 50%; top: 50%;
-  border-radius: 50%;
   display: block;
   pointer-events: none;
+  mix-blend-mode: screen;
+  filter: brightness(var(--levi-glow, 1));
+}
+
+/* The middle: white-hot, falling to the accent at its rim. */
+.levi__core {
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(var(--levi-s, 1));
+  background: radial-gradient(circle at 50% 42%,
+    #fff 0%, #fff 30%, #ffeccd 44%, #ffc477 62%,
+    var(--accent-fill) 80%, var(--accent-deep) 100%);
+  box-shadow: 0 0 60px rgb(255 198 130 / 96%), 0 0 140px rgb(255 140 40 / 62%);
+}
+
+/* A thin bright ring just outside the core - the single strongest depth cue
+   in the reference, because it gives the light an inside and an outside. */
+.levi__ring {
+  width: 170px; height: 170px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 214 150 / 60%);
+  transform: translate(-50%, -50%)
+             rotate(var(--levi-spin, 0deg))
+             scale(var(--levi-s, 1)) scaleY(.94);
+  box-shadow: 0 0 26px rgb(255 170 70 / 42%), inset 0 0 22px rgb(255 170 70 / 28%);
+}
+
+.levi__corona {
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%)
+             rotate(var(--levi-spin, 0deg))
+             scale(var(--levi-s, 1)) scaleX(1.1);
+  background: radial-gradient(circle,
+    rgb(255 228 190 / 60%) 0%,
+    rgb(255 186 110 / 40%) 14%,
+    rgb(255 140 40 / 22%) 30%,
+    rgb(255 122 26 / 10%) 50%,
+    rgb(229 106 13 / 3%) 70%,
+    transparent 84%);
+}
+
+/* FOUR BEAMS. Two crossed bars, each a gradient that is transparent at both
+   ends, rotating slowly with the rest of the light. This is the shape the
+   reference uses and it is what stops the thing reading as a circle. */
+.levi__flare {
+  width: 520px; height: 520px;
   transform: translate(-50%, -50%)
              rotate(var(--levi-spin, 0deg))
              scale(var(--levi-s, 1));
+  background:
+    linear-gradient(90deg, transparent 0%, rgb(255 190 110 / 0%) 12%,
+      rgb(255 205 140 / 34%) 42%, rgb(255 236 205 / 62%) 50%,
+      rgb(255 205 140 / 34%) 58%, rgb(255 190 110 / 0%) 88%, transparent 100%)
+      center / 100% 3px no-repeat,
+    linear-gradient(0deg, transparent 0%, rgb(255 190 110 / 0%) 14%,
+      rgb(255 205 140 / 26%) 42%, rgb(255 236 205 / 52%) 50%,
+      rgb(255 205 140 / 26%) 58%, rgb(255 190 110 / 0%) 86%, transparent 100%)
+      center / 3px 100% no-repeat;
 }
 
-/* Dark is the bare selector because the page that uses this is dark; making
-   the LIGHT form the default once let its ring bleed into the dark one. */
-/* BIGGER AND BRIGHTER, because "where is it" is a verdict. At 22px with a
-   soft bloom it was a highlight on a busy hero rather than a presence you
-   notice arriving. */
-.levi__core {
-  width: 28px; height: 28px;
-  background: radial-gradient(circle at 50% 45%,
-    #fff 0%, #fff 38%, #ffe0bd 56%, var(--accent-fill) 76%, var(--accent-deep) 100%);
-  mix-blend-mode: screen;
-  box-shadow: 0 0 34px rgb(255 190 130 / 92%), 0 0 84px rgb(255 122 26 / 58%);
-  filter: brightness(var(--levi-glow, 1));
-}
-/* Elongated a touch on purpose: a perfectly radial gradient rotating is
-   invisible - there is nothing in it to see turn. 1.14 is enough that the
-   tumble reads and not enough to look like a comet. */
-.levi__corona {
-  width: 200px; height: 200px;
-  transform: translate(-50%, -50%)
-             rotate(var(--levi-spin, 0deg))
-             scale(var(--levi-s, 1)) scaleX(1.14);
-  background: radial-gradient(circle,
-    rgb(255 222 186 / 72%) 0%,
-    rgb(255 174 100 / 50%) 15%,
-    rgb(255 122 26 / 28%) 32%,
-    rgb(255 122 26 / 12%) 52%,
-    rgb(229 106 13 / 4%) 70%,
-    transparent 84%);
-  mix-blend-mode: screen;
-  filter: brightness(var(--levi-glow, 1));
-}
+/* The light ground, for the pages that will use this later. */
 body:not(.void-page) .levi__core {
-  width: 13px; height: 13px;
+  width: 22px; height: 22px;
   background: radial-gradient(circle at 50% 40%,
     var(--accent-fill) 0%, var(--accent-deep) 55%, var(--accent-text) 100%);
   mix-blend-mode: normal;
-  box-shadow: 0 1px 3px rgb(20 22 26 / 28%);
+  box-shadow: 0 1px 4px rgb(20 22 26 / 30%);
 }
-body:not(.void-page) .levi__corona {
-  width: 40px; height: 40px;
-  background: transparent;
+body:not(.void-page) .levi__corona,
+body:not(.void-page) .levi__flare { display: none; }
+body:not(.void-page) .levi__ring {
+  width: 62px; height: 62px;
   mix-blend-mode: normal;
-  border: 1.5px solid rgb(255 122 26 / 42%);
-  box-shadow: 0 0 0 6px rgb(255 122 26 / 8%);
+  border-color: rgb(255 122 26 / 48%);
+  box-shadow: none;
 }
 
 /* --- what it says ---------------------------------------------------------
-   Text, and nothing else. No panel, no border, no title, no counter, no button
-   row. The darkening is already transparent before it reaches its own box, so
-   there is no boundary to find - atmosphere rather than a plate. */
+   A FIXED MEASURE. It used to be max-content inside a 0-width layer, which is
+   how the line ended up wrapping one word per row against the screen edge.
+   It is body size, not micro, and it does not compress: if it will not fit
+   beside the star, levi.js moves the star. */
 .levi__speech {
   position: absolute;
   left: 0; top: 0;
-  width: var(--levi-w, 21rem);
+  width: 19rem;                 /* ~304px, about 34 characters */
+  min-width: 19rem;
   transform: translate(var(--levi-tx, 0px), var(--levi-ty, 0px));
-  pointer-events: auto;
-  cursor: pointer;
+  pointer-events: none;
 }
 .levi__speech::before {
   content: "";
   position: absolute;
-  left: -9%; top: -32%;
-  width: 118%; height: 164%;
+  left: -9%; top: -34%;
+  width: 118%; height: 168%;
   z-index: -1;
   pointer-events: none;
   background: radial-gradient(ellipse 50% 50% at 50% 50%,
-    rgb(3 5 8 / 78%) 0%,
-    rgb(3 5 8 / 58%) 40%,
-    rgb(3 5 8 / 22%) 64%,
-    rgb(3 5 8 / 5%) 80%,
-    transparent 92%);
+    rgb(3 5 8 / 80%) 0%, rgb(3 5 8 / 60%) 40%,
+    rgb(3 5 8 / 24%) 64%, rgb(3 5 8 / 6%) 80%, transparent 92%);
 }
 .levi__line {
   margin: 0;
-  font-size: var(--t-small);
-  line-height: var(--lh-body);
+  font-size: var(--t-body, 1rem);
+  line-height: 1.35;
   color: var(--ink);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 74%), 0 0 18px rgb(0 0 0 / 62%);
-}
-
-/* THE ONLY INSTRUCTION. One small line, discovered rather than advertised.
-   It goes once the visitor has clicked, because an instruction you have
-   already followed is just noise. */
-.levi__hint {
-  display: block;
-  margin-top: .5rem;
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: var(--t-micro);
-  letter-spacing: .04em;
-  color: var(--dim);
-  opacity: var(--levi-hint, .5);
-  transition: opacity 420ms var(--ease-out);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 74%);
-  pointer-events: none;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 80%), 0 0 22px rgb(0 0 0 / 66%);
 }
 
 /* --- states --------------------------------------------------------------- */
-.levi.is-idle .levi__core      { opacity: .7; }
-.levi.is-idle .levi__corona    { opacity: .48; }
-.levi-say.is-idle .levi__speech { opacity: 0; pointer-events: none; }
-
+.levi.is-idle .levi__core   { opacity: .8; }
+.levi.is-idle .levi__corona { opacity: .5; }
+.levi.is-idle .levi__flare  { opacity: .34; }
 .levi.is-speaking .levi__core   { opacity: 1; }
-.levi.is-speaking .levi__corona { opacity: .9; }
-.levi.is-pointing .levi__core   { opacity: 1; }
-.levi.is-pointing .levi__corona { opacity: .95; }
+.levi.is-speaking .levi__corona { opacity: .92; }
+.levi.is-speaking .levi__flare  { opacity: .6; }
 .levi.is-approved .levi__core   { opacity: 1; }
-.levi.is-approved .levi__corona { opacity: 1; }
+.levi.is-approved .levi__flare  { opacity: .9; }
 
-.levi__speech { transition: opacity 320ms var(--ease-out); }
+.levi__speech { transition: opacity 300ms var(--ease-out); }
+.levi-say.is-quiet .levi__speech { opacity: 0; }
+/* No zone owns this part of the page, so there is nothing here to be. */
+.levi.is-quiet { opacity: 0; transition: opacity 300ms var(--ease-out); }
 .levi.is-gone, .levi-say.is-gone { opacity: 0; transition: opacity 260ms var(--ease-out); }
 .levi.is-boot, .levi-say.is-boot { visibility: hidden; }
 
-/* --- the footnote, which is not part of what Levi says --------------------- */
+/* --- the footnote --------------------------------------------------------- */
 .levi-note {
   position: fixed;
   left: clamp(1rem, 2.4vw, 2rem);
@@ -2423,21 +2424,19 @@ body:not(.void-page) .levi__corona {
 }
 
 @media (max-width: 700px) {
-  .levi__star { width: 56px; height: 56px; margin: -28px 0 0 -28px; }
-  .levi__core { width: 21px; height: 21px;
-    box-shadow: 0 0 24px rgb(255 190 130 / 88%), 0 0 56px rgb(255 122 26 / 52%); }
-  .levi__corona { width: 138px; height: 138px; }
-  .levi__shadow { width: 128px; height: 46px; }
-  .levi__speech { width: var(--levi-w, 15rem); }
+  .levi__star { width: 96px; height: 96px; margin: -48px 0 0 -48px; }
+  .levi__core { width: 62px; height: 62px;
+    box-shadow: 0 0 44px rgb(255 198 130 / 92%), 0 0 100px rgb(255 140 40 / 56%); }
+  .levi__ring { width: 124px; height: 124px; }
+  .levi__corona { width: 220px; height: 220px; }
+  .levi__flare { width: 380px; height: 380px; }
+  .levi__shadow { width: 210px; height: 68px; }
+  .levi__speech { width: 16rem; min-width: 16rem; }
   .levi-note { max-width: 30ch; bottom: .6rem; }
 }
 
-/* --- reduced motion -------------------------------------------------------
-   It appears where it is needed and the tour still advances. What goes is the
-   spring, the drift, the tumble, the cursor reaction and the scroll impulse -
-   levi.js writes the settled position directly and never integrates. */
 @media (prefers-reduced-motion: reduce) {
-  .levi__core, .levi__corona { animation: none !important; }
+  .levi__core, .levi__corona, .levi__ring, .levi__flare { animation: none !important; }
   .levi__speech { transition: none; }
   .levi.is-gone, .levi-say.is-gone { transition: none; }
 }
@@ -2561,4 +2560,65 @@ html.is-cold-film .singularity { z-index: 9001; }
 @media (max-width: 700px) {
   .cold__line, .cold__caption { font-size: .62rem; }
   .cold__caption { margin-top: 3rem; }
+}
+
+/* ============================================================================
+   LEVI'S ZONES
+
+   Declared bands the light is allowed to occupy, sized in the layout so they
+   are genuinely empty rather than checked for emptiness at runtime. The
+   previous version scanned every text rect on the page and scored candidate
+   positions each time it moved; that is what produced the hero it could not
+   see (mid-reveal text at opacity 0 counted as free space), the dense stops it
+   could not solve, and the corner it fell back into - which was inside the
+   film's brightest band at 1.26:1.
+
+   A zone reserves star + line + 48px of clearance. 300px is that arithmetic:
+   the light is 204px across at its largest state, plus 48 above and below.
+   ========================================================================== */
+.levi-zone {
+  display: block;
+  /* 2 x 48 clearance + 2 x 150 for the light's visible mass. It grew when the
+     light did; the rule is move Levi, never shrink it. */
+  min-height: 396px;
+  pointer-events: none;
+}
+
+/* The hero is pinned to one screen by design, so it cannot grow a band. Its
+   zone goes in the empty right half instead, beside the copy rather than under
+   it. Below 1100px the hero is one column and that half no longer exists, so
+   the zone is withdrawn and the hero simply has no Levi. */
+.hero__void { position: relative; }
+/* NOT THE RIGHT MARGIN. That is where it was exiled to and where it could not
+   be found. The hero's open dark area is the band BELOW the copy column and to
+   the LEFT of the film's bright arm, so that is where the zone goes: anchored
+   to the bottom-left of the hero, clear of both. */
+.levi-zone--hero {
+  position: absolute;
+  left: 52%; top: 0;
+  width: 46%;
+  height: 396px;
+  min-height: 0;
+}
+/* Measured at 1536x830: the hero has 70px above the copy, 70px below it and
+   170px to the right of the copy BOX - none of which holds a 396px zone. The
+   copy TEXT, though, stops around x 730 while its box runs to 1350, so the
+   open dark half beside the headline is the only place in the hero that can
+   take the light. Below 1200px the hero is one column and that half stops
+   existing, so the hero simply has no zone there. */
+@media (max-width: 1200px) {
+  .levi-zone--hero { display: none; }
+}
+@media (max-width: 1100px) {
+  .levi-zone--hero { display: none; }
+}
+
+/* The fixed measure is declared with the rest of the speech above. max-content
+   inside a zero-width layer is what produced a computed width of 0 and a line
+   wrapping one word per row against the screen edge. */
+
+/* Set data-levi-debug on <html> to see the zones while working on them. */
+html[data-levi-debug] .levi-zone {
+  outline: 1px dashed rgb(255 122 26 / 55%);
+  background: rgb(255 122 26 / 6%);
 }
