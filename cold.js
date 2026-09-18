@@ -290,7 +290,10 @@
        precisely the frame the whole sequence exists to make seamless. It is
        born large and arrives at exactly 1, which is what levi.js then draws. */
     var orbScale = land > 0 ? mix(BORN, 1, easeOut(land)) : born * BORN;
-    var orbOp = born;
+    /* With no Levi to hand to - a narrow window, where the tour does not run -
+       the light has nowhere to arrive, so it goes out with the veil instead of
+       vanishing with the overlay. */
+    var orbOp = born * (target ? 1 : (land > 0 ? 1 - easeOut(land) : 1));
 
     /* ONE hard stutter, exactly two frames, at the moment it forms. Counted in
        FRAMES rather than milliseconds so it is two frames on any machine - and
