@@ -234,7 +234,8 @@ window.COGNIVEX_QUEUE = [
 
   var frag = document.createDocumentFragment();
 
-  window.COGNIVEX_QUEUE.forEach(function (it) {
+  var ALL = window.COGNIVEX_QUEUE.concat(window.COGNIVEX_QUEUE_EXTRA || []);
+  ALL.forEach(function (it) {
     var li = document.createElement("li");
     li.className = "card";
     li.setAttribute("data-item", "");

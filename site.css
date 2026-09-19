@@ -375,6 +375,29 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .queue__back:hover, .queue__back:focus-visible { color: var(--ink); }
 .queue__back[hidden] { display: none; }
 
+/* --- TODAY's four states, openable ---------------------------------------- */
+.rail__item--open { padding: 0; display: block; }
+.rail__hit {
+  display: flex; align-items: baseline; justify-content: space-between; gap: .6rem;
+  width: 100%; padding: .4rem .6rem; margin: 0; text-align: left;
+  background: none; border: 0; font: inherit; color: inherit; cursor: pointer;
+  border-radius: 7px;
+}
+.rail__hit:hover, .rail__hit:focus-visible { background: var(--sunk); }
+.rail__item.is-on .rail__hit { background: transparent; }
+.rail__panel { padding: .15rem .6rem .7rem; }
+.rail__panel[hidden] { display: none; }
+.rail__lead { margin: 0 0 .45rem; font-size: .78rem; line-height: 1.5; color: var(--dim); }
+.rail__sub { margin: 0; padding: 0; list-style: none; }
+.rail__sub li {
+  display: flex; flex-direction: column; gap: .05rem;
+  padding: .32rem 0; border-top: 1px solid var(--line);
+}
+.rail__sub li:first-child { border-top: 0; }
+.rail__sub b { font-weight: var(--w-read); font-size: .8rem; color: var(--ink); }
+.rail__sub span { font-size: .75rem; line-height: 1.45; color: var(--dim); }
+.rail__acts { margin-top: .6rem; }
+
 /* --- the morning list, openable ------------------------------------------- */
 .feed--open { padding: 0; }
 .feed__hit {
