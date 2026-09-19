@@ -178,12 +178,31 @@
   star.className = "levi__star";
   star.setAttribute("aria-label", "Levi. Approve the nearest pending item.");
   star.innerHTML =
-    /* Three layers, widest first. No ring: a 2px border, and later a
+    /* Three layers of GLOW, widest first. No ring: a 2px border, and later a
        radial-gradient annulus, are both a circumference - the one thing a
-       light does not have. */
+       light does not have.
+
+       Then a BODY and a FACE on top, which is the part that is new.
+
+       He was a blurred light and nothing else: a 30px core under blur(14px),
+       so there was no surface anywhere on him that a face could sit on. A
+       face needs somewhere to be. So the glow keeps doing what it did and an
+       opaque disc is composited in the middle of it - the glow is the halo
+       around him now rather than the whole of him.
+
+       The features are ink on that disc, not light on it. #14161a on
+       accent-fill #ff7a1a measures 6.94:1, so his own face clears AA against
+       his own body, and it does that identically on the dark homepage and the
+       six light pages because the disc is opaque and carries its own ground
+       with it. A face drawn in light would have disappeared on white. */
     '<i class="levi__flare"  aria-hidden="true"></i>' +
     '<i class="levi__corona" aria-hidden="true"></i>' +
-    '<i class="levi__core"   aria-hidden="true"></i>';
+    '<i class="levi__core"   aria-hidden="true"></i>' +
+    '<i class="levi__body"   aria-hidden="true">' +
+      '<i class="levi__eye levi__eye--l"></i>' +
+      '<i class="levi__eye levi__eye--r"></i>' +
+      '<i class="levi__mouth"></i>' +
+    '</i>';
 
   /* No shadow element any more - the chatbox replaced it. */
 
@@ -334,6 +353,13 @@
        changed. Tweened, the change of state is something you feel rather than
        something that snaps. */
     breathAmp(n !== "idle");
+    /* The state machine already knows what he is doing; the face just has to
+       agree with it. idleTier is how long the pause has run - the ladder that
+       already exists for choosing a longer idle line - so the same number
+       decides when he nods off. */
+    if (n === "speaking")      setEmotion("speaking");
+    else if (n === "approved") setEmotion("happy", { ease: "back.out(2.4)" });
+    else                       setEmotion(idleTier >= 2 ? "sleeping" : "neutral");
   }
 
   var zone = null, zoneName = null, done = false, dismissed = false, frozen = false;
@@ -452,6 +478,182 @@
      transition is still there and the box still shows and hides correctly -
      it just does it plainly. Given that the complaint this whole thread began
      with was an invisible box, the fallback fails OPEN. */
+  /* ---- EMOTION ------------------------------------------------------------
+
+     Seven faces, and each one is six numbers. Because every feature is a box
+     with a top radius and a bottom radius (see the note in site.css), the
+     whole expression is a tween of six lengths - which means Levi does not
+     SWAP faces, he moves between them. The difference matters: a swap is a
+     sprite sheet, and the eye reads sprite sheets as cheap. Easing from a
+     neutral mouth into a grin over 380ms reads as a change of mind.
+
+     The mapping to his run-time states is deliberately small. He is a
+     colleague in the corner of a business tool, not a mascot: he is neutral
+     almost always, pleased when you approve something, sorry on the one page
+     where the copy admits he gets things wrong, and asleep if you leave him
+     alone for a minute. Anything more and he starts competing with the work.
+
+     THE EYES ARE NOT PART OF THE SIX. Blinking is its own quick tween on
+     top, because it has to survive whatever expression is currently held. */
+  var FACES = {
+    neutral:  { ew: 8,  eh: 10, ert: 5, erb: 5, ety: 0,  mw: 22, mh: 11, mrt: 0,  mrb: 22 },
+    speaking: { ew: 8,  eh: 10, ert: 5, erb: 5, ety: 0,  mw: 16, mh: 16, mrt: 8,  mrb: 8  },
+    happy:    { ew: 11, eh: 6,  ert: 6, erb: 0, ety: -1, mw: 26, mh: 13, mrt: 0,  mrb: 26 },
+    thinking: { ew: 8,  eh: 10, ert: 5, erb: 5, ety: -2, mw: 16, mh: 3,  mrt: 2,  mrb: 2  },
+    sorry:    { ew: 9,  eh: 7,  ert: 0, erb: 5, ety: 1,  mw: 20, mh: 10, mrt: 20, mrb: 0  },
+    sleeping: { ew: 11, eh: 3,  ert: 2, erb: 2, ety: 0,  mw: 7,  mh: 7,  mrt: 4,  mrb: 4  },
+    alert:    { ew: 11, eh: 13, ert: 6, erb: 6, ety: -1, mw: 9,  mh: 11, mrt: 5,  mrb: 5  }
+  };
+
+  var body = root.querySelector(".levi__body");
+  var emotion = null, faceTween = null, blinkT = null;
+
+  function faceVars(f) {
+    return {
+      "--e-w":  f.ew  + "px", "--e-h":  f.eh  + "px",
+      "--e-rt": f.ert + "px", "--e-rb": f.erb + "px",
+      "--e-ty": f.ety + "px",
+      "--m-w":  f.mw  + "px", "--m-h":  f.mh  + "px",
+      "--m-rt": f.mrt + "px", "--m-rb": f.mrb + "px"
+    };
+  }
+
+  function setEmotion(name, how) {
+    var f = FACES[name];
+    if (!body || !f || emotion === name) return;
+    emotion = name;
+    var vars = faceVars(f);
+    if (!window.gsap) {                       /* no vendor: snap, still correct */
+      for (var k in vars) body.style.setProperty(k, vars[k]);
+      return;
+    }
+    if (faceTween) faceTween.kill();
+    var reduced = window.matchMedia &&
+                  matchMedia("(prefers-reduced-motion: reduce)").matches;
+    vars.duration = reduced ? 0 : ((how && how.fast) ? 0.18 : 0.38);
+    vars.ease = (how && how.ease) || "back.out(1.6)";
+    vars.overwrite = "auto";
+    faceTween = gsap.to(body, vars);
+  }
+
+  /* A BLINK IS NOT AN EXPRESSION. It rides on top of whichever face is held,
+     restores that face's own eye height, and never fires while he is asleep -
+     a sleeping face has its eyes shut already and blinking them reads as a
+     twitch. Irregular on purpose: a blink on a fixed interval reads as a
+     cursor. */
+  function blink() {
+    window.clearTimeout(blinkT);
+    blinkT = window.setTimeout(function () {
+      var f = FACES[emotion] || FACES.neutral;
+      if (window.gsap && body && emotion !== "sleeping" && !document.hidden) {
+        gsap.timeline()
+          .to(body, { "--e-h": "2px", duration: 0.07, ease: "power2.in" })
+          .to(body, { "--e-h": f.eh + "px", duration: 0.11, ease: "power2.out" });
+      }
+      blink();
+    }, 2600 + Math.random() * 4200);
+  }
+
+  /* ---- THE FLIGHT PATH ----------------------------------------------------
+
+     Rebuilt from nothing. The integrator this replaces was a real piece of
+     work and it is worth saying why it still had to go: it carried a
+     velocity, a force cap, a cruise ceiling, a slow radius, an arc measured
+     from the distance the trip STARTED at, four clamps and three guards
+     against non-finite numbers - and every one of those existed because the
+     position was ACCUMULATED. Accumulated state drifts, and drift is what you
+     then need guards against. The runaway once measured at (-25539, -126876)
+     was the accumulation, not the arithmetic.
+
+     This PRODUCES the position instead. Two modes, and nothing else:
+
+     FOLLOW - the station drifts under him as the page scrolls. gsap.quickTo
+     exists for exactly this: a target that changes every frame, re-aiming one
+     live tween instead of spawning a new one. Tracking the whole page costs
+     two tweens for the lifetime of the document.
+
+     FLIGHT - the section changes and the station jumps. A quadratic bezier
+     from where he is to where he is going, control point pushed perpendicular
+     to the route so he bows rather than sliding down the diagonal. Duration
+     is distance over CRUISE, clamped: that is the constant-speed property the
+     old steering had, and the reason it beat a spring. A spring crosses a
+     900px gap and a 40px one at wildly different speeds and neither reads as
+     flying.
+
+     There is no velocity to clamp, so there is nothing to run away. Every
+     frame p is a point on a curve between two finite endpoints - it cannot be
+     anything else, which is a stronger guarantee than the three guards it
+     replaces. */
+  var CRUISE = 640;        /* px/s - the speed he crosses the page at        */
+  var JUMP_R = 150;        /* further than this and it is a flight, not drift */
+  var flight = null, qx = null, qy = null;
+  var fromP = { x: 0, y: 0 }, ctrlP = { x: 0, y: 0 }, toP = { x: 0, y: 0 };
+  var prog = { t: 0 };
+  var lastP = { x: 0, y: 0 };
+  var kick = { x: 0, y: 0 };
+
+  function qbez(a, c, b, t) { var u = 1 - t; return u * u * a + 2 * u * t * c + t * t * b; }
+
+  function ensureFollow() {
+    if (qx || !window.gsap) return;
+    qx = gsap.quickTo(p, "x", { duration: 0.55, ease: "power3" });
+    qy = gsap.quickTo(p, "y", { duration: 0.55, ease: "power3" });
+  }
+
+  function writeKick() {
+    root.style.setProperty("--levi-kx", kick.x.toFixed(2) + "px");
+    root.style.setProperty("--levi-ky", kick.y.toFixed(2) + "px");
+  }
+
+  /* THE SCROLL KICK IS A LAYER, NOT A FORCE. It used to be added straight to
+     the velocity, which is how a 400ms flourish got to move the number every
+     placement decision reads. Same lesson as the breath: decoration composites
+     on top, it does not enter the station. */
+  function kickBy(dx, dy) {
+    if (!window.gsap) return;
+    gsap.killTweensOf(kick);
+    kick.x = Math.max(-40, Math.min(40, kick.x + dx));
+    kick.y = Math.max(-90, Math.min(90, kick.y + dy));
+    writeKick();
+    gsap.to(kick, { x: 0, y: 0, duration: 0.9, ease: "elastic.out(1, 0.55)",
+                    onUpdate: writeKick });
+  }
+
+  function flyTo(tx, ty) {
+    if (!window.gsap) { p.x = tx; p.y = ty; return; }
+    var dx = tx - p.x, dy = ty - p.y;
+    var d = Math.hypot(dx, dy) || 1;
+    fromP.x = p.x; fromP.y = p.y; toP.x = tx; toP.y = ty;
+
+    /* The bow is perpendicular to the route and always the same size for the
+       same trip, so the same journey draws the same curve every time. Capped,
+       or a full-page flight swings out of the viewport on the way. */
+    var bow = Math.min(d * 0.3, 200) * (dy >= 0 ? 1 : -1);
+    ctrlP.x = (fromP.x + tx) / 2 + (-dy / d) * bow;
+    ctrlP.y = (fromP.y + ty) / 2 + ( dx / d) * bow;
+
+    var dur = Math.max(0.42, Math.min(1.5, d / CRUISE));
+    if (flight) flight.kill();
+    prog.t = 0;
+
+    /* He leans into the turn and comes level as he arrives. */
+    if (body) {
+      var tilt = Math.max(-14, Math.min(14, dx * 0.05));
+      gsap.timeline()
+        .to(body, { "--b-tilt": tilt + "deg", duration: dur * 0.4, ease: "power2.out" })
+        .to(body, { "--b-tilt": "0deg", duration: dur * 0.6, ease: "power2.inOut" });
+    }
+
+    flight = gsap.to(prog, {
+      t: 1, duration: dur, ease: "power2.inOut",
+      onUpdate: function () {
+        p.x = qbez(fromP.x, ctrlP.x, toP.x, prog.t);
+        p.y = qbez(fromP.y, ctrlP.y, toP.y, prog.t);
+      },
+      onComplete: function () { flight = null; }
+    });
+  }
+
   var boxTween = null, boxShown = null;
 
   function boxHidden() {
@@ -893,11 +1095,54 @@
     placeBox(PAD - lane, Math.round(R * 0.86 + gapW()));
   }
 
+  /* ---- HE FLIES IN THE MARGIN, NOT THROUGH THE COPY -----------------------
+
+     A soft glow could pass over a paragraph and only tint it. An opaque body
+     covers the words. Measured at 1425x900 after he was given one: at 5 of 15
+     scroll positions his disc sat on top of live body copy - walk__disc,
+     nw__sum, a step in an ordered list - and elementsFromPoint confirmed he
+     was painting above them, not behind.
+
+     The fix is a clamp, NOT a search. Hunting for empty space is exactly what
+     produced five rounds of speech-box bugs, and it fails the same way here:
+     a per-frame decision against a threshold oscillates the moment anything
+     near it moves. This reads one number that only changes when the viewport
+     does - where the content column starts - and refuses to place him to the
+     right of it. Stable input, stable output.
+
+     IT IS MEASURED AGAINST THE BODY, NOT THE STAR. The star is a 104px hit
+     area and the gutter at this width is about 100px, so nothing clamped
+     against the star would ever fit and the rule would quietly never fire.
+     The visible disc is 64px, which does fit. The invisible half of the
+     button is allowed to overhang the column; only the part you can see is
+     held out of it. */
+  var colCache = { w: -1, left: 0 };
+
+  function bodyR() { return phone() ? 27 : 32; }
+
+  function columnLeft() {
+    var w = document.documentElement.clientWidth;
+    if (colCache.w === w) return colCache.left;
+    var wrap = document.querySelector("main .wrap") || document.querySelector(".wrap");
+    colCache.w = w;
+    colCache.left = wrap ? Math.round(wrap.getBoundingClientRect().left) : 0;
+    return colCache.left;
+  }
+
+  function offColumn(x) {
+    var w = document.documentElement.clientWidth;
+    if (x > w * 0.5) return x;          /* a right-hand placement is its own case */
+    var R = bodyR();
+    var lim = columnLeft() - R - 8;
+    if (lim < R + 4) return x;          /* no gutter to hide in - leave him alone */
+    return Math.min(x, lim);
+  }
+
   function retarget() {
     if (!zoneName) {
       var hold = holdPoint();
       var h = keepOffPanel(hold.x, hold.y);
-      goal.x = h.x; goal.y = h.y; laneOffsets(); return;
+      goal.x = offColumn(h.x); goal.y = h.y; laneOffsets(); return;
     }
     /* Re-resolved every frame so the hand-off between two bands of the SAME
        zone happens without a change of line - arrive() returns early when the
@@ -907,7 +1152,7 @@
     if (!r) {
       var hp0 = holdPoint();
       var hp = keepOffPanel(hp0.x, hp0.y);
-      goal.x = hp.x; goal.y = hp.y; laneOffsets(); return;
+      goal.x = offColumn(hp.x); goal.y = hp.y; laneOffsets(); return;
     }
     zone = el;
     var R = starR(), gap = gapW();
@@ -975,7 +1220,7 @@
        scanning, no candidate scoring: one number off the section box. */
     /* The zone put it somewhere; the panel gets the final say. */
     var safe = keepOffPanel(goal.x, goal.y);
-    goal.x = safe.x; goal.y = safe.y;
+    goal.x = offColumn(safe.x); goal.y = safe.y;
 
     /* RELATIVE OFFSETS ONLY. The first attempt pinned the line to viewport
        coordinates with (lineY - p.y), which fed the light's own position back
@@ -1037,76 +1282,24 @@
        that is a real change of destination rather than decoration. */
     var gx = g.x + cx, gy = g.y + cy;
 
-    /* ---- STEERING, NOT A SPRING --------------------------------------------
-       The spring was the reason it read as teleporting. A spring's speed is
-       proportional to how far it has to go, so a zone change 900px away threw
-       it across the screen in three frames and a change 40px away crawled -
-       the same motion at two completely different speeds, neither of them a
-       flight. This is the standard arrive-and-wander steering instead: one
-       cruise speed whatever the distance, an easing radius at the end, and a
-       cap on how fast the velocity itself may change. */
-    var tox = gx - p.x, toy = gy - p.y;
-    var dist = Math.hypot(tox, toy) || 1;
+    /* Two modes, decided by one distance. See the long note at flyTo(). */
+    var dist = Math.hypot(gx - p.x, gy - p.y);
+    if (window.gsap) {
+      if (!flight) {
+        if (dist > JUMP_R) flyTo(gx, gy);
+        else { ensureFollow(); qx(gx); qy(gy); }
+      }
+    } else {
+      p.x = gx; p.y = gy;               /* no vendor file: correct, not pretty */
+    }
 
-    /* Full speed until SLOW_R, then ramp down into the target. */
-    var want = MAXV * Math.min(1, dist / SLOW_R);
-    var wvx = tox / dist * want, wvy = toy / dist * want;
-
-    /* A FIXED PATH, NOT A RANDOM WALK.
-
-       The wander was noise: two sines accumulating into an angle, so the route
-       between the same two points was different every time and nothing about
-       it could be designed or predicted. This is a deterministic arc instead -
-       the bow is always perpendicular to the direction of travel, always the
-       same size for the same trip, and it collapses to nothing as Levi closes
-       in so the arrival stays exact.
-
-       Same journey, same curve, every time. That is what makes it read as a
-       flight path rather than a drunk insect. */
-    var nx = tox / dist, ny = toy / dist;      /* unit vector along the route  */
-
-    /* The bow peaks at the MIDDLE of the journey and is zero at both ends, so
-       the route is a clean arc from A to B rather than a swerve near one of
-       them. It needs the distance the trip STARTED at, not the distance left -
-       measuring against the remaining distance put the widest part of the
-       curve 210px from the destination, which is a last-second swerve. */
-    if (dist > tripD0) tripD0 = dist;          /* a new, longer target          */
-    var prog = tripD0 > 1 ? 1 - Math.min(1, dist / tripD0) : 1;
-    var reach = Math.min(1, tripD0 / 520);     /* short hops stay straight      */
-    var side = ny >= 0 ? 1 : -1;               /* always bow the same way       */
-    var arc = Math.sin(prog * Math.PI) * reach * 190 * side;
-    wvx += -ny * arc;                          /* perpendicular to travel       */
-    wvy +=  nx * arc;
-    if (dist < ARRIVE_R) tripD0 = 0;           /* arrived; next trip starts new */
-
-    /* The vertical breath that used to live here is now part of the breath
-       LAYER, for the same reason as the bob: it moved p, so it moved every
-       number read off p. */
-
-    /* MAXV HAS TO BE A CEILING, NOT A SUGGESTION. The wander is added
-       VECTORIALLY on top of a desired velocity that is already at full cruise,
-       so on a diagonal the two combined to 709 px/s - measured - against a
-       reference character that runs 310-540. Re-normalising here puts the cap
-       back where the name says it is, and costs the wander nothing: it still
-       bends the path, it just cannot also speed it up. */
-    var wm = Math.hypot(wvx, wvy);
-    if (wm > MAXV) { wvx = wvx / wm * MAXV; wvy = wvy / wm * MAXV; }
-
-    /* Force limit: mass. Without this the wander becomes a jitter. */
-    var fx = wvx - v.x, fy = wvy - v.y;
-    var fm = Math.hypot(fx, fy), cap = MAXF * dt;
-    if (fm > cap && fm > 0) { fx = fx / fm * cap; fy = fy / fm * cap; }
-    v.x += fx; v.y += fy;
-
-    /* Belt and braces. Nothing decorative should be able to leave the page
-       whatever the clock does. */
-    var sp0 = Math.hypot(v.x, v.y), lim = MAXV * 2.2;
-    if (sp0 > lim) { v.x = v.x / sp0 * lim; v.y = v.y / sp0 * lim; }
-
-    /* Hovering, not travelling - bleed off speed so it holds station. */
-    if (dist < ARRIVE_R) { v.x *= 0.88; v.y *= 0.88; }
-
-    p.x += v.x * dt; p.y += v.y * dt;
+    /* VELOCITY IS DERIVED NOW, NOT INTEGRATED. Nothing steers by it any more -
+       it exists so the trail, the report and the stats can still ask how fast
+       he is going. Measured across the previous frame because GSAP mutates p
+       on its own ticker, not inside this function. */
+    v.x = dt > 0 ? (p.x - lastP.x) / dt : 0;
+    v.y = dt > 0 ? (p.y - lastP.y) / dt : 0;
+    lastP.x = p.x; lastP.y = p.y;
 
     /* A GUIDE MAY NOT LEAVE THE SCREEN. Ever, for any reason.
 
@@ -1566,8 +1759,8 @@
     if (burstT) window.clearTimeout(burstT);
     burstT = window.setTimeout(function () { burst = 0; burstSaid = false; }, 400);
 
-    v.y += Math.max(-820, Math.min(820, -d * 7));
-    v.x += Math.max(-260, Math.min(260, -d * 1.1));
+    kickBy(Math.max(-26, Math.min(26, -d * 0.11)),
+           Math.max(-70, Math.min(70, -d * 0.55)));
     run();
   }, { passive: true });
 
@@ -1874,6 +2067,8 @@
   }
 
   watchBox();
+  setEmotion("neutral");
+  blink();
 
   setState("idle");
   lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
@@ -1943,6 +2138,7 @@
     frame: frame,
     ratios: function () { return ratio; },
     gesture: function () { gesture(); },
+    emotion: function (n) { setEmotion(n); return emotion; },
     forceIdle: function () { lastActivity = -1e9; checkIdle(1e9); },
     /* Read the position immediately, skipping the debounce - for verification
        only; a visitor always gets the debounced read. */

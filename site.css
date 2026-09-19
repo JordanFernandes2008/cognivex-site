@@ -2452,7 +2452,8 @@ html:has(.void-page) { background: #05070a; }
    note above write() in levi.js. */
 .levi {
   transform: translate3d(var(--levi-x, 50vw), var(--levi-y, 50vh), 0)
-             translate3d(var(--levi-bx, 0px), var(--levi-by, 0px), 0);
+             translate3d(var(--levi-bx, 0px), var(--levi-by, 0px), 0)
+             translate3d(var(--levi-kx, 0px), var(--levi-ky, 0px), 0);
 }
 .levi     { z-index: 1; }    /* inside main: behind the display type */
 .levi-say { z-index: 60; }   /* on body: always readable            */
@@ -2653,6 +2654,91 @@ html:has(.void-page) { background: #05070a; }
   width: 300px; height: 300px;
   background: rgb(255 120 26 / 26%);
   filter: blur(100px);
+}
+
+/* ============================================================================
+   THE BODY AND THE FACE.
+
+   Everything above this is glow: blurred, screen-blended, no surface. This is
+   the opaque part - the disc the face is drawn on, and the eyes and mouth
+   drawn on it in ink.
+
+   IT IS DELIBERATELY NOT BLENDED. The three glow layers use mix-blend-mode:
+   screen, which is a no-op against white and is why the light needed a
+   separate treatment on the six light pages. The body carries its own ground,
+   so the face reads identically everywhere and needs no per-page rule.
+
+   EVERY FEATURE IS A DIV WITH TWO RADII, AND THAT IS WHAT MAKES IT TWEENABLE.
+   An eye is `border-radius: --e-rt --e-rt --e-rb --e-rb` over a fixed box:
+   equal radii give a disc, a top-only radius gives the upward arc of a smile
+   seen in an eye, near-zero gives the flat line of a closed one. Same for the
+   mouth. All lengths are px - never %, because GSAP cannot tween 50% to 0px,
+   and the whole emotion system is one tween of six numbers. */
+.levi__body {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 64px; height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 38% 32%,
+      rgb(255 226 176) 0%,
+      rgb(255 154 54)  46%,
+      rgb(233 112 20)  100%);
+  box-shadow:
+    0 0 0 1px rgb(120 52 0 / 22%),
+    0 6px 18px rgb(96 40 0 / 30%),
+    inset 0 -4px 10px rgb(150 62 0 / 26%);
+  display: grid;
+  place-items: center;
+}
+
+.levi__eye,
+.levi__mouth {
+  position: absolute;
+  display: block;
+  background: #14161a;
+  pointer-events: none;
+}
+
+.levi__eye {
+  top: 50%;
+  width:  var(--e-w,  8px);
+  height: var(--e-h, 10px);
+  margin-top: calc(-1 * var(--e-h, 10px) / 2 - 5px + var(--e-ty, 0px));
+  border-radius: var(--e-rt, 5px) var(--e-rt, 5px) var(--e-rb, 5px) var(--e-rb, 5px);
+}
+.levi__eye--l { left: 50%; margin-left: calc(-1 * var(--e-w, 8px) - 4px); }
+.levi__eye--r { left: 50%; margin-left: 4px; }
+
+.levi__mouth {
+  left: 50%; top: 50%;
+  width:  var(--m-w, 22px);
+  height: var(--m-h, 11px);
+  margin-left: calc(-1 * var(--m-w, 22px) / 2);
+  margin-top: 6px;
+  border-radius: var(--m-rt, 0px) var(--m-rt, 0px) var(--m-rb, 22px) var(--m-rb, 22px);
+}
+
+/* TILT AND SQUASH SHARE ONE TRANSFORM, THROUGH VARIABLES.
+
+   --b-tilt is GSAP's, tweened in flyTo(): he banks into the turn on the way
+   out of a section and comes level as he arrives. --b-scale is the grab.
+   They are separate variables feeding one declaration because two rules both
+   setting `transform` would simply overwrite each other, and a CSS transition
+   on that declaration would fight GSAP for the same property sixty times a
+   second. So there is no transition here - the grab squash is instant, which
+   is what a grab should feel like, and everything else is tweened. */
+.levi__body { transform: rotate(var(--b-tilt, 0deg)) scale(var(--b-scale, 1)); }
+.levi.is-held .levi__body { --b-scale: .94; }
+
+@media (max-width: 700px) {
+  .levi__body { width: 54px; height: 54px; margin: -27px 0 0 -27px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .levi__body { --b-tilt: 0deg; }
 }
 
 /* Alive, not flashing. Opacity only - it composites, where a brightness filter
