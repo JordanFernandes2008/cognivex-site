@@ -88,10 +88,24 @@
      scrollY 1400 the hero band sat 1,081px above the viewport and Levi was
      dutifully sent there. It was on screen for two of eight sampled scroll
      positions. Nothing reads a raw zone rect any more. */
+  /* Whether a zone is DISPLAYED changes only when a media query flips - that
+     is, on resize, not sixty times a second. getComputedStyle forces a style
+     recalculation on every call, and this was asking three or four times per
+     frame for an answer that had not changed since the last resize. */
+  var shownCache = null;
+  function isShown(el) {
+    if (!shownCache) shownCache = new WeakMap();
+    if (shownCache.has(el)) return shownCache.get(el);
+    var cs = getComputedStyle(el);
+    var ok = cs.display !== "none" && cs.visibility !== "hidden";
+    shownCache.set(el, ok);
+    return ok;
+  }
+  function forgetShown() { shownCache = null; }
+
   function visibleSlice(el) {
     if (!el) return null;
-    var cs = getComputedStyle(el);
-    if (cs.display === "none" || cs.visibility === "hidden") return null;
+    if (!isShown(el)) return null;
     var vh = document.documentElement.clientHeight;
     var r = el.getBoundingClientRect();
     var top = Math.max(r.top, 0), bottom = Math.min(r.bottom, vh);
@@ -105,9 +119,14 @@
      band across its top 485px; past that the band was gone while the section
      still dominated. A tall section declares more than one, and whichever has
      the most of itself on screen is the one Levi uses. */
+  var elsCache = {};
   function zoneEls(name) {
-    return document.querySelectorAll('[data-levi-zone="' + name + '"]');
+    if (!elsCache[name]) {
+      elsCache[name] = document.querySelectorAll('[data-levi-zone="' + name + '"]');
+    }
+    return elsCache[name];
   }
+  function forgetEls() { elsCache = {}; }
   function zoneEl(name) {
     var all = zoneEls(name), best = null, bestH = 0;
     for (var i = 0; i < all.length; i++) {
@@ -121,8 +140,7 @@
 
   function zoneUsable(el) {
     if (!el) return false;
-    var cs = getComputedStyle(el);
-    if (cs.display === "none" || cs.visibility === "hidden") return false;
+    if (!isShown(el)) return false;
     var r = el.getBoundingClientRect();
     if (r.height < 2 * PAD + 2 * starR()) return false;
     return fitsWidth(r.width);
@@ -199,7 +217,8 @@
   var mouse = { x: 0, y: 0, fresh: 0 };
   var lastT = 0, raf = null, flareTimer = null, settleT = null;
   var spin = 0, glow = 1, lastScrollY = 0, lastActivity = 0;
-  var alt = 0, wanderA = 0;   /* how high it is flying, and which way it is
+  var alt = 0, wanderA = 0;
+  var ticking = false;   /* true while the simulation is being driven by hand */   /* how high it is flying, and which way it is
                                  currently drifting off the direct line */
 
   /* WHAT THE 3D RENDERER READS. levi3d.js draws a real object at this point
@@ -210,11 +229,30 @@
                 gx: 0, gy: 0, frames: 0 };
   var idleSpoken = false, savedLine = null, lure = null, stacked = false;
 
+  /* SCOPED, NOT ON :root.
+
+     Measured: four custom-property writes landed on document.documentElement
+     every frame - two here and two in retarget(). A custom property set on the
+     root element invalidates style for every element in the document that
+     could inherit it, and this document is about 9,000px of content. That is a
+     full-document style invalidation sixty times a second in order to move one
+     star, and it is the largest single reason the page feels heavy.
+
+     Only .levi and .levi-say read --levi-x/--levi-y (site.css:2244), and only
+     .levi__speech reads --levi-tx/--levi-ty (site.css:2439) - checked by grep
+     across every css and js file in the project. So they go on those elements
+     and the invalidation stops there. */
   function write(x, y) {
+    /* Belt and braces. If anything upstream ever slips a non-finite value past
+       the barrier in step(), it stops here rather than becoming `NaNpx` in a
+       transform and dropping the element into the corner. */
+    if (!isFinite(x) || !isFinite(y)) return;
     frame.x = x; frame.y = y;
-    var d = document.documentElement.style;
-    d.setProperty("--levi-x", x.toFixed(1) + "px");
-    d.setProperty("--levi-y", y.toFixed(1) + "px");
+    var xs = x.toFixed(1) + "px", ys = y.toFixed(1) + "px";
+    root.style.setProperty("--levi-x", xs);
+    root.style.setProperty("--levi-y", ys);
+    say.style.setProperty("--levi-x", xs);
+    say.style.setProperty("--levi-y", ys);
   }
 
   /* ---- which section is the visitor actually looking at ---------------------
@@ -295,7 +333,7 @@
 
     stacked = (PAD + 2 * R + gap + lw + PAD) > r.width;
 
-    var d = document.documentElement.style;
+    var d = speech.style;          /* scoped: .levi__speech owns --levi-tx/ty */
     /* THE LINE DECIDES THE HEIGHT, NOT THE LIGHT.
 
        Measured at 1425x820, the line overlapped page copy at five of nine
@@ -381,6 +419,12 @@
        and the steering force is scaled by a negative number - so it
        accelerates directly AWAY from the target, harder every frame, forever.
        Measured before this guard: the star reached -25539,-126876. */
+    /* A NON-FINITE TIMESTAMP POISONS EVERYTHING DOWNSTREAM. now feeds
+       Math.sin(now / 2600) in the idle bob, and Math.sin(NaN) is NaN, which
+       flows into gx, then tox, then the steering force, then v, then p - and
+       NaN propagates through every arithmetic operation, so it never clears. */
+    if (!isFinite(now)) now = (isFinite(lastT) ? lastT : 0) + 16.7;
+
     var dt = (now - lastT) / 1000;
     if (!(dt > 0)) dt = 1 / 60;          /* first frame, clock step, anything odd */
     if (dt > MAX_DT) dt = MAX_DT;
@@ -432,6 +476,15 @@
     wvx += Math.cos(wanderA) * wob;
     wvy += Math.sin(wanderA * 1.27) * wob * 0.8;
 
+    /* MAXV HAS TO BE A CEILING, NOT A SUGGESTION. The wander is added
+       VECTORIALLY on top of a desired velocity that is already at full cruise,
+       so on a diagonal the two combined to 709 px/s - measured - against a
+       reference character that runs 310-540. Re-normalising here puts the cap
+       back where the name says it is, and costs the wander nothing: it still
+       bends the path, it just cannot also speed it up. */
+    var wm = Math.hypot(wvx, wvy);
+    if (wm > MAXV) { wvx = wvx / wm * MAXV; wvy = wvy / wm * MAXV; }
+
     /* Force limit: mass. Without this the wander becomes a jitter. */
     var fx = wvx - v.x, fy = wvy - v.y;
     var fm = Math.hypot(fx, fy), cap = MAXF * dt;
@@ -448,6 +501,48 @@
 
     p.x += v.x * dt; p.y += v.y * dt;
 
+    /* A GUIDE MAY NOT LEAVE THE SCREEN. Ever, for any reason.
+
+       Every goal assignment is provably clamped to the viewport and the
+       steering force is capped, so on paper this can never fire. It fired
+       anyway - measured at (-25539, -126876) - and one cause was found and
+       guarded. Rather than keep betting that the next arithmetic slip is the
+       last one, this is an unconditional floor: the visitor never watches the
+       companion sail off the top of the page, whatever happened upstream. The
+       outward velocity is zeroed too, so it cannot press against an edge and
+       accumulate there. */
+    var cw = document.documentElement.clientWidth;
+    var ch = document.documentElement.clientHeight;
+    var mg = starR() * 0.45;
+
+    /* NaN IS NOT CAUGHT BY A CLAMP, AND THIS IS THE WHOLE POINT.
+
+       Every comparison with NaN evaluates false, so `if (p.y < mg)` below does
+       nothing at all and the poison passes straight through to the stylesheet
+       as `--levi-y: NaNpx`. That makes the transform declaration invalid; an
+       invalid transform is dropped; and a position:fixed element with left:0,
+       top:0 and no transform sits in the TOP-LEFT CORNER of the viewport.
+       "Flying up and off the screen" is what that looks like.
+
+       Measured with the tick driver: one non-finite frame poisoned p and v
+       permanently - every subsequent frame stayed NaN, across every later test
+       case, because nothing downstream could ever clear it.
+
+       So this recovers rather than clamps: drop the velocity, put the light
+       back on its target, and carry on. */
+    if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(v.x) || !isFinite(v.y)) {
+      v.x = 0; v.y = 0;
+      p.x = isFinite(goal.x) ? goal.x : cw * 0.5;
+      p.y = isFinite(goal.y) ? goal.y : ch * 0.5;
+      wanderA = 0; alt = 0;
+    }
+    if (!isFinite(spin)) spin = 0;
+    if (!isFinite(glow)) glow = 1;
+    if (p.x < mg)      { p.x = mg;      if (v.x < 0) v.x = 0; }
+    if (p.x > cw - mg) { p.x = cw - mg; if (v.x > 0) v.x = 0; }
+    if (p.y < mg)      { p.y = mg;      if (v.y < 0) v.y = 0; }
+    if (p.y > ch - mg) { p.y = ch - mg; if (v.y > 0) v.y = 0; }
+
     spin = (spin + dt * 6 + Math.sin(now / 5200) * dt * 8) % 360;
 
     /* ALTITUDE. Nothing here is really 3D, so height is inferred from effort:
@@ -459,8 +554,13 @@
     var lift = alt;
 
     /* The trail: each point chases the one in front, and the whole thing is
-       only visible while there is real speed to leave a mark. */
-    if (!REDUCED) {
+       only visible while there is real speed to leave a mark.
+
+       NOT WHEN THE 3D STAR HAS TAKEN OVER. site.css hides .levi__trail under
+       .levi.is-3d, so on any machine with WebGL these were six elements being
+       repositioned every frame while display:none - twenty-four style writes a
+       frame for something nobody can see. */
+    if (!REDUCED && !root.classList.contains("is-3d")) {
       var speed = Math.hypot(v.x, v.y);
       var vis = Math.min(1, Math.max(0, (speed - 120) / 900));
       for (var k = 0; k < TRAIL; k++) {
@@ -468,11 +568,12 @@
         var f = Math.min(1, dt * (16 - k * 1.6));
         trail[k].x += (lead.x - trail[k].x) * f;
         trail[k].y += (lead.y - trail[k].y) * f;
+        /* One transform instead of four variables the browser must resolve. */
         var st = trail[k].el.style;
-        st.setProperty("--tx", (trail[k].x - p.x).toFixed(1) + "px");
-        st.setProperty("--ty", (trail[k].y - p.y).toFixed(1) + "px");
-        st.setProperty("--ts", (1 - k * 0.12).toFixed(2));
-        st.setProperty("--to", (vis * (1 - k / TRAIL) * 0.55).toFixed(3));
+        st.transform = "translate(-50%,-50%) translate(" +
+          (trail[k].x - p.x).toFixed(1) + "px," + (trail[k].y - p.y).toFixed(1) + "px) scale(" +
+          (1 - k * 0.12).toFixed(2) + ")";
+        st.opacity = (vis * (1 - k / TRAIL) * 0.55).toFixed(3);
       }
     }
 
@@ -495,7 +596,7 @@
     root.style.setProperty("--levi-shs", (0.70 + alt * 1.05).toFixed(3));
     root.style.setProperty("--levi-sho", (0.66 - alt * 0.38).toFixed(3));
 
-    raf = requestAnimationFrame(step);
+    if (!ticking) raf = requestAnimationFrame(step);
   }
 
   function run() {
@@ -681,6 +782,7 @@
        across a breakpoint, a reflow during load) destroyed Levi, and widening
        the window again never brought it back. Go quiet instead, and return when
        a zone is usable again. */
+    forgetShown(); forgetEls();   /* a media query may have flipped */
     if (!anyZoneUsable()) { goQuiet(); return; }
     observeZones();
     readPosition();
@@ -820,6 +922,44 @@
       return { x: Math.round(p.x), y: Math.round(p.y) };
     },
     unfreeze: function () { frozen = false; run(); },
+
+    /* DRIVE THE SIMULATION BY HAND. Verification only.
+
+       The browser pane this is developed against starves requestAnimationFrame
+       to roughly one frame per half second, and it changes state between tool
+       calls - so no motion check against it can be trusted, and several were
+       wrong in both directions before anyone noticed. This runs the REAL step()
+       over the REAL DOM with the REAL zone geometry, at whatever timestep is
+       asked for, with no dependence on the host actually painting.
+
+       dtMs is deliberately unvalidated: passing a negative, zero or absurd
+       value is how the guards get tested. */
+    tick: function (dtMs, frames) {
+      var n = Math.max(1, frames | 0 || 1);
+      var d = (typeof dtMs === "number") ? dtMs : 16.7;
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      ticking = true;
+      var t = lastT || 0;
+      var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, peak = 0;
+      for (var i = 0; i < n; i++) {
+        t += d;
+        step(t);
+        if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+        var sp = Math.hypot(v.x, v.y); if (sp > peak) peak = sp;
+      }
+      ticking = false;
+      lastT = t;
+      return {
+        x: Math.round(p.x), y: Math.round(p.y),
+        vx: Math.round(v.x), vy: Math.round(v.y),
+        goal: Math.round(goal.x) + "," + Math.round(goal.y),
+        bounds: [Math.round(minX), Math.round(minY), Math.round(maxX), Math.round(maxY)],
+        peakSpeed: Math.round(peak),
+        finite: isFinite(p.x) && isFinite(p.y) && isFinite(v.x) && isFinite(v.y),
+        frames: frame.frames
+      };
+    },
     restingPoint: function () {
       var z = dominantZone();
       if (!z) return null;

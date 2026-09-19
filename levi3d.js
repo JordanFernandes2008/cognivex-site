@@ -144,7 +144,13 @@ import * as THREE from "./vendor/three.module.min.js";
       cam.left = -W / 2; cam.right = W / 2;
       cam.top = H / 2; cam.bottom = -H / 2;
       cam.updateProjectionMatrix();
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      /* 1.5, not 2. At 1425x820 a ratio of 2 is a 2850x1640 buffer - 4.7
+         million pixels redrawn every frame for one small object on a dark
+         page. The reference itself runs its BACKGROUND scene at 1.5 and saves
+         full density for the foreground; here there is only one scene and the
+         object is small, so 1.5 costs nothing visible and cuts the fill rate
+         by 44%. */
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
       renderer.setSize(W, H, false);
     }
     size();
@@ -190,9 +196,21 @@ import * as THREE from "./vendor/three.module.min.js";
 
     }
 
+    /* Do not redraw a scene that has not changed. When Levi is hovering, the
+       page is still and reduced motion is on, nothing in the frame differs
+       from the last one - and a WebGL clear+draw is not free just because the
+       geometry is identical. */
+    var lastKey = "";
     function draw() {
       raf = requestAnimationFrame(draw);
       update();
+      var f = L.frame;
+      var key = REDUCED
+        ? Math.round(f.x) + "," + Math.round(f.y)
+        : Math.round(f.x) + "," + Math.round(f.y) + "," +
+          Math.round(tumble * 300) + "," + Math.round((f.glow || 1) * 60);
+      if (key === lastKey && handedOver) return;
+      lastKey = key;
       renderer.render(scene, cam);
 
       if (!handedOver) {                    /* a real frame is on screen */
