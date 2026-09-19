@@ -962,7 +962,14 @@
   function watchQueue() {
     var stack = document.querySelector("[data-stack]");
     if (!stack) return;
-    var lastSaid = null;
+    var lastSaid = null, pending = null;
+
+    /* A queued card line must not land on top of a view the visitor has since
+       navigated away from. Measured: approving, then going back, left the NEXT
+       card introducing itself over the briefing. */
+    function cancelPending() {
+      if (pending) { window.clearTimeout(pending); pending = null; }
+    }
 
     /* THE CONDITION IS WHETHER YOU CAN SEE THE QUEUE, not which zone Levi is
        standing in. Gating on zoneName === "hero" was wrong and measured wrong:
@@ -970,7 +977,13 @@
        null, and it refused to say anything about a card the visitor was
        actively clicking. If the queue is on screen, it is worth talking about. */
     function queueVisible() {
-      var r = stack.getBoundingClientRect();
+      /* Measure the PANEL, not the stack. digest.js hides the stack whenever
+         the briefing is showing, and a hidden element reports a zero rect - so
+         measuring it meant Levi fell silent on exactly the view that opens
+         first. Measured: going back to the briefing left the previous card's
+         line on screen because this returned false. */
+      var el = document.querySelector("[data-queue]") || stack;
+      var r = el.getBoundingClientRect();
       var vh = document.documentElement.clientHeight;
       return r.width > 4 && r.bottom > 40 && r.top < vh - 40;
     }
@@ -1009,7 +1022,8 @@
         : "Skipped. It stays in the list.");
       noteActivity();
       /* Let the reaction be read before the next card introduces itself. */
-      window.setTimeout(speakActive, 1500);
+      cancelPending();
+      pending = window.setTimeout(speakActive, 1500);
     }, true);
 
     if (window.MutationObserver) {
@@ -1018,6 +1032,26 @@
         speakActive();
       }).observe(stack, { subtree: true, attributes: true, attributeFilter: ["class"] });
     }
+
+    /* The briefing and the list are two different conversations, so Levi says
+       a different thing in each. Fired by digest.js, not polled. */
+    window.addEventListener("cognivex:view", function (e) {
+      if (dismissed || !queueVisible()) return;
+      var v = e.detail && e.detail.view;
+      cancelPending();
+      lastSaid = null;
+      savedLine = null; idleSpoken = false;
+      say.classList.remove("is-quiet");
+      root.classList.remove("is-quiet");
+      setState("speaking");
+      if (v === "digest") {
+        sayLine("That is the whole morning. Five things want you.");
+      } else {
+        sayLine("Here they are. Read one, then decide.");
+        pending = window.setTimeout(speakActive, 1600);
+      }
+      noteActivity();
+    });
 
     window.setTimeout(speakActive, 900);
   }

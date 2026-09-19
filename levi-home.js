@@ -40,5 +40,9 @@ window.LEVI_SCRIPT = [
    knows - it does not claim to be watching you. */
 window.LEVI_IDLE = [
   "Still here. Take your time.",
-  "Nothing moves until you say so."
+  "Nothing moves until you say so.",
+  "I will wait. That is most of the job.",
+  "No rush. Nothing goes out on its own.",
+  "Everything is drafted. It only wants a yes.",
+  "Read it twice if you like. It keeps."
 ];
