@@ -2757,8 +2757,12 @@ section { position: relative; }
    the left of the queue - measured 0..484 at 1440 wide, against a queue that
    starts at 484 - and that is this band. Stacked arrangement: star above, line
    underneath, because the column is too narrow to sit them side by side. */
+/* Width is set by levi.js from the hero stage's real left edge - see
+   sizeHeroBand(). The 33% here is only a floor for the instant before that
+   runs, and for JS-off, where the zone is never used anyway. */
 .levi-zone--hero-b {
-  left: 0; right: 66%;
+  left: 0; right: auto;
+  width: 33%;
   top: 49%; bottom: 4%;
   height: auto;
 }

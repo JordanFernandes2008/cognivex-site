@@ -341,14 +341,34 @@
   }
 
   /* ---- placement, which is arithmetic -------------------------------------- */
+  /* IN THE LANE, THE BOX GOES UNDER THE LIGHT - NOT BESIDE IT.
+
+     Beside is right inside a zone, which is wide. The holding lane is the page
+     gutter, and a 328px box placed to the right of a star sitting at x 179 ends
+     at 507 - which at 1905 is 39px inside the interactive demo panel, and
+     measured as four collisions with .app, .rail and the feed items.
+
+     Stacked under the star and left-aligned to the page margin, the box runs 40
+     to 368. The demo panel starts at 468 here and 484 at 1440, so it clears at
+     both. Offsets are computed from the LANE, which is a function of the
+     viewport, never from p - deriving an offset from the light's own position
+     is what sent it to -22322,-109726 once already. */
+  function laneOffsets() {
+    var de = document.documentElement;
+    var R = starR(), lane = Math.max(PAD + R, Math.round(de.clientWidth * 0.094));
+    var d = speech.style;
+    d.setProperty("--levi-tx", Math.round(PAD - lane) + "px");
+    d.setProperty("--levi-ty", Math.round(R * 0.86 + gapW()) + "px");
+  }
+
   function retarget() {
-    if (!zoneName) { var h = holdPoint(); goal.x = h.x; goal.y = h.y; return; }
+    if (!zoneName) { var h = holdPoint(); goal.x = h.x; goal.y = h.y; laneOffsets(); return; }
     /* Re-resolved every frame so the hand-off between two bands of the SAME
        zone happens without a change of line - arrive() returns early when the
        name has not changed, so it would never have swapped the element. */
     var el = zoneEl(zoneName);
     var r = el && visibleSlice(el);
-    if (!r) { var h = holdPoint(); goal.x = h.x; goal.y = h.y; return; }
+    if (!r) { var h = holdPoint(); goal.x = h.x; goal.y = h.y; laneOffsets(); return; }
     zone = el;
     var R = starR(), gap = gapW(), lw = lineW();
     var sh = speech.getBoundingClientRect().height || 26;
@@ -662,6 +682,28 @@
      The gutter is the one column empty in every section: the wrap starts at
      about 13.4% of the viewport, so 9.4% is clear of it, and it is where the
      zones already put Levi in six sections out of eight. */
+  /* THE HERO'S LOWER BAND IS THE LEFT GUTTER, AND THE GUTTER IS MEASURED.
+
+     It was `left: 0; right: 66%`, tuned at 1440 where the demo panel happened
+     to start at 484 and the band ended at 484 - exactly zero overlap, and
+     exactly one viewport. At 1905 the same rule put the band 180px INSIDE the
+     interactive demo, so Levi sat on top of the approval queue: the one thing
+     on this page a visitor is meant to touch.
+
+     No percentage can track it, because .wrap is max-width 1180 but the hero
+     stage measures 1038. So the band is sized from the stage's own left edge,
+     once at startup and again on resize - never per frame. 12px of clearance
+     so the light never grazes the panel edge. */
+  function sizeHeroBand() {
+    var b = document.querySelector(".levi-zone--hero-b");
+    if (!b) return;
+    var stage = document.querySelector(".hero__stage") ||
+                document.querySelector(".hero .wrap");
+    if (!stage) return;
+    var left = stage.getBoundingClientRect().left;
+    b.style.width = Math.max(0, Math.round(left - 12)) + "px";
+  }
+
   function holdPoint() {
     var de = document.documentElement;
     var R = starR();
@@ -819,6 +861,7 @@
        the window again never brought it back. Go quiet instead, and return when
        a zone is usable again. */
     forgetShown(); forgetEls();   /* a media query may have flipped */
+    sizeHeroBand();
     if (!anyZoneUsable()) { goQuiet(); return; }
     observeZones();
     readPosition();
@@ -905,6 +948,82 @@
   }
 
   function startLevi() {
+  /* ---- THE QUEUE TALKS BACK -------------------------------------------------
+     Every card carries a data-levi line written for it, and Levi reads the one
+     belonging to whichever card is at the top. That is the difference between
+     a mascot and an assistant: it is not narrating the page, it is telling you
+     the one thing about THIS item that you would want a person to tell you.
+
+     Only while Levi is in the hero, because that is where the queue is. Reading
+     out invoice notes while the visitor is four sections down would be noise.
+
+     A MutationObserver rather than a poll: the active card changes only when
+     something is approved, skipped or reset, so this is idle almost always. */
+  function watchQueue() {
+    var stack = document.querySelector("[data-stack]");
+    if (!stack) return;
+    var lastSaid = null;
+
+    /* THE CONDITION IS WHETHER YOU CAN SEE THE QUEUE, not which zone Levi is
+       standing in. Gating on zoneName === "hero" was wrong and measured wrong:
+       between zones Levi holds in the lane with NO zone at all, so zoneName is
+       null, and it refused to say anything about a card the visitor was
+       actively clicking. If the queue is on screen, it is worth talking about. */
+    function queueVisible() {
+      var r = stack.getBoundingClientRect();
+      var vh = document.documentElement.clientHeight;
+      return r.width > 4 && r.bottom > 40 && r.top < vh - 40;
+    }
+
+    function speakActive() {
+      if (dismissed || !queueVisible()) return;
+      var card = stack.querySelector("[data-item].is-active");
+      var line = card && card.getAttribute("data-levi");
+      if (!line || line === lastSaid) return;
+      lastSaid = line;
+      savedLine = null; idleSpoken = false;
+      say.classList.remove("is-quiet");
+      setState("speaking");
+      sayLine(line);
+      noteActivity();
+    }
+
+    /* React to the decision itself, before the next card's line lands. */
+    /* On DOCUMENT and in the CAPTURE phase, not on the stack. site.js owns this
+       queue and resolves a card by removing it from the tree; a listener
+       further in was measured firing for approve and silently not for skip.
+       Capturing at the document means the reaction cannot be lost to whatever
+       the queue does underneath it. */
+    document.addEventListener("click", function (e) {
+      var t = e.target;
+      var b = t && t.closest ? t.closest("[data-approve],[data-skip]") : null;
+      if (!b || !stack.contains(b) || dismissed || !queueVisible()) return;
+      var approved = b.hasAttribute("data-approve");
+      lastSaid = null;
+      savedLine = null; idleSpoken = false;
+      say.classList.remove("is-quiet");     /* it may have been holding quietly */
+      root.classList.remove("is-quiet");
+      setState(approved ? "approved" : "speaking");
+      sayLine(approved
+        ? "Sent. That one is done with."
+        : "Skipped. It stays in the list.");
+      noteActivity();
+      /* Let the reaction be read before the next card introduces itself. */
+      window.setTimeout(speakActive, 1500);
+    }, true);
+
+    if (window.MutationObserver) {
+      new MutationObserver(function () {
+        if (!lastSaid) return;          /* a click is already handling it */
+        speakActive();
+      }).observe(stack, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    }
+
+    window.setTimeout(speakActive, 900);
+  }
+  watchQueue();
+
+  sizeHeroBand();
   setState("idle");
   lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
   observeZones();

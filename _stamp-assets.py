@@ -29,6 +29,7 @@ ASSETS = ['site.css', 'site.js', 'motion.js', 'cursor.js', 'walk.js', 'film.js',
           # levi3d.js is a module and is stamped like the rest; vendor/ is
           # not, matching how gsap and lenis are already loaded.
           'levi3d.js',
+          'queue-data.js',
           # boot.js is loaded from the HEAD of index.html only - it has to run
           # before <body> exists so the cold start's black is on the first paint.
           'boot.js', 'cold.js']
