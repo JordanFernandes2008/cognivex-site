@@ -357,8 +357,9 @@
        agree with it. idleTier is how long the pause has run - the ladder that
        already exists for choosing a longer idle line - so the same number
        decides when he nods off. */
-    if (n === "speaking")      setEmotion("speaking");
-    else if (n === "approved") setEmotion("happy", { ease: "back.out(2.4)" });
+    if (n === "approved")      setEmotion("happy", { ease: "back.out(2.4)" });
+    else if (mood)             setEmotion(mood);
+    else if (n === "speaking") setEmotion("speaking");
     else                       setEmotion(idleTier >= 2 ? "sleeping" : "neutral");
   }
 
@@ -508,6 +509,30 @@
   var body = root.querySelector(".levi__body");
   var emotion = null, faceTween = null, blinkT = null;
 
+  /* SOME SECTIONS HAVE A MOOD, AND IT OUTRANKS "SPEAKING".
+
+     Without this, three of the seven faces were unreachable - built, tweenable
+     and never once shown, because setState() only ever knows idle / speaking /
+     approved. The section is the missing input: what he is saying should
+     change how he looks while he says it.
+
+     The trust page's "wrong" section is the copy where the product admits it
+     makes mistakes, and the capabilities page's "limits" is where it says what
+     it will not do. A companion grinning through either of those is the kind
+     of tonal miss that makes people distrust the whole page. The walkthrough
+     and the night-work section are him working rather than talking, which is
+     what thinking is for.
+
+     Held for the whole section rather than the sentence, so it survives the
+     speaking state instead of being overwritten by it. */
+  var ZONE_MOOD = {
+    wrong:     "sorry",
+    limits:    "sorry",
+    walk:      "thinking",
+    nightwork: "thinking"
+  };
+  var mood = null;
+
   function faceVars(f) {
     return {
       "--e-w":  f.ew  + "px", "--e-h":  f.eh  + "px",
@@ -534,6 +559,26 @@
     vars.ease = (how && how.ease) || "back.out(1.6)";
     vars.overwrite = "auto";
     faceTween = gsap.to(body, vars);
+  }
+
+  /* A STARTLE, WHICH IS A FACE HE WEARS AND THEN TAKES OFF AGAIN.
+
+     Everything else here is a state he holds. This one is an event: fly past
+     four sections and he looks startled for a moment and then recovers. It
+     restores whatever the state machine currently wants rather than a
+     remembered value, so it cannot strand him wearing it if the section
+     changed while the timer was running. */
+  var flashT = null;
+  function flashEmotion(name, ms) {
+    setEmotion(name, { fast: true });
+    window.clearTimeout(flashT);
+    flashT = window.setTimeout(function () {
+      var st = STATES.filter(function (c) { return root.classList.contains(c); })[0];
+      if (st === "is-approved")      setEmotion("happy");
+      else if (mood)                 setEmotion(mood);
+      else if (st === "is-speaking") setEmotion("speaking");
+      else                           setEmotion(idleTier >= 2 ? "sleeping" : "neutral");
+    }, ms || 1100);
   }
 
   /* A BLINK IS NOT AN EXPRESSION. It rides on top of whichever face is held,
@@ -1576,7 +1621,7 @@
      that conflation is what made a gap in the zones look like a disappearance
      rather than a pause in the conversation. */
   function goQuiet() {
-    zone = null; zoneName = null;
+    zone = null; zoneName = null; mood = null;
     say.classList.add("is-quiet");
     setState("idle");
   }
@@ -1602,6 +1647,7 @@
     if (!z) { if (!zoneName) goQuiet(); return; }
     if (z.name === zoneName) return;          /* already here */
     zone = z.el; zoneName = z.name;
+    mood = ZONE_MOOD[z.name] || null;
     /* A LEAN IS PER-SECTION. Whoever set it - the approve gesture or the demo
        commentary - it points at something in the section being left, so it
        cannot outlive the arrival in the next one. Belt and braces against the
@@ -1754,6 +1800,7 @@
     burst += Math.abs(d);
     if (!burstSaid && burst > document.documentElement.clientHeight * 2.5) {
       burstSaid = true;
+      flashEmotion("alert", 1400);
       speak(voice("state", "scrolledFast"));
     }
     if (burstT) window.clearTimeout(burstT);
