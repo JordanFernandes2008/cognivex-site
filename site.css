@@ -2445,6 +2445,31 @@ html:has(.void-page) { background: #05070a; }
 .levi     { z-index: 1; }    /* inside main: behind the display type */
 .levi-say { z-index: 60; }   /* on body: always readable            */
 
+/* ==========================================================================
+   THE WORDS ARE DOCKED. THE LIGHT STILL FLIES.
+
+   The box used to hunt for empty space and hide when it could not find any,
+   and the hunting was the defect. A 328px box that must clear all copy, the
+   demo panel, the ticker and the masthead has almost nowhere to go on this
+   page - at 1300px the gutters are 100 - so it spent its life either
+   suppressed or oscillating across a constraint edge as the light breathed.
+   Five rounds of placement fixes each measured clean and each came back.
+
+   One permanent position instead. It cannot overlap anything it did not
+   already overlap yesterday, it cannot flicker, and it cannot go missing.
+   Where it does cover the hero copy or the panel's own chrome it covers it
+   outright - the box is opaque, which is what makes that acceptable.
+
+   .levi-say must stop being transformed for this to work: a transformed
+   ancestor becomes the containing block for its fixed descendants, so a
+   docked box inside the old translate3d layer would have docked to the
+   LIGHT rather than to the viewport. The layer is the viewport now. */
+.levi-say {
+  width: 100%; height: 100%;
+  transform: none;
+  will-change: auto;
+}
+
 /* THE FOREGROUND LAYER. One fixed canvas over the whole page, which is how a
    WebGL object gets to be IN FRONT of HTML rather than trapped behind it -
    the reference does the same thing with a canvas at z-index 200.
@@ -2690,10 +2715,11 @@ body:not(.void-page) .levi__flare { display: none; }
   --say-edge:   rgb(255 255 255 / 13%);
 
   position: absolute;
-  left: 0; top: 0;
+  left: clamp(12px, 2vw, 28px);
+  top: auto;
+  bottom: clamp(12px, 2.5vh, 26px);
   width: 20.5rem;
   min-width: 20.5rem;
-  transform: translate(var(--levi-tx, 0px), var(--levi-ty, 0px));
   pointer-events: none;
   padding: .72rem .9rem .78rem;
   border-radius: 13px;
@@ -2701,8 +2727,11 @@ body:not(.void-page) .levi__flare { display: none; }
   border: 1px solid var(--say-edge);
   box-shadow: 0 12px 34px rgb(0 0 0 / 52%), inset 0 1px 0 rgb(255 255 255 / 5%);
 }
-/* The caret. Points left, back toward the light that is speaking. */
-.levi__speech::after {
+/* RETIRED WITH THE FOLLOWING. The tail pointed back at the light, which was
+   the point of it while the box sat beside him. Docked, it points at the edge
+   of the screen. A tail aimed at nothing is worse than no tail. */
+.levi__speech::after { content: none; }
+.levi__speech--tail::after {
   content: "";
   position: absolute;
   left: -6px; top: 18px;
@@ -2806,6 +2835,28 @@ body:not(.void-page) .levi__flare { display: none; }
   .levi__shadow { width: 168px; height: 54px; }
   .levi__speech { width: 16rem; min-width: 16rem; }
   .levi-note { max-width: 30ch; bottom: .6rem; }
+}
+
+/* THE DOCK MOVES TO THE TOP ON SMALL SCREENS, AND ONLY THERE.
+
+   The bottom-left corner is the right dock on a wide screen: the layout is
+   centred with real margins there, so the corner is empty. On a phone the
+   layout is edge to edge and the corner is not empty - it is where controls
+   live. Measured at 390x844 across nineteen scroll positions, a bottom dock
+   landed on 29 controls and 50 blocks of copy; the same box under the masthead
+   landed on 8 and 28. The walkthrough's own "go" button was one of the 29,
+   half-covered - taps still reached it (the box is pointer-events: none, and
+   elementFromPoint confirmed the button was the hit target) but a control you
+   cannot read is not a control you can use.
+
+   Under the masthead rather than over it: the masthead measured 63px and is
+   sticky, so it is the one thing guaranteed to be at the top of every screen.
+   Sitting below it means the box never fights it. */
+@media (max-width: 1024px) {
+  .levi__speech {
+    top: calc(var(--masthead-h, 63px) + 10px);
+    bottom: auto;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

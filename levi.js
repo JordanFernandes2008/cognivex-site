@@ -755,203 +755,18 @@
     return occ.hit;
   }
 
-  function placeBox(tx, ty, sr) {
-    var de = document.documentElement;
-    var vw = de.clientWidth, vh = de.clientHeight;
-    if (!sr) sr = speech.getBoundingClientRect();
-    var bw = sr.width > 4 ? sr.width : lineW();
-    var bh = sr.height > 4 ? sr.height : 26;
+  /* DOCKED, SO THERE IS NOTHING LEFT TO DECIDE.
 
-    /* The offsets are relative to the light, so the light is the origin. */
-    var ox = isFinite(p.x) ? p.x : goal.x, oy = isFinite(p.y) ? p.y : goal.y;
-    if (!isFinite(ox) || !isFinite(oy)) { ox = 0; oy = 0; }
+     Everything that used to live here - the panel escapes, the gutters, the
+     occupancy test, the anchor, the hysteresis - existed to find a hole in a
+     page that does not have one. The box has a fixed home in the stylesheet
+     now, so placement is a stylesheet concern and this is the whole of the
+     runtime's job: make sure nothing is still hiding it.
 
-    var left = ox + tx, top = oy + ty;
-
-    /* Held where it was put, unless something other than the wander moved. */
-    if (!anchorStale(ox, oy, bw, bh, vw, vh)) {
-      if (anchor.blocked) { say.classList.add("is-blocked"); return; }
-      say.classList.remove("is-blocked");
-      var d = speech.style;
-      d.setProperty("--levi-tx", Math.round(anchor.left - ox) + "px");
-      d.setProperty("--levi-ty", Math.round(anchor.top - oy) + "px");
-      return;
-    }
-
-    /* ON A PHONE THE BOX IS HELD OFF THE CONTENT, NOT OFF THE WHOLE PANEL.
-
-       Keeping it off `.app` entirely is right on a desktop, where there is
-       always somewhere else to be. On a 390x844 phone the demo is 799px tall
-       under a 63px sticky masthead: above it leaves 45 usable pixels, below it
-       leaves none, and the box is 91. Measured - the queue's line was
-       suppressed at every scroll position on the phone, which is the same as
-       not writing it.
-
-       What actually has to stay clear is what Jordan asked for: the card, the
-       draft text and the three buttons. onWords() already guarantees exactly
-       that - every one of them is painted text, and buttons are in TEXTY - so
-       the box may rest on the panel's own empty chrome and nothing else. The
-       LIGHT keeps its full keep-out either way; keepOffPanel() is untouched. */
-    /* HARD EXCLUSIONS, NOT JUST THE PANEL.
-
-       onWords() is the right tool for copy, which holds still. It is the wrong
-       tool for a MARQUEE: `.ticker` runs a 46s linear loop, so its text slides
-       under whatever is parked above it and a verdict taken at one instant is
-       not true a moment later. Measured at 1300x620 - 33 overlaps of ticker
-       text across 11 scroll positions, worst 251x15, with the words test
-       returning clear the whole time.
-
-       So the ticker is excluded the way the demo panel is: geometrically, by
-       rectangle, before any of the text machinery runs. That does more than
-       suppress - onPanel() drives the escape search, so the box actively moves
-       off it rather than going dark. The masthead and status bar are here too;
-       both are sticky chrome and the box is z-index 60 against the masthead's
-       40, so it covers them rather than passing behind.
-
-       `box` stays the app alone, because the app is what the below/above/
-       gutter candidates are measured against. */
-    var box = panelBox();
-    var hard = [];
-    (function () {
-      var vhh = de.clientHeight;
-      if (box) hard.push(box);
-      [".ticker", ".masthead", ".statusbar"].forEach(function (sel) {
-        var all = document.querySelectorAll(sel);
-        for (var i = 0; i < all.length; i++) {
-          var r = all[i].getBoundingClientRect();
-          if (r.width < 4 || r.height < 4) continue;
-          if (r.bottom < 0 || r.top > vhh) continue;
-          hard.push(r);
-        }
-      });
-    })();
-
-    function hitHard(l, t) {
-      for (var hi = 0; hi < hard.length; hi++) {
-        var q = hard[hi];
-        if (l < q.right + MARGIN && l + bw > q.left - MARGIN &&
-            t < q.bottom + MARGIN && t + bh > q.top - MARGIN) return q;
-      }
-      return null;
-    }
-    function onPanel(l, t) { return !!hitHard(l, t); }
-
-    /* FOUR WAYS OFF THE PANEL, IN A FIXED ORDER.
-
-       This was "down only", and down alone is not enough. The demo grows as
-       you scroll - .hero__stage is scale-animated - so on a 1920x900 desktop
-       it reaches 1,093 x 740 in a 900px viewport: nothing fits below it, and
-       above it is the masthead. Meanwhile the GUTTERS beside it measure 406px
-       against a 328px box, which is room to spare.
-
-       The box never looked there. keepOffPanel() pushes the LIGHT into that
-       gutter, and the box is then laid out BESIDE the light - to its right,
-       which is back onto the panel. Light at x 299, box at 432..760, panel
-       starting at 406. So the one place with room was the one place the box
-       could not be put, and the line went dark for the whole demo. That is
-       the "textbox not visible" in the report.
-
-       Gutters are tried on the light's own side first, so the words stay with
-       the thing that is speaking them. The vertical offset there is the
-       stacked one - under the light, not across it, or the light sits on top
-       of its own box. */
-    var blocked = false;
-    var clash = hitHard(left, top);
-    if (clash) {
-      /* Escape geometry is measured against whatever was actually hit, not
-         always the app - the app can be off screen while the ticker is not,
-         and reading box.left in that state was a null dereference waiting for
-         the first visitor who scrolled past the demo. */
-      var stackTop = oy + starR() * 0.86 + gapW();
-      var leftGut  = clash.left - MARGIN - bw;    /* box's left edge if parked left  */
-      var rightGut = clash.right + MARGIN;        /* box's left edge if parked right */
-      var nearLeft = (ox <= (clash.left + clash.right) / 2);
-
-      var tries = [
-        { l: left, t: clash.bottom + MARGIN },    /* below it */
-        { l: left, t: clash.top - MARGIN - bh }   /* above it */
-      ];
-      var gutters = [
-        { l: Math.min(Math.max(ox - bw / 2, MARGIN), leftGut), t: stackTop, ok: leftGut >= MARGIN },
-        { l: Math.max(Math.min(ox - bw / 2, vw - MARGIN - bw), rightGut), t: stackTop,
-          ok: rightGut + bw <= vw - MARGIN }
-      ];
-      if (!nearLeft) gutters.reverse();
-      tries = tries.concat(gutters.filter(function (g) { return g.ok; }));
-
-      var got = null;
-      for (var ti = 0; ti < tries.length; ti++) {
-        var c = tries[ti];
-        if (c.t < MARGIN || c.t + bh > vh - MARGIN) continue;
-        if (c.l < MARGIN || c.l + bw > vw - MARGIN) continue;
-        if (onPanel(c.l, c.t)) continue;
-        got = c; break;
-      }
-      if (got) { left = got.l; top = got.t; }
-      else blocked = true;
-    }
-    if (!blocked) {
-      left = Math.max(MARGIN, Math.min(left, vw - MARGIN - bw));
-      top  = Math.max(MARGIN, Math.min(top,  vh - MARGIN - bh));
-      if (onPanel(left, top)) blocked = true;   /* the clamp put it back on */
-    }
-
-    /* NOW ASK WHETHER ANYTHING IS ALREADY THERE. A short, FIXED list of named
-       alternatives - the two sides of the panel and the mirror of the stack -
-       tried in that order, and then the answer is no. It is a preference
-       order, not a scored search over the page: nothing here measures a
-       candidate against a candidate, which is what exiled this thing to the
-       right margin the last time.
-
-       Not asked at all while the box is not being drawn, which is most of the
-       scroll: between zones Levi holds in the lane with nothing to say, and
-       measuring what a hidden box would have crossed is work for no one. The
-       hysteresis is primed so the first verdict after it speaks again counts
-       immediately instead of costing a second frame. */
-    var mute = say.classList.contains("is-quiet") ||
-               say.classList.contains("is-gone") ||
-               say.classList.contains("is-boot");
-    var when = (window.performance && performance.now) ? performance.now() : Date.now();
-    if (mute) { occ.n = 1; }
-    else if (!blocked && boxOnWords(left, top, bw, bh, when)) {
-      var alts = [];
-      if (box) { alts.push(box.bottom + MARGIN); alts.push(box.top - MARGIN - bh); }
-      alts.push(oy - gapW() - bh);
-      var placed = false;
-      for (var ai = 0; ai < alts.length; ai++) {
-        var cand = alts[ai];
-        if (cand < MARGIN || cand + bh > vh - MARGIN) continue;
-        if (Math.abs(cand - top) < 1) continue;
-        if (onPanel(left, cand) || onWords(left, cand, bw, bh, when)) continue;
-        top = cand; placed = true;
-        occ.hit = false; occ.n = 0;
-        break;
-      }
-      if (!placed) blocked = true;
-    }
-
-    /* Nothing clear of the copy anywhere: put it back where the offsets asked,
-       clamped on screen, provided it is off the demo's own content. Saying it
-       over a paragraph beats not saying it at all. */
-    if (blocked && !mute) {
-      var fl = Math.max(MARGIN, Math.min(ox + tx, vw - MARGIN - bw));
-      var ft = Math.max(MARGIN, Math.min(oy + ty, vh - MARGIN - bh));
-      if (!onGuarded(fl, ft, bw, bh)) {
-        left = fl; top = ft; blocked = false;
-        occ.hit = false; occ.n = 0;
-      }
-    }
-
-    anchor = { left: left, top: top, px: ox, py: oy, bw: bw, bh: bh,
-               vw: vw, vh: vh, sy: (window.pageYOffset || 0),
-               zone: zoneName, blocked: blocked };
-
-    say.classList.toggle("is-blocked", blocked);
-    if (blocked) return;
-
-    var d = speech.style;
-    d.setProperty("--levi-tx", Math.round(left - ox) + "px");
-    d.setProperty("--levi-ty", Math.round(top - oy) + "px");
+     The signature is unchanged because retarget() and laneOffsets() still
+     call it, and they still position the LIGHT, which does still fly. */
+  function placeBox() {
+    say.classList.remove("is-blocked");
   }
 
   function laneOffsets() {
@@ -1458,7 +1273,24 @@
   }
 
   function arrive(z) {
-    if (!z) { goQuiet(); return; }
+    /* A GAP IS NOT A SILENCE. Measured on the homepage: the ten bands cover
+       2839px of a 6839px scroll range, so 58% of the page fell between zones
+       and called goQuiet(). That was survivable while the line was pinned to
+       the light and moved around - a line that wanders is expected to come and
+       go. Docked, it is not: the box blinks out at a fixed spot and back in
+       350px later, eight times down the page, which is precisely the flicker
+       the docking was meant to end.
+
+       So a gap now HOLDS the section it just left. The light still leaves -
+       retarget() resolves the zone element every frame and drops into the
+       holding lane the moment visibleSlice() returns null - so the object
+       still reads as travelling between sections. Only the sentence persists,
+       which is what "narrates every section" asks for: the last thing said
+       about a section stays readable until there is something new to say.
+
+       goQuiet() is kept for the cases that really are silence: dismissal, and
+       a page where nothing has been said at all. */
+    if (!z) { if (!zoneName) goQuiet(); return; }
     if (z.name === zoneName) return;          /* already here */
     zone = z.el; zoneName = z.name;
     /* A LEAN IS PER-SECTION. Whoever set it - the approve gesture or the demo
