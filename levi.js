@@ -73,13 +73,19 @@
 
   function sectionOf(el) { return el.closest("section") || el.parentElement || el; }
 
-  /* Can a band of this width hold the light and the line at full measure, in
-     either arrangement? */
-  function fitsWidth(w) {
-    var R = starR();
-    return (PAD + 2 * R + gapW() + lineW() + PAD) <= w ||
-           (PAD + Math.max(2 * R, lineW()) + PAD) <= w;
-  }
+  /* A BAND HAS TO HOLD THE LIGHT. NOT THE LINE.
+
+     This budgeted for the chatbox inside the band - 408px stacked, 636px
+     beside - which was correct when the line sat next to the star inside the
+     zone. It has not since the line was decoupled and given its own placement
+     (the section's free foot, or the gutter when Levi is in the lane).
+
+     Left as it was, it rejected the hero's lower band for being 229px wide
+     when the thing it actually has to contain is 190px across. Measured: the
+     hero was unreachable at 1536 because of it. */
+  function LIGHT_BOX() { return 2 * starR() + 24; }
+
+  function fitsWidth(w) { return w >= LIGHT_BOX(); }
 
   /* THE PART OF A BAND THAT IS ACTUALLY ON SCREEN, or null.
 
@@ -110,7 +116,11 @@
     var r = el.getBoundingClientRect();
     var top = Math.max(r.top, 0), bottom = Math.min(r.bottom, vh);
     var h = bottom - top;
-    if (h < 2 * PAD + 2 * starR()) return null;
+    /* Same correction vertically. Demanding 2*PAD + 2*R meant the WHOLE band
+       had to be on screen, so centring a section left 216-227px visible
+       against a 270px requirement and four sections out of eight went silent.
+       What has to fit is the light and a little air. */
+    if (h < LIGHT_BOX()) return null;
     if (!fitsWidth(r.width)) return null;
     return { left: r.left, width: r.width, top: top, height: h };
   }
@@ -142,7 +152,7 @@
     if (!el) return false;
     if (!isShown(el)) return false;
     var r = el.getBoundingClientRect();
-    if (r.height < 2 * PAD + 2 * starR()) return false;
+    if (r.height < LIGHT_BOX()) return false;
     return fitsWidth(r.width);
   }
 
@@ -792,6 +802,18 @@
     if (dismissed) return;
     if (settleT) window.clearTimeout(settleT);
     settleT = window.setTimeout(function () {
+      /* RE-MEASURE THE GUTTER HERE, NOT ONLY ON RESIZE.
+
+         sizeHeroBand() writes an inline width onto the hero's lower band. It
+         ran once at startup, when the stage happened to be a different width,
+         and the stale 158px it left behind was below the 214px the light
+         needs - so the hero was the one section out of eight that stayed
+         unreachable after the other seven were fixed. Fonts landing, the cold
+         start finishing and ScrollTrigger building its pin all move that edge
+         after startup and none of them fire a resize.
+
+         One getBoundingClientRect, on settle, not per frame. */
+      sizeHeroBand();
       arrive(dominantZone());
     }, SETTLE_MS);
   }
