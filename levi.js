@@ -1184,16 +1184,36 @@
     return r;
   }
 
-  function keepOffPanel(gx, gy) {
-    var box = panelBox();
-    if (!box) return { x: gx, y: gy };
-    var R = starR() + 12;
+  /* THE PANEL IS NOT THE ONLY THING THE LIGHT MAY NOT SIT ON.
+
+     The rule was written for `.app` alone, on the principle that the light is
+     additive and may pass over anything else - which is true of display type
+     and body copy, and is NOT true of the one button the whole page is asking
+     you to press. A 300px flare centred on "See how it works" does not read as
+     atmosphere, it reads as the button being broken, which is exactly how it
+     was reported. Measured on the live site at 1536x830: flare over the hero
+     lede 169x74 and climbing onto the call to action below it.
+
+     So the no-go list is named elements, plural. Resolved in order and then
+     re-checked, because stepping out of one can step into another - three
+     passes is enough for two rectangles and terminates whatever they do. */
+  function hotBoxes() {
+    var out = [];
+    var vh = document.documentElement.clientHeight;
+    [".app", ".cta"].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      if (r.width < 4 || r.bottom < 0 || r.top > vh) return;
+      out.push(r);
+    });
+    return out;
+  }
+
+  function escapeBox(box, gx, gy, R, vw, vh) {
     var inside = gx + R > box.left && gx - R < box.right &&
                  gy + R > box.top  && gy - R < box.bottom;
-    if (!inside) return { x: gx, y: gy };
-
-    var de = document.documentElement;
-    var vw = de.clientWidth, vh = de.clientHeight;
+    if (!inside) return null;
 
     /* Four ways out. Pick the shortest that is still on screen. */
     var outs = [
@@ -1204,10 +1224,33 @@
     ].filter(function (o) { return o.ok; })
      .sort(function (a, b) { return Math.abs(a.d) - Math.abs(b.d); });
 
+    if (!outs.length) return { x: null, y: null };   /* nowhere legal */
+    return { x: outs[0].x, y: outs[0].y };
+  }
+
+  function keepOffPanel(gx, gy) {
+    var boxes = hotBoxes();
+    if (!boxes.length) return { x: gx, y: gy };
+    var R = starR() + 12;
+    var de = document.documentElement;
+    var vw = de.clientWidth, vh = de.clientHeight;
+    var x = gx, y = gy, stuck = false;
+
+    for (var pass = 0; pass < 3; pass++) {
+      var moved = false;
+      for (var i = 0; i < boxes.length; i++) {
+        var got = escapeBox(boxes[i], x, y, R, vw, vh);
+        if (!got) continue;
+        if (got.x === null) { stuck = true; continue; }
+        x = got.x; y = got.y; moved = true;
+      }
+      if (!moved) break;
+    }
+
     /* Nowhere legal - the panel fills the screen. Sit in the left margin and
        let the light pass over it rather than leave the viewport. */
-    if (!outs.length) return { x: Math.max(R, Math.round(vw * 0.06)), y: gy };
-    return { x: outs[0].x, y: outs[0].y };
+    if (stuck) return { x: Math.max(R, Math.round(vw * 0.06)), y: y };
+    return { x: x, y: y };
   }
 
   /* ==========================================================================
