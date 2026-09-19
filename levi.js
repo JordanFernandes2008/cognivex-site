@@ -594,8 +594,22 @@
      was actually asked for: the card, the draft, and the three buttons. Their
      whole boxes, not their line boxes, because a card is a solid object rather
      than a run of type. */
+  /* THE TICKER IS IN HERE, AND IT IS THE REASON THIS LIST EXISTS AT ALL NOW.
+
+     The last-resort placement is allowed to rest on ordinary copy, because a
+     covered paragraph beats an unreadable line. A marquee is not ordinary
+     copy. `.ticker` runs a 46s linear loop by design - the brief says so and
+     says not to "fix" it - so text slides through anything parked on top of
+     it, continuously, forever. Reported as the box bugging out, and the
+     screenshot shows it sitting across INVOICE 0142 ... NEWSLETTERS x6 while
+     they travel underneath.
+
+     The masthead and the status bar are here for the neighbouring reason:
+     both are sticky chrome, and the box is z-index 60 against the masthead's
+     40, so it does not pass behind them - it covers them. */
   var GUARDED = ".card, .card__draft, .card__why, .detail__why, .walk__panel," +
-                "[data-approve], [data-edit], [data-skip]";
+                "[data-approve], [data-edit], [data-skip]," +
+                ".ticker, .masthead, .statusbar";
 
   function lineBoxes(now) {
     var y = window.pageYOffset || 0;
@@ -737,13 +751,49 @@
        that - every one of them is painted text, and buttons are in TEXTY - so
        the box may rest on the panel's own empty chrome and nothing else. The
        LIGHT keeps its full keep-out either way; keepOffPanel() is untouched. */
-    var box = panelBox();
+    /* HARD EXCLUSIONS, NOT JUST THE PANEL.
 
-    function onPanel(l, t) {
-      return !!box &&
-             l < box.right + MARGIN && l + bw > box.left - MARGIN &&
-             t < box.bottom + MARGIN && t + bh > box.top - MARGIN;
+       onWords() is the right tool for copy, which holds still. It is the wrong
+       tool for a MARQUEE: `.ticker` runs a 46s linear loop, so its text slides
+       under whatever is parked above it and a verdict taken at one instant is
+       not true a moment later. Measured at 1300x620 - 33 overlaps of ticker
+       text across 11 scroll positions, worst 251x15, with the words test
+       returning clear the whole time.
+
+       So the ticker is excluded the way the demo panel is: geometrically, by
+       rectangle, before any of the text machinery runs. That does more than
+       suppress - onPanel() drives the escape search, so the box actively moves
+       off it rather than going dark. The masthead and status bar are here too;
+       both are sticky chrome and the box is z-index 60 against the masthead's
+       40, so it covers them rather than passing behind.
+
+       `box` stays the app alone, because the app is what the below/above/
+       gutter candidates are measured against. */
+    var box = panelBox();
+    var hard = [];
+    (function () {
+      var vhh = de.clientHeight;
+      if (box) hard.push(box);
+      [".ticker", ".masthead", ".statusbar"].forEach(function (sel) {
+        var all = document.querySelectorAll(sel);
+        for (var i = 0; i < all.length; i++) {
+          var r = all[i].getBoundingClientRect();
+          if (r.width < 4 || r.height < 4) continue;
+          if (r.bottom < 0 || r.top > vhh) continue;
+          hard.push(r);
+        }
+      });
+    })();
+
+    function hitHard(l, t) {
+      for (var hi = 0; hi < hard.length; hi++) {
+        var q = hard[hi];
+        if (l < q.right + MARGIN && l + bw > q.left - MARGIN &&
+            t < q.bottom + MARGIN && t + bh > q.top - MARGIN) return q;
+      }
+      return null;
     }
+    function onPanel(l, t) { return !!hitHard(l, t); }
 
     /* FOUR WAYS OFF THE PANEL, IN A FIXED ORDER.
 
@@ -765,15 +815,20 @@
        stacked one - under the light, not across it, or the light sits on top
        of its own box. */
     var blocked = false;
-    if (onPanel(left, top)) {
+    var clash = hitHard(left, top);
+    if (clash) {
+      /* Escape geometry is measured against whatever was actually hit, not
+         always the app - the app can be off screen while the ticker is not,
+         and reading box.left in that state was a null dereference waiting for
+         the first visitor who scrolled past the demo. */
       var stackTop = oy + starR() * 0.86 + gapW();
-      var leftGut  = box.left - MARGIN - bw;      /* box's left edge if parked left  */
-      var rightGut = box.right + MARGIN;          /* box's left edge if parked right */
-      var nearLeft = (ox <= (box.left + box.right) / 2);
+      var leftGut  = clash.left - MARGIN - bw;    /* box's left edge if parked left  */
+      var rightGut = clash.right + MARGIN;        /* box's left edge if parked right */
+      var nearLeft = (ox <= (clash.left + clash.right) / 2);
 
       var tries = [
-        { l: left, t: box.bottom + MARGIN },      /* below the panel */
-        { l: left, t: box.top - MARGIN - bh }     /* above it */
+        { l: left, t: clash.bottom + MARGIN },    /* below it */
+        { l: left, t: clash.top - MARGIN - bh }   /* above it */
       ];
       var gutters = [
         { l: Math.min(Math.max(ox - bw / 2, MARGIN), leftGut), t: stackTop, ok: leftGut >= MARGIN },

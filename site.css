@@ -2662,7 +2662,33 @@ body:not(.void-page) .levi__flare { display: none; }
    A box is also honest about what this is: a thing talking to you. The surface
    is the page's own dark, not a white or orange floating panel, and the only
    ornament is a hairline and one caret pointing back at the light. */
+/* IT CARRIES ITS OWN FOREGROUND, BECAUSE IT IS ITS OWN SURFACE.
+
+   The box is dark on every page. The PAGE is dark on one and light on six,
+   and the line was painted with var(--ink) - which is #eef0f2 under
+   .void-page and #14161a everywhere else. So on all six light pages Levi's
+   sentence was #14161a on a composited rgb(28,30,34): measured on trust,
+   a contrast ratio of 1.09 against the 4.5 AA needs, and 2.39 for the LEVI
+   label. Invisible, from the moment he was wired onto those pages.
+
+   The lesson is the token, not the number. A surface that does not change
+   with the theme must not read colours that do. These four are local to the
+   box and answer only to its own background:
+
+     --say-ink     #f1f3f5  16.9 on the box over white, 17.3 over the void
+     --say-accent  #ff9d52   8.9 and  9.1  - the dark theme's accent, which is
+                             the one that was always meant for a dark surface
+   Both measured against the worst-case composite, per the contrast rule.
+
+   96%, not 93%: on a white page the old value let 7% of it through and lifted
+   the ground to rgb(28,30,34). Still not glass - the brief bans that - just
+   opaque enough that the page underneath cannot bleach it. */
 .levi__speech {
+  --say-bg:     rgb(12 14 18 / 96%);
+  --say-ink:    #f1f3f5;
+  --say-accent: #ff9d52;
+  --say-edge:   rgb(255 255 255 / 13%);
+
   position: absolute;
   left: 0; top: 0;
   width: 20.5rem;
@@ -2671,8 +2697,8 @@ body:not(.void-page) .levi__flare { display: none; }
   pointer-events: none;
   padding: .72rem .9rem .78rem;
   border-radius: 13px;
-  background: rgb(11 13 17 / 93%);
-  border: 1px solid rgb(255 255 255 / 11%);
+  background: var(--say-bg);
+  border: 1px solid var(--say-edge);
   box-shadow: 0 12px 34px rgb(0 0 0 / 52%), inset 0 1px 0 rgb(255 255 255 / 5%);
 }
 /* The caret. Points left, back toward the light that is speaking. */
@@ -2682,9 +2708,9 @@ body:not(.void-page) .levi__flare { display: none; }
   left: -6px; top: 18px;
   width: 10px; height: 10px;
   transform: rotate(45deg);
-  background: rgb(11 13 17 / 93%);
-  border-left: 1px solid rgb(255 255 255 / 11%);
-  border-bottom: 1px solid rgb(255 255 255 / 11%);
+  background: var(--say-bg);
+  border-left: 1px solid var(--say-edge);
+  border-bottom: 1px solid var(--say-edge);
   border-radius: 2px;
 }
 /* Who is speaking, once, small. */
@@ -2695,7 +2721,7 @@ body:not(.void-page) .levi__flare { display: none; }
   font-size: var(--t-micro);
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--accent-text);
+  color: var(--say-accent);
   opacity: .92;
 }
 /* The cursor that blinks while a line is being typed out. */
@@ -2704,7 +2730,7 @@ body:not(.void-page) .levi__flare { display: none; }
   width: .52em; height: 1.02em;
   margin-left: .08em;
   vertical-align: -.16em;
-  background: var(--accent-fill);
+  background: var(--say-accent);
   opacity: .9;
   animation: levi-blink 1.05s steps(1, end) infinite;
 }
@@ -2721,7 +2747,7 @@ body:not(.void-page) .levi__flare { display: none; }
   min-height: 2.7em;
   font-size: var(--t-body, 1rem);
   line-height: 1.35;
-  color: var(--ink);
+  color: var(--say-ink);
   text-shadow: 0 1px 3px rgb(0 0 0 / 80%), 0 0 22px rgb(0 0 0 / 66%);
 }
 
