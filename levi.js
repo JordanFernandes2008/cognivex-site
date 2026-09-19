@@ -648,21 +648,28 @@
     return hit === q.el || q.el.contains(hit) || hit.contains(q.el);
   }
 
-  /* THE LAST RESORT, AND ONLY WHERE THE PAGE IS ONE COLUMN.
+  /* THE LAST RESORT, AT EVERY WIDTH.
 
-     Below 1240 the layout is a single column and the text runs nearly edge to
-     edge - 342 of 390 on a phone, ~700 of 768 on a tablet - so "clear of all
-     copy" has no solution anywhere near the demo, and the hero and the queue
-     were suppressed at every scroll position on both. Above 1240 the desktop
-     rule is untouched: it works, and its one dead window is accepted.
+     This was gated to clientWidth <= 1240, on the reasoning that a single
+     column has no free gutter while a desktop always does. The number was
+     wrong and the reasoning with it. `.app` caps at 1100px and the box needs
+     328 plus its margins, so a gutter only holds it from about 1804px of
+     viewport upward. Everything between 1240 and 1804 got neither: no gutter
+     wide enough, and no fallback either.
 
-     So the strict rule stays the PREFERENCE at every width. Only when it has
-     produced nothing does a narrow screen fall back to this, which protects
-     what was actually asked for - the card, the draft, the three buttons - and
-     lets the box rest on ordinary copy. It is 93% opaque with its own border,
-     so it covers that copy the way a toast does rather than smearing through
-     it, which is the thing the desktop rule exists to prevent. */
-  function narrow() { return document.documentElement.clientWidth <= 1240; }
+     Reported twice from a 1300x620 window, where the demo is 1,100 x 745 -
+     taller than the viewport, with 100px gutters - and the box was suppressed
+     from scrollY 700 to 1000 with nowhere left to go. Measured: 4 of 15
+     sampled positions dark, which is the whole of the interesting part of the
+     page.
+
+     So the strict rule stays the PREFERENCE everywhere, and when it produces
+     nothing, anything falls back to this: protect what was actually asked for
+     - the card, the draft, the three buttons - and let the box rest on
+     ordinary copy. It is 93% opaque with its own border, so it covers that
+     copy the way a toast does rather than smearing through it, which is the
+     thing the strict rule exists to prevent. A line nobody can read is worse
+     than a line sitting over a paragraph. */
 
   function onGuarded(l, t, w, h) {
     var de = document.documentElement;
@@ -827,10 +834,10 @@
       if (!placed) blocked = true;
     }
 
-    /* Nothing clear of the copy, and the page is one column: put it back where
-       the offsets asked, clamped on screen, provided it is off the demo's own
-       content. Saying it over a paragraph beats not saying it. */
-    if (blocked && !mute && narrow()) {
+    /* Nothing clear of the copy anywhere: put it back where the offsets asked,
+       clamped on screen, provided it is off the demo's own content. Saying it
+       over a paragraph beats not saying it at all. */
+    if (blocked && !mute) {
       var fl = Math.max(MARGIN, Math.min(ox + tx, vw - MARGIN - bw));
       var ft = Math.max(MARGIN, Math.min(oy + ty, vh - MARGIN - bh));
       if (!onGuarded(fl, ft, bw, bh)) {
