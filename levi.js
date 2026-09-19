@@ -202,6 +202,44 @@
     trail.push({ el: d, x: 0, y: 0 });
   }
 
+  /* Pointer events, so mouse, pen and touch are one code path. The star is a
+     <button>, so a press that never moves more than 4px stays a click and the
+     approve gesture still works; anything further is a drag. */
+  star.style.touchAction = "none";
+  star.addEventListener("pointerdown", function (e) {
+    if (dismissed) return;
+    drag = { id: e.pointerId, x: p.x, y: p.y, ox: e.clientX - p.x, oy: e.clientY - p.y };
+    dragMoved = 0;
+    try { star.setPointerCapture(e.pointerId); } catch (err) {}
+    root.classList.add("is-held");
+    noteActivity();
+  });
+
+  star.addEventListener("pointermove", function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var nx = e.clientX - drag.ox, ny = e.clientY - drag.oy;
+    dragMoved += Math.abs(nx - drag.x) + Math.abs(ny - drag.y);
+    drag.x = nx; drag.y = ny;
+    if (dragMoved > 4) e.preventDefault();
+  });
+
+  function endDrag(e) {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    var moved = dragMoved > 4;
+    if (moved) { parked = { x: drag.x, y: drag.y, zone: zoneName }; }
+    drag = null;
+    root.classList.remove("is-held");
+    if (moved && !dismissed) {
+      say.classList.remove("is-quiet");
+      root.classList.remove("is-quiet");
+      setState("speaking");
+      sayLine("Fine. I will wait here.");
+      noteActivity();
+    }
+  }
+  star.addEventListener("pointerup", endDrag);
+  star.addEventListener("pointercancel", endDrag);
+
   var sayEl = speech.querySelector("[data-levi-say]");
 
   /* TYPED, NOT PASTED. A line that appears whole is a tooltip; a line that
@@ -250,6 +288,14 @@
   var frame = { x: 0, y: 0, vx: 0, vy: 0, glow: 1, spin: 0, alt: 0,
                 gx: 0, gy: 0, frames: 0 };
   var idleSpoken = false, savedLine = null, lure = null, stacked = false;
+
+  /* ---- PICK HIM UP AND PUT HIM SOMEWHERE ------------------------------------
+     drag   - where the pointer is, while it is down.
+     parked - where you let go, which he holds until you scroll to a different
+              section. Sticking forever would make him a sticker; releasing him
+              the instant you let go would make the drag pointless. Holding
+              within the section you dropped him in is the useful middle. */
+  var drag = null, parked = null, dragMoved = 0;
 
   /* SCOPED, NOT ON :root.
 
@@ -491,7 +537,10 @@
     var wantGlow = 1 + near * mouse.fresh * 0.5;
     glow += (wantGlow - glow) * Math.min(1, dt * 5);
 
-    var g = lure || goal;
+    /* Order of authority: your hand, then where you put him, then the lure,
+       then the zone. */
+    if (parked && parked.zone !== zoneName) parked = null;   /* new section, he follows again */
+    var g = drag || parked || lure || goal;
     var gx = g.x + dx + cx, gy = g.y + dy + cy;
 
     /* ---- STEERING, NOT A SPRING --------------------------------------------

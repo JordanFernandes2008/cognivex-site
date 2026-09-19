@@ -162,6 +162,20 @@
     } catch (e) {}
   }
 
+  /* site.js owns this counter and re-rolls it from the card count on every
+     refresh, which lands AFTER the view has switched - so the header read
+     "46 NEED YOU" beside a briefing saying five. Rather than fight it for
+     ownership, re-assert once it has settled. Cheap: refreshes happen on a
+     decision, not on a frame. */
+  if (window.MutationObserver && counter) {
+    var reassert = new MutationObserver(function () {
+      if (!stack.hidden) return;                 /* queue view: site.js is right */
+      var track = counter.querySelector(".roller__track");
+      if (track && track.textContent.trim() !== "5") setCount(5, "need you");
+    });
+    reassert.observe(counter, { childList: true, subtree: true, characterData: true });
+  }
+
   wrap.addEventListener("click", function (e) {
     var b = e.target.closest("[data-open-queue]");
     if (b) show("queue");

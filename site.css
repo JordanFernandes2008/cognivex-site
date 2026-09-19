@@ -374,6 +374,44 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 }
 .queue__back:hover, .queue__back:focus-visible { color: var(--ink); }
 .queue__back[hidden] { display: none; }
+
+/* --- the morning list, openable ------------------------------------------- */
+.feed--open { padding: 0; }
+.feed__hit {
+  display: flex; align-items: baseline; justify-content: space-between; gap: .6rem;
+  width: 100%; padding: .3rem .45rem; margin: 0; text-align: left;
+  background: none; border: 0; font: inherit; color: inherit; cursor: pointer;
+  border-radius: 6px;
+}
+.feed__hit:hover, .feed__hit:focus-visible { background: var(--sunk); }
+.feed__hit::after {
+  content: "open"; margin-left: auto; flex: 0 0 auto;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .58rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--accent-text); opacity: 0;
+}
+.feed__hit:hover::after, .feed__hit:focus-visible::after,
+.feed__hit[aria-expanded="true"]::after { opacity: .8; }
+.feed__hit[aria-expanded="true"]::after { content: "close"; }
+
+.feed__panel { padding: .1rem .45rem .7rem; }
+.feed__panel[hidden] { display: none; }
+.feed__state {
+  font-size: .58rem; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 .3rem;
+}
+.feed[data-state="needs"] .feed__state,
+.feed[data-state="drafted"] .feed__state { color: var(--accent-text); }
+.feed__what { margin: 0; font-size: .78rem; line-height: 1.5; color: var(--dim); }
+.feed__draft {
+  margin: .5rem 0 0; padding: .5rem .6rem;
+  border-left: 2px solid var(--accent-fill);
+  background: var(--sunk); border-radius: 0 6px 6px 0;
+  font-size: .78rem; line-height: 1.55; color: var(--ink);
+}
+.feed__acts { margin-top: .5rem; }
+.btn--sm { padding: .3rem .7rem; font-size: .74rem; }
+.btn--sm[disabled] { opacity: .5; cursor: default; }
 .card { padding: 1rem 1.1rem; border-bottom: 1px solid var(--line); background: var(--paper); }
 .card:last-child { border-bottom: 0; }
 
@@ -2372,6 +2410,34 @@ html:has(.void-page) { background: #05070a; }
   cursor: pointer;
 }
 .levi__star:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 10px; }
+.levi__star { cursor: grab; }
+.levi.is-held .levi__star { cursor: grabbing; }
+
+/* --- how it feels, not what it says ---------------------------------------
+   Emotion in a light is brightness, size and how fast it breathes. Held: it
+   swells and brightens, the way anything does when you pick it up. Approved:
+   one quick flare. Alert: a slow pulse that does not stop until you deal with
+   it. No face, no eyes - see the note in the reply about that. */
+.levi.is-held .levi__core   { filter: brightness(1.28); }
+.levi.is-held .levi__corona { opacity: .95; transform: translate(-50%,-50%) rotate(var(--levi-spin,0deg)) scale(calc(var(--levi-s,1) * 1.12)) scaleX(1.1); }
+
+.levi.is-approved .levi__core { animation: levi-flare 620ms var(--ease-out) 1; }
+@keyframes levi-flare {
+  0%   { filter: brightness(1); }
+  22%  { filter: brightness(1.7); }
+  100% { filter: brightness(1); }
+}
+
+.levi.is-alert .levi__corona { animation: levi-pulse 2.1s ease-in-out infinite; }
+@keyframes levi-pulse {
+  0%, 100% { opacity: .6; }
+  50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .levi.is-approved .levi__core,
+  .levi.is-alert .levi__corona { animation: none; }
+}
 
 /* REPLACED BY THE CHATBOX. Kept as a no-op so any stale markup cannot paint.
    The cast-light experiment is finished: it read as shading on the artwork
@@ -2430,25 +2496,44 @@ html:has(.void-page) { background: #05070a; }
 }
 
 /* The middle: white-hot, falling to the accent at its rim. */
+/* A GLOW, NOT A BALL WITH AN EDGE.
+
+   The old stop list ran #fff to #fff for the first 30% and then to a solid
+   accent at 100%, which gives a hard white disc with a coloured rim - a
+   sphere. A star has no surface: it is brightest in the middle and fades to
+   nothing, and the edge of it is the point at which you stop seeing it, not a
+   boundary you could touch.
+
+   So: no pure white, no solid outer stop, and the falloff reaches transparent
+   inside the element. Dimmer at the centre too - the note was "not too
+   bright". */
 .levi__core {
-  /* 72, not 84. It reserved a 300px radius while rendering 124, which pushed
-     it onto the film's bright band in the hero. The reserved radius now
-     matches what it actually occupies. */
-  width: 72px; height: 72px;
+  width: 78px; height: 78px;
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(var(--levi-s, 1));
-  background: radial-gradient(circle at 50% 42%,
-    #fff 0%, #fff 30%, #ffeccd 44%, #ffc477 62%,
-    var(--accent-fill) 80%, var(--accent-deep) 100%);
-  box-shadow: 0 0 46px rgb(255 198 130 / 96%), 0 0 104px rgb(255 140 40 / 58%);
+  background: radial-gradient(circle at 50% 46%,
+    rgb(255 248 236 / 96%) 0%,
+    rgb(255 226 186 / 82%) 22%,
+    rgb(255 186 112 / 52%) 44%,
+    rgb(255 142 52 / 24%) 66%,
+    rgb(229 106 13 / 7%) 84%,
+    transparent 100%);
+  box-shadow: 0 0 34px rgb(255 190 120 / 55%), 0 0 78px rgb(255 140 40 / 26%);
 }
 
 /* A thin bright ring just outside the core - the single strongest depth cue
    in the reference, because it gives the light an inside and an outside. */
+/* THE RING IS THE THING THAT MADE IT A BALL. A 2px border is a hard edge, and
+   a hard edge around a light says "object with a surface". It is a soft halo
+   now - same job, giving the light an inside and an outside, with nothing you
+   could trace. */
 .levi__ring {
-  width: 124px; height: 124px;
+  width: 150px; height: 150px;
   border-radius: 50%;
-  border: 2px solid rgb(255 214 150 / 60%);
+  border: 0;
+  background: radial-gradient(circle,
+    transparent 44%, rgb(255 206 146 / 16%) 58%,
+    rgb(255 170 80 / 9%) 72%, transparent 88%);
   transform: translate(-50%, -50%)
              rotate(var(--levi-spin, 0deg))
              scale(var(--levi-s, 1)) scaleY(.94);
@@ -2462,12 +2547,12 @@ html:has(.void-page) { background: #05070a; }
              rotate(var(--levi-spin, 0deg))
              scale(var(--levi-s, 1)) scaleX(1.1);
   background: radial-gradient(circle,
-    rgb(255 228 190 / 60%) 0%,
-    rgb(255 186 110 / 40%) 14%,
-    rgb(255 140 40 / 22%) 30%,
-    rgb(255 122 26 / 10%) 50%,
-    rgb(229 106 13 / 3%) 70%,
-    transparent 84%);
+    rgb(255 232 198 / 34%) 0%,
+    rgb(255 190 118 / 22%) 16%,
+    rgb(255 146 50 / 12%) 34%,
+    rgb(255 122 26 / 5%) 54%,
+    rgb(229 106 13 / 2%) 74%,
+    transparent 90%);
 }
 
 /* FOUR BEAMS. Two crossed bars, each a gradient that is transparent at both
@@ -2479,14 +2564,17 @@ html:has(.void-page) { background: #05070a; }
              rotate(var(--levi-spin, 0deg))
              scale(var(--levi-s, 1));
   background:
-    linear-gradient(90deg, transparent 0%, rgb(255 190 110 / 0%) 12%,
-      rgb(255 205 140 / 34%) 42%, rgb(255 236 205 / 62%) 50%,
-      rgb(255 205 140 / 34%) 58%, rgb(255 190 110 / 0%) 88%, transparent 100%)
-      center / 100% 3px no-repeat,
-    linear-gradient(0deg, transparent 0%, rgb(255 190 110 / 0%) 14%,
-      rgb(255 205 140 / 26%) 42%, rgb(255 236 205 / 52%) 50%,
-      rgb(255 205 140 / 26%) 58%, rgb(255 190 110 / 0%) 86%, transparent 100%)
-      center / 3px 100% no-repeat;
+    /* Wider and far fainter. At 3px and 62% these were four hard needles -
+       the spikes in the screenshot. At 9px and 20% they are a suggestion of
+       starlight, which is what a star actually looks like. */
+    linear-gradient(90deg, transparent 0%, rgb(255 190 110 / 0%) 14%,
+      rgb(255 208 148 / 11%) 40%, rgb(255 236 205 / 20%) 50%,
+      rgb(255 208 148 / 11%) 60%, rgb(255 190 110 / 0%) 86%, transparent 100%)
+      center / 100% 9px no-repeat,
+    linear-gradient(0deg, transparent 0%, rgb(255 190 110 / 0%) 16%,
+      rgb(255 208 148 / 8%) 40%, rgb(255 236 205 / 15%) 50%,
+      rgb(255 208 148 / 8%) 60%, rgb(255 190 110 / 0%) 84%, transparent 100%)
+      center / 9px 100% no-repeat;
 }
 
 /* The light ground, for the pages that will use this later. */
