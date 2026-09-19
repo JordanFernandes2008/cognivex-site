@@ -202,7 +202,11 @@
       '<i class="levi__eye levi__eye--l"></i>' +
       '<i class="levi__eye levi__eye--r"></i>' +
       '<i class="levi__mouth"></i>' +
-    '</i>';
+    '</i>' +
+    /* OUTSIDE the body on purpose: the body tilts when he banks into a turn
+       and scales when you grab him, and a number that rotates with it reads
+       as a sticker coming unstuck. */
+    '<i class="levi__badge" aria-hidden="true" hidden></i>';
 
   /* No shadow element any more - the chatbox replaced it. */
 
@@ -697,6 +701,88 @@
       },
       onComplete: function () { flight = null; }
     });
+  }
+
+  /* ---- A DOT, NOT A NUMBER -------------------------------------------------
+
+     Taken from the pattern every persistent assistant on the web has landed
+     on: Intercom's launcher is a circle with a mark on it, and the mark does
+     the work - it says "there is something for you" before you have read a
+     word. Levi had no such signal, which is strange, because something
+     waiting for you IS the product.
+
+     IT WAS A COUNT FIRST, AND THE COUNT WAS WRONG. [data-stack] [data-item]
+     is the demo deck: 68 cards. The page's own copy says three came in
+     overnight and the digest says "5 need your approval". A badge reading 68
+     would have contradicted the page it sits on, and a component that argues
+     with the copy is worse than no component. Note that Intercom's launcher
+     does not carry a number either - it carries a dot. A dot cannot be wrong.
+
+     SO THE DOT MEANS ONE THING AND MEANS IT HONESTLY: clicking Levi right now
+     will do something. It is on when there is an approve control actually on
+     screen, and off otherwise, which also fixes the quieter problem underneath
+     - that clicking him approves the nearest item and nothing on the page has
+     ever said so. The gesture had zero discoverability. Now he lights up
+     exactly when he is useful.
+
+     The accessible name carries the same fact in words, because a signal that
+     exists only as a coloured dot is a signal some people do not get. */
+  var badgeEl = root.querySelector(".levi__badge");
+  var badgeOn = null;
+
+  function canApproveNow() {
+    var all = document.querySelectorAll("[data-approve]");
+    var vh = document.documentElement.clientHeight;
+    var vw = document.documentElement.clientWidth;
+    for (var i = 0; i < all.length; i++) {
+      var r = all[i].getBoundingClientRect();
+      if (r.width > 2 && r.height > 2 &&
+          r.bottom > 8 && r.top < vh - 8 &&
+          r.right > 8 && r.left < vw - 8) return true;
+    }
+    return false;
+  }
+
+  function paintBadge() {
+    if (!badgeEl) return;
+    var on = canApproveNow();
+    if (on === badgeOn) return;
+    badgeOn = on;
+    star.setAttribute("aria-label", on
+      ? "Levi. Approve the nearest pending item."
+      : "Levi, your guide to this page.");
+    if (!on) {
+      if (window.gsap) gsap.to(badgeEl, { scale: 0, duration: 0.18, ease: "power2.in",
+                                          onComplete: function () { badgeEl.hidden = true; } });
+      else badgeEl.hidden = true;
+      return;
+    }
+    badgeEl.hidden = false;
+    if (window.gsap) gsap.fromTo(badgeEl, { scale: 0 },
+      { scale: 1, duration: 0.44, ease: "back.out(2.6)", overwrite: "auto" });
+  }
+
+  /* WATCHING THE STACK WAS NOT ENOUGH, AND THE TEST CAUGHT IT.
+
+     The dot was recomputed on scroll and on the card stack changing. But the
+     demo opens on a briefing with the stack hidden, and moving from the
+     briefing to a card is a VIEW change inside .app - it mutates classes, not
+     the stack's children, and it does not scroll. Measured: an approve button
+     was on screen and the dot was still off, because nothing had asked it to
+     look again.
+
+     So it watches the panel itself, attributes included, which is where the
+     view change actually shows up. Cheap: the callback is a bounded loop over
+     the approve controls and it exits on the first hit. */
+  function watchBadge() {
+    paintBadge();
+    if (!window.MutationObserver) return;
+    var obs = new MutationObserver(paintBadge);
+    var app = document.querySelector(".app");
+    if (app) obs.observe(app, { childList: true, subtree: true, attributes: true,
+                                attributeFilter: ["class", "hidden", "style"] });
+    var stack = document.querySelector("[data-stack]");
+    if (stack && stack !== app) obs.observe(stack, { childList: true, subtree: true });
   }
 
   var boxTween = null, boxShown = null;
@@ -1808,6 +1894,7 @@
 
     kickBy(Math.max(-26, Math.min(26, -d * 0.11)),
            Math.max(-70, Math.min(70, -d * 0.55)));
+    paintBadge();          /* the approve controls scroll in and out of view */
     run();
   }, { passive: true });
 
@@ -2114,6 +2201,7 @@
   }
 
   watchBox();
+  watchBadge();
   setEmotion("neutral");
   blink();
 
