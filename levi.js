@@ -169,9 +169,11 @@
   star.className = "levi__star";
   star.setAttribute("aria-label", "Levi. Approve the nearest pending item.");
   star.innerHTML =
+    /* Three layers, widest first. No ring: a 2px border, and later a
+       radial-gradient annulus, are both a circumference - the one thing a
+       light does not have. */
     '<i class="levi__flare"  aria-hidden="true"></i>' +
     '<i class="levi__corona" aria-hidden="true"></i>' +
-    '<i class="levi__ring"   aria-hidden="true"></i>' +
     '<i class="levi__core"   aria-hidden="true"></i>';
 
   /* No shadow element any more - the chatbox replaced it. */
@@ -766,6 +768,12 @@
   function holdPoint() {
     var de = document.documentElement;
     var R = starR();
+    /* REVERTED. Capping this at 58% to clear the hero's CTA pushed the light
+       up into the copy instead, and the box with it: measured 4 overlaps
+       before, 14 after. The lower half is where the controls are; the upper
+       half is where the text is. There is no height at which a 328px box in a
+       170px gutter is clear of both, which is the real finding - see the note
+       in the reply. */
     return {
       x: Math.max(PAD + R, Math.round(de.clientWidth * 0.094)),
       y: Math.min(de.clientHeight - PAD - R, Math.max(PAD + R, p.y))
