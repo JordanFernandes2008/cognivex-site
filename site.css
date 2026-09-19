@@ -2675,6 +2675,17 @@ html:has(.void-page) { background: #05070a; }
    mouth. All lengths are px - never %, because GSAP cannot tween 50% to 0px,
    and the whole emotion system is one tween of six numbers. */
 .levi__body {
+  /* THE SMILE, DECLARED RATHER THAN LEFT TO FALLBACKS.
+
+     These lived only as the fallback half of var(--e-h, 10px), which renders
+     identically and reads back as the empty string - so GSAP had no start
+     value to tween the blink FROM. Declaring them costs nothing and makes the
+     face a real, readable state. */
+  --e-w:  8px;  --e-h: 10px;
+  --e-rt: 5px;  --e-rb: 5px;  --e-ty: 0px;
+  --m-w: 22px;  --m-h: 11px;
+  --m-rt: 0px;  --m-rb: 22px;
+
   position: absolute;
   left: 50%; top: 50%;
   width: 64px; height: 64px;
@@ -2692,28 +2703,6 @@ html:has(.void-page) { background: #05070a; }
     inset 0 -4px 10px rgb(150 62 0 / 26%);
   display: grid;
   place-items: center;
-}
-
-/* THE DOT. It sits on his glow, which is the only bright thing it ever
-   crosses, so it is the accent fill with a dark ring to hold its edge there.
-   display:block because an <i> is inline by default and inline boxes ignore
-   width and height - the first version measured 18x14 instead of 14x14. */
-.levi__badge {
-  position: absolute;
-  display: block;
-  left: 50%; top: 50%;
-  margin: -40px 0 0 16px;
-  width: 14px; height: 14px;
-  box-sizing: border-box;
-  border-radius: 50%;
-  background: #ff7a1a;
-  pointer-events: none;
-  box-shadow: 0 0 0 2.5px rgb(12 14 18 / 72%), 0 2px 10px rgb(255 122 26 / 55%);
-}
-.levi__badge[hidden] { display: none; }
-
-@media (max-width: 700px) {
-  .levi__badge { margin: -34px 0 0 12px; width: 12px; height: 12px; }
 }
 
 .levi__eye,

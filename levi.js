@@ -202,11 +202,7 @@
       '<i class="levi__eye levi__eye--l"></i>' +
       '<i class="levi__eye levi__eye--r"></i>' +
       '<i class="levi__mouth"></i>' +
-    '</i>' +
-    /* OUTSIDE the body on purpose: the body tilts when he banks into a turn
-       and scales when you grab him, and a number that rotates with it reads
-       as a sticker coming unstuck. */
-    '<i class="levi__badge" aria-hidden="true" hidden></i>';
+    '</i>';
 
   /* No shadow element any more - the chatbox replaced it. */
 
@@ -357,14 +353,6 @@
        changed. Tweened, the change of state is something you feel rather than
        something that snaps. */
     breathAmp(n !== "idle");
-    /* The state machine already knows what he is doing; the face just has to
-       agree with it. idleTier is how long the pause has run - the ladder that
-       already exists for choosing a longer idle line - so the same number
-       decides when he nods off. */
-    if (n === "approved")      setEmotion("happy", { ease: "back.out(2.4)" });
-    else if (mood)             setEmotion(mood);
-    else if (n === "speaking") setEmotion("speaking");
-    else                       setEmotion(idleTier >= 2 ? "sleeping" : "neutral");
   }
 
   var zone = null, zoneName = null, done = false, dismissed = false, frozen = false;
@@ -483,121 +471,29 @@
      transition is still there and the box still shows and hides correctly -
      it just does it plainly. Given that the complaint this whole thread began
      with was an invisible box, the fallback fails OPEN. */
-  /* ---- EMOTION ------------------------------------------------------------
+  /* ---- ONE FACE, AND IT BLINKS -------------------------------------------
 
-     Seven faces, and each one is six numbers. Because every feature is a box
-     with a top radius and a bottom radius (see the note in site.css), the
-     whole expression is a tween of six lengths - which means Levi does not
-     SWAP faces, he moves between them. The difference matters: a swap is a
-     sprite sheet, and the eye reads sprite sheets as cheap. Easing from a
-     neutral mouth into a grin over 380ms reads as a change of mind.
+     This was seven emotions that tweened between each other as he moved down
+     the page. Built, measured, and cut on Jordan's call: a face that keeps
+     changing expression while you are trying to read reads as glitching, not
+     as character. He was competing with the work.
 
-     The mapping to his run-time states is deliberately small. He is a
-     colleague in the corner of a business tool, not a mascot: he is neutral
-     almost always, pleased when you approve something, sorry on the one page
-     where the copy admits he gets things wrong, and asleep if you leave him
-     alone for a minute. Anything more and he starts competing with the work.
-
-     THE EYES ARE NOT PART OF THE SIX. Blinking is its own quick tween on
-     top, because it has to survive whatever expression is currently held. */
-  var FACES = {
-    neutral:  { ew: 8,  eh: 10, ert: 5, erb: 5, ety: 0,  mw: 22, mh: 11, mrt: 0,  mrb: 22 },
-    speaking: { ew: 8,  eh: 10, ert: 5, erb: 5, ety: 0,  mw: 16, mh: 16, mrt: 8,  mrb: 8  },
-    happy:    { ew: 11, eh: 6,  ert: 6, erb: 0, ety: -1, mw: 26, mh: 13, mrt: 0,  mrb: 26 },
-    thinking: { ew: 8,  eh: 10, ert: 5, erb: 5, ety: -2, mw: 16, mh: 3,  mrt: 2,  mrb: 2  },
-    sorry:    { ew: 9,  eh: 7,  ert: 0, erb: 5, ety: 1,  mw: 20, mh: 10, mrt: 20, mrb: 0  },
-    sleeping: { ew: 11, eh: 3,  ert: 2, erb: 2, ety: 0,  mw: 7,  mh: 7,  mrt: 4,  mrb: 4  },
-    alert:    { ew: 11, eh: 13, ert: 6, erb: 6, ety: -1, mw: 9,  mh: 11, mrt: 5,  mrb: 5  }
-  };
-
+     The smile now lives entirely in the CSS defaults for --e-* and --m-* (see
+     site.css) - nothing sets them at run time, so there is no state to get
+     stuck in and no transition to catch mid-way. Blinking is the only thing
+     that touches his face, it only touches eye height, and it always returns
+     to the same 10px it started from. */
   var body = root.querySelector(".levi__body");
-  var emotion = null, faceTween = null, blinkT = null;
+  var blinkT = null;
 
-  /* SOME SECTIONS HAVE A MOOD, AND IT OUTRANKS "SPEAKING".
-
-     Without this, three of the seven faces were unreachable - built, tweenable
-     and never once shown, because setState() only ever knows idle / speaking /
-     approved. The section is the missing input: what he is saying should
-     change how he looks while he says it.
-
-     The trust page's "wrong" section is the copy where the product admits it
-     makes mistakes, and the capabilities page's "limits" is where it says what
-     it will not do. A companion grinning through either of those is the kind
-     of tonal miss that makes people distrust the whole page. The walkthrough
-     and the night-work section are him working rather than talking, which is
-     what thinking is for.
-
-     Held for the whole section rather than the sentence, so it survives the
-     speaking state instead of being overwritten by it. */
-  var ZONE_MOOD = {
-    wrong:     "sorry",
-    limits:    "sorry",
-    walk:      "thinking",
-    nightwork: "thinking"
-  };
-  var mood = null;
-
-  function faceVars(f) {
-    return {
-      "--e-w":  f.ew  + "px", "--e-h":  f.eh  + "px",
-      "--e-rt": f.ert + "px", "--e-rb": f.erb + "px",
-      "--e-ty": f.ety + "px",
-      "--m-w":  f.mw  + "px", "--m-h":  f.mh  + "px",
-      "--m-rt": f.mrt + "px", "--m-rb": f.mrb + "px"
-    };
-  }
-
-  function setEmotion(name, how) {
-    var f = FACES[name];
-    if (!body || !f || emotion === name) return;
-    emotion = name;
-    var vars = faceVars(f);
-    if (!window.gsap) {                       /* no vendor: snap, still correct */
-      for (var k in vars) body.style.setProperty(k, vars[k]);
-      return;
-    }
-    if (faceTween) faceTween.kill();
-    var reduced = window.matchMedia &&
-                  matchMedia("(prefers-reduced-motion: reduce)").matches;
-    vars.duration = reduced ? 0 : ((how && how.fast) ? 0.18 : 0.38);
-    vars.ease = (how && how.ease) || "back.out(1.6)";
-    vars.overwrite = "auto";
-    faceTween = gsap.to(body, vars);
-  }
-
-  /* A STARTLE, WHICH IS A FACE HE WEARS AND THEN TAKES OFF AGAIN.
-
-     Everything else here is a state he holds. This one is an event: fly past
-     four sections and he looks startled for a moment and then recovers. It
-     restores whatever the state machine currently wants rather than a
-     remembered value, so it cannot strand him wearing it if the section
-     changed while the timer was running. */
-  var flashT = null;
-  function flashEmotion(name, ms) {
-    setEmotion(name, { fast: true });
-    window.clearTimeout(flashT);
-    flashT = window.setTimeout(function () {
-      var st = STATES.filter(function (c) { return root.classList.contains(c); })[0];
-      if (st === "is-approved")      setEmotion("happy");
-      else if (mood)                 setEmotion(mood);
-      else if (st === "is-speaking") setEmotion("speaking");
-      else                           setEmotion(idleTier >= 2 ? "sleeping" : "neutral");
-    }, ms || 1100);
-  }
-
-  /* A BLINK IS NOT AN EXPRESSION. It rides on top of whichever face is held,
-     restores that face's own eye height, and never fires while he is asleep -
-     a sleeping face has its eyes shut already and blinking them reads as a
-     twitch. Irregular on purpose: a blink on a fixed interval reads as a
-     cursor. */
+  /* Irregular on purpose - a blink on a fixed interval reads as a cursor. */
   function blink() {
     window.clearTimeout(blinkT);
     blinkT = window.setTimeout(function () {
-      var f = FACES[emotion] || FACES.neutral;
-      if (window.gsap && body && emotion !== "sleeping" && !document.hidden) {
+      if (window.gsap && body && !document.hidden) {
         gsap.timeline()
-          .to(body, { "--e-h": "2px", duration: 0.07, ease: "power2.in" })
-          .to(body, { "--e-h": f.eh + "px", duration: 0.11, ease: "power2.out" });
+          .to(body, { "--e-h": "2px",  duration: 0.07, ease: "power2.in" })
+          .to(body, { "--e-h": "10px", duration: 0.11, ease: "power2.out" });
       }
       blink();
     }, 2600 + Math.random() * 4200);
@@ -701,88 +597,6 @@
       },
       onComplete: function () { flight = null; }
     });
-  }
-
-  /* ---- A DOT, NOT A NUMBER -------------------------------------------------
-
-     Taken from the pattern every persistent assistant on the web has landed
-     on: Intercom's launcher is a circle with a mark on it, and the mark does
-     the work - it says "there is something for you" before you have read a
-     word. Levi had no such signal, which is strange, because something
-     waiting for you IS the product.
-
-     IT WAS A COUNT FIRST, AND THE COUNT WAS WRONG. [data-stack] [data-item]
-     is the demo deck: 68 cards. The page's own copy says three came in
-     overnight and the digest says "5 need your approval". A badge reading 68
-     would have contradicted the page it sits on, and a component that argues
-     with the copy is worse than no component. Note that Intercom's launcher
-     does not carry a number either - it carries a dot. A dot cannot be wrong.
-
-     SO THE DOT MEANS ONE THING AND MEANS IT HONESTLY: clicking Levi right now
-     will do something. It is on when there is an approve control actually on
-     screen, and off otherwise, which also fixes the quieter problem underneath
-     - that clicking him approves the nearest item and nothing on the page has
-     ever said so. The gesture had zero discoverability. Now he lights up
-     exactly when he is useful.
-
-     The accessible name carries the same fact in words, because a signal that
-     exists only as a coloured dot is a signal some people do not get. */
-  var badgeEl = root.querySelector(".levi__badge");
-  var badgeOn = null;
-
-  function canApproveNow() {
-    var all = document.querySelectorAll("[data-approve]");
-    var vh = document.documentElement.clientHeight;
-    var vw = document.documentElement.clientWidth;
-    for (var i = 0; i < all.length; i++) {
-      var r = all[i].getBoundingClientRect();
-      if (r.width > 2 && r.height > 2 &&
-          r.bottom > 8 && r.top < vh - 8 &&
-          r.right > 8 && r.left < vw - 8) return true;
-    }
-    return false;
-  }
-
-  function paintBadge() {
-    if (!badgeEl) return;
-    var on = canApproveNow();
-    if (on === badgeOn) return;
-    badgeOn = on;
-    star.setAttribute("aria-label", on
-      ? "Levi. Approve the nearest pending item."
-      : "Levi, your guide to this page.");
-    if (!on) {
-      if (window.gsap) gsap.to(badgeEl, { scale: 0, duration: 0.18, ease: "power2.in",
-                                          onComplete: function () { badgeEl.hidden = true; } });
-      else badgeEl.hidden = true;
-      return;
-    }
-    badgeEl.hidden = false;
-    if (window.gsap) gsap.fromTo(badgeEl, { scale: 0 },
-      { scale: 1, duration: 0.44, ease: "back.out(2.6)", overwrite: "auto" });
-  }
-
-  /* WATCHING THE STACK WAS NOT ENOUGH, AND THE TEST CAUGHT IT.
-
-     The dot was recomputed on scroll and on the card stack changing. But the
-     demo opens on a briefing with the stack hidden, and moving from the
-     briefing to a card is a VIEW change inside .app - it mutates classes, not
-     the stack's children, and it does not scroll. Measured: an approve button
-     was on screen and the dot was still off, because nothing had asked it to
-     look again.
-
-     So it watches the panel itself, attributes included, which is where the
-     view change actually shows up. Cheap: the callback is a bounded loop over
-     the approve controls and it exits on the first hit. */
-  function watchBadge() {
-    paintBadge();
-    if (!window.MutationObserver) return;
-    var obs = new MutationObserver(paintBadge);
-    var app = document.querySelector(".app");
-    if (app) obs.observe(app, { childList: true, subtree: true, attributes: true,
-                                attributeFilter: ["class", "hidden", "style"] });
-    var stack = document.querySelector("[data-stack]");
-    if (stack && stack !== app) obs.observe(stack, { childList: true, subtree: true });
   }
 
   var boxTween = null, boxShown = null;
@@ -1707,7 +1521,7 @@
      that conflation is what made a gap in the zones look like a disappearance
      rather than a pause in the conversation. */
   function goQuiet() {
-    zone = null; zoneName = null; mood = null;
+    zone = null; zoneName = null;
     say.classList.add("is-quiet");
     setState("idle");
   }
@@ -1733,7 +1547,6 @@
     if (!z) { if (!zoneName) goQuiet(); return; }
     if (z.name === zoneName) return;          /* already here */
     zone = z.el; zoneName = z.name;
-    mood = ZONE_MOOD[z.name] || null;
     /* A LEAN IS PER-SECTION. Whoever set it - the approve gesture or the demo
        commentary - it points at something in the section being left, so it
        cannot outlive the arrival in the next one. Belt and braces against the
@@ -1886,7 +1699,6 @@
     burst += Math.abs(d);
     if (!burstSaid && burst > document.documentElement.clientHeight * 2.5) {
       burstSaid = true;
-      flashEmotion("alert", 1400);
       speak(voice("state", "scrolledFast"));
     }
     if (burstT) window.clearTimeout(burstT);
@@ -1894,7 +1706,6 @@
 
     kickBy(Math.max(-26, Math.min(26, -d * 0.11)),
            Math.max(-70, Math.min(70, -d * 0.55)));
-    paintBadge();          /* the approve controls scroll in and out of view */
     run();
   }, { passive: true });
 
@@ -2201,8 +2012,6 @@
   }
 
   watchBox();
-  watchBadge();
-  setEmotion("neutral");
   blink();
 
   setState("idle");
@@ -2273,7 +2082,6 @@
     frame: frame,
     ratios: function () { return ratio; },
     gesture: function () { gesture(); },
-    emotion: function (n) { setEmotion(n); return emotion; },
     forceIdle: function () { lastActivity = -1e9; checkIdle(1e9); },
     /* Read the position immediately, skipping the debounce - for verification
        only; a visitor always gets the debounced read. */
