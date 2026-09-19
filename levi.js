@@ -330,6 +330,10 @@
   function setState(n) {
     STATES.forEach(function (c) { root.classList.remove(c); });
     root.classList.add("is-" + n);
+    /* Amplitude used to be a hard swap between 12 and 9 the frame the class
+       changed. Tweened, the change of state is something you feel rather than
+       something that snaps. */
+    breathAmp(n !== "idle");
   }
 
   var zone = null, zoneName = null, done = false, dismissed = false, frozen = false;
@@ -373,6 +377,120 @@
      .levi__speech reads --levi-tx/--levi-ty (site.css:2439) - checked by grep
      across every css and js file in the project. So they go on those elements
      and the invalidation stops there. */
+  /* ---- THE BREATH IS A LAYER, NOT A DISPLACEMENT -------------------------
+
+     This is the single change that ends the class of bug that cost five
+     rounds. The idle bob used to be added to the GOAL:
+
+         var gx = g.x + dx + cx
+
+     so the sine went into the steering target, through the integrator, into
+     p, and out of write() as --levi-x/--levi-y. Every consumer of Levi's
+     position therefore inherited a +/-18px oscillation on a 2.6s period, and
+     anything that made a decision by comparing his position against a
+     threshold flipped back and forth across it forever. That is what made the
+     speech box flicker, and docking the box only hid it - the oscillation was
+     still there, still being computed, still moving the number everything
+     reads.
+
+     Now the station and the breath are two different transforms on the same
+     element. --levi-x/--levi-y is where he BELONGS and only changes when that
+     genuinely changes; --levi-bx/--levi-by is the breathing, composited on top
+     in CSS (site.css, the .levi transform), visible to the eye and invisible
+     to every measurement. The light looks exactly the same and his reported
+     position is now stable to the pixel between zone changes.
+
+     GSAP owns it because two yoyoing sine tweens at different periods are
+     three lines and give the same Lissajous drift the hand-rolled pair of
+     Math.sin calls did - with the amplitude tweenable, so the idle/active
+     change is an eased transition rather than a step. */
+  var breath = { x: 0, y: 0, k: 1 };
+  var breathTweens = [];
+
+  function writeBreath() {
+    root.style.setProperty("--levi-bx", (breath.x * breath.k).toFixed(2) + "px");
+    root.style.setProperty("--levi-by", (breath.y * breath.k).toFixed(2) + "px");
+  }
+
+  /* Periods carried over from the hand-rolled version (2.6s and 3.1s) so the
+     motion reads identically; amplitudes are the old idle figures, and
+     breath.k scales them for the active state. */
+  function startBreath() {
+    if (!window.gsap) return;                 /* vendor missing: simply no bob */
+    breathTweens.forEach(function (t) { t.kill(); });
+    breathTweens = [
+      gsap.to(breath, { x: 18, duration: 2.6, ease: "sine.inOut",
+                        repeat: -1, yoyo: true, onUpdate: writeBreath }),
+      gsap.to(breath, { y: 13, duration: 3.1, ease: "sine.inOut",
+                        repeat: -1, yoyo: true, delay: 0.55,
+                        onUpdate: writeBreath })
+    ];
+    gsap.set(breath, { x: -18, y: -13 });     /* start mid-swing, not at rest */
+  }
+
+  function breathAmp(active) {
+    if (!window.gsap) return;
+    gsap.to(breath, { k: active ? 0.75 : 1, duration: 0.9, ease: "power2.out",
+                      overwrite: "auto" });
+  }
+
+  /* ---- THE BOX ARRIVES, IT DOES NOT JUST APPEAR ---------------------------
+
+     The reveal was `transition: opacity 300ms` and nothing else, so the line
+     faded in exactly where it would end up, at a constant rate, with no sense
+     of anything having been said. That reads as a tooltip. A companion who is
+     about to tell you something should look like he has just decided to.
+
+     So: a short rise into place on the way in, quicker and shorter on the way
+     out, because arriving deserves more time than leaving. power3.out on the
+     way in settles hard at the end, which is what makes it read as landing
+     rather than drifting.
+
+     THE CSS RULES ARE LEFT WHERE THEY ARE ON PURPOSE. GSAP writes inline
+     styles, which outrank the class rules, so GSAP wins whenever it is
+     running. If the vendor file ever fails to load, the old opacity
+     transition is still there and the box still shows and hides correctly -
+     it just does it plainly. Given that the complaint this whole thread began
+     with was an invisible box, the fallback fails OPEN. */
+  var boxTween = null, boxShown = null;
+
+  function boxHidden() {
+    return say.classList.contains("is-quiet") ||
+           say.classList.contains("is-blocked") ||
+           say.classList.contains("is-gone");
+  }
+
+  function revealBox(on) {
+    if (!window.gsap || boxShown === on) return;
+    boxShown = on;
+    if (boxTween) boxTween.kill();
+    var reduced = window.matchMedia &&
+                  matchMedia("(prefers-reduced-motion: reduce)").matches;
+    boxTween = gsap.to(speech, {
+      autoAlpha: on ? 1 : 0,
+      y: on ? 0 : 7,
+      duration: reduced ? 0 : (on ? 0.42 : 0.24),
+      ease: on ? "power3.out" : "power2.in",
+      overwrite: "auto"
+    });
+  }
+
+  /* ONE HOOK, NOT EIGHT. is-quiet and is-blocked are toggled from a number of
+     places - arrive(), goQuiet(), watchQueue(), the demo, the dismiss path -
+     and threading a call through every one of them is how a state machine
+     acquires a site that forgets. Watching the attribute catches all of them,
+     including any added later. */
+  function watchBox() {
+    if (!window.gsap || !window.MutationObserver) return;
+    /* The CSS transition would fight GSAP for the same property every frame. */
+    speech.style.transition = "none";
+    var h = boxHidden();
+    boxShown = !h;
+    gsap.set(speech, { autoAlpha: h ? 0 : 1, y: h ? 7 : 0 });
+    new MutationObserver(function () { revealBox(!boxHidden()); })
+      .observe(say, { attributes: true, attributeFilter: ["class"] });
+  }
+
   function write(x, y) {
     /* Belt and braces. If anything upstream ever slips a non-finite value past
        the barrier in step(), it stops here rather than becoming `NaNpx` in a
@@ -899,10 +1017,6 @@
     retarget();
     checkIdle(now);
 
-    var amp = root.classList.contains("is-idle") ? 12 : 9;
-    var dx = Math.sin(now / 2600) * amp + Math.sin(now / 4300) * amp * 0.5;
-    var dy = Math.cos(now / 3100) * amp * 0.8 + Math.sin(now / 5700) * amp * 0.4;
-
     var cx = 0, cy = 0, near = 0;
     if (mouse.fresh > 0 && !phone()) {
       var mx = mouse.x - p.x, my = mouse.y - p.y;
@@ -919,7 +1033,9 @@
        then the zone. */
     if (parked && parked.zone !== zoneName) parked = null;   /* new section, he follows again */
     var g = drag || parked || lure || goal;
-    var gx = g.x + dx + cx, gy = g.y + dy + cy;
+    /* No bob here any more - see startBreath(). The cursor pull stays, because
+       that is a real change of destination rather than decoration. */
+    var gx = g.x + cx, gy = g.y + cy;
 
     /* ---- STEERING, NOT A SPRING --------------------------------------------
        The spring was the reason it read as teleporting. A spring's speed is
@@ -963,9 +1079,9 @@
     wvy +=  nx * arc;
     if (dist < ARRIVE_R) tripD0 = 0;           /* arrived; next trip starts new */
 
-    /* A slow vertical breath so holding station is not dead still. Bounded,
-       deterministic, and far too small to move it out of its zone. */
-    wvy += Math.sin(now / 1750) * 26 * (1 - reach * Math.sin(prog * Math.PI));
+    /* The vertical breath that used to live here is now part of the breath
+       LAYER, for the same reason as the bob: it moved p, so it moved every
+       number read off p. */
 
     /* MAXV HAS TO BE A CEILING, NOT A SUGGESTION. The wander is added
        VECTORIALLY on top of a desired velocity that is already at full cruise,
@@ -1738,6 +1854,26 @@
     window.setTimeout(speakActive, 900);
   }
   watchQueue();
+
+  /* REDUCED MOTION IS A MEDIA QUERY, NOT A BOOLEAN READ ONCE AT LOAD.
+
+     REDUCED is captured at script time, so a visitor who turns the preference
+     on mid-session kept the full motion until they reloaded. gsap.matchMedia
+     reverts everything created inside the handler the moment the query stops
+     matching, which for the breath means it stops AND the transform is put
+     back - no residual offset frozen into the element. */
+  if (window.gsap && gsap.matchMedia) {
+    gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", function () {
+      startBreath();
+      return function () {
+        breathTweens.forEach(function (t) { t.kill(); });
+        breathTweens = [];
+        breath.x = 0; breath.y = 0; writeBreath();
+      };
+    });
+  }
+
+  watchBox();
 
   setState("idle");
   lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();

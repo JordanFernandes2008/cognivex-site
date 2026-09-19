@@ -2442,6 +2442,18 @@ html:has(.void-page) { background: #05070a; }
   transform: translate3d(var(--levi-x, 50vw), var(--levi-y, 50vh), 0);
   will-change: transform;
 }
+/* TWO TRANSFORMS, AND THE ORDER MATTERS.
+
+   The first is the station: where Levi belongs, written by write() as
+   --levi-x/--levi-y, and stable to the pixel between zone changes. The second
+   is the breath, written by GSAP as --levi-bx/--levi-by, which is what makes
+   him look alive. Keeping them separate is what stops the breathing from
+   entering the numbers that placement decisions are made from - see the long
+   note above write() in levi.js. */
+.levi {
+  transform: translate3d(var(--levi-x, 50vw), var(--levi-y, 50vh), 0)
+             translate3d(var(--levi-bx, 0px), var(--levi-by, 0px), 0);
+}
 .levi     { z-index: 1; }    /* inside main: behind the display type */
 .levi-say { z-index: 60; }   /* on body: always readable            */
 
