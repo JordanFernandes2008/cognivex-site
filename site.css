@@ -375,28 +375,65 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .queue__back:hover, .queue__back:focus-visible { color: var(--ink); }
 .queue__back[hidden] { display: none; }
 
-/* --- TODAY's four states, openable ---------------------------------------- */
-.rail__item--open { padding: 0; display: block; }
-.rail__hit {
+/* --- the left rail is a LIST ---------------------------------------------
+   Rows are buttons that open on the right. Nothing expands in place: the list
+   is for finding, the panel is for reading, and a row that grows under the
+   cursor pushes everything below it down the screen mid-click. */
+.rail__item--open, .feed--open { padding: 0; display: block; }
+.rail__hit, .feed__hit {
   display: flex; align-items: baseline; justify-content: space-between; gap: .6rem;
-  width: 100%; padding: .4rem .6rem; margin: 0; text-align: left;
-  background: none; border: 0; font: inherit; color: inherit; cursor: pointer;
-  border-radius: 7px;
+  width: 100%; margin: 0; text-align: left; cursor: pointer;
+  background: none; border: 0; font: inherit; color: inherit; border-radius: 7px;
 }
-.rail__hit:hover, .rail__hit:focus-visible { background: var(--sunk); }
-.rail__item.is-on .rail__hit { background: transparent; }
-.rail__panel { padding: .15rem .6rem .7rem; }
-.rail__panel[hidden] { display: none; }
-.rail__lead { margin: 0 0 .45rem; font-size: .78rem; line-height: 1.5; color: var(--dim); }
-.rail__sub { margin: 0; padding: 0; list-style: none; }
-.rail__sub li {
+.rail__hit { padding: .4rem .6rem; }
+.feed__hit { padding: .3rem .45rem; }
+.rail__hit:hover, .feed__hit:hover,
+.rail__hit:focus-visible, .feed__hit:focus-visible { background: var(--sunk); }
+
+/* Which row you are reading. A left edge, the same device the queue uses. */
+.rail__item.is-reading, .feed.is-reading { position: relative; }
+.rail__item.is-reading .rail__hit,
+.feed.is-reading .feed__hit { background: var(--sunk); }
+.rail__item.is-reading::before, .feed.is-reading::before {
+  content: ""; position: absolute; left: 0; top: 4px; bottom: 4px;
+  width: 2px; border-radius: 2px; background: var(--accent-fill);
+}
+
+/* --- the reading pane ----------------------------------------------------- */
+.detail { padding: 1rem 1.15rem 1.2rem; }
+.detail[hidden] { display: none; }
+.detail:focus { outline: none; }
+.detail__kind {
+  margin: 0 0 .3rem; font-size: var(--t-micro); letter-spacing: .09em;
+  text-transform: uppercase; color: var(--muted);
+}
+.detail__title { margin: 0 0 .5rem; font-size: 1.05rem; font-weight: var(--w-read); color: var(--ink); line-height: 1.35; }
+.detail__state {
+  display: inline-block; margin: 0 0 .9rem;
+  font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted);
+}
+.detail__state[data-state="needs"], .detail__state[data-state="drafted"] { color: var(--accent-text); }
+.detail__draft {
+  margin: 0 0 1rem; padding: .7rem .85rem;
+  border-left: 2px solid var(--accent-fill);
+  background: var(--sunk); border-radius: 0 8px 8px 0;
+  font-size: .9rem; line-height: 1.6; color: var(--ink);
+}
+.detail__wlab {
+  margin: 0 0 .25rem; font-size: var(--t-micro); letter-spacing: .09em;
+  text-transform: uppercase; color: var(--accent-text);
+}
+.detail__why { margin: 0 0 1rem; font-size: .85rem; line-height: 1.6; color: var(--dim); }
+.detail__rows { margin: 0 0 1rem; padding: 0; list-style: none; }
+.detail__rows li {
   display: flex; flex-direction: column; gap: .05rem;
-  padding: .32rem 0; border-top: 1px solid var(--line);
+  padding: .45rem 0; border-top: 1px solid var(--line);
 }
-.rail__sub li:first-child { border-top: 0; }
-.rail__sub b { font-weight: var(--w-read); font-size: .8rem; color: var(--ink); }
-.rail__sub span { font-size: .75rem; line-height: 1.45; color: var(--dim); }
-.rail__acts { margin-top: .6rem; }
+.detail__rows li:first-child { border-top: 0; }
+.detail__rows b { font-weight: var(--w-read); font-size: .86rem; color: var(--ink); }
+.detail__rows span { font-size: .8rem; line-height: 1.45; color: var(--dim); }
+.detail__acts { display: flex; gap: .5rem; flex-wrap: wrap; }
 
 /* --- the morning list, openable ------------------------------------------- */
 .feed--open { padding: 0; }
@@ -407,32 +444,8 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
   border-radius: 6px;
 }
 .feed__hit:hover, .feed__hit:focus-visible { background: var(--sunk); }
-.feed__hit::after {
-  content: "open"; margin-left: auto; flex: 0 0 auto;
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: .58rem; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--accent-text); opacity: 0;
-}
-.feed__hit:hover::after, .feed__hit:focus-visible::after,
-.feed__hit[aria-expanded="true"]::after { opacity: .8; }
 .feed__hit[aria-expanded="true"]::after { content: "close"; }
 
-.feed__panel { padding: .1rem .45rem .7rem; }
-.feed__panel[hidden] { display: none; }
-.feed__state {
-  font-size: .58rem; letter-spacing: .09em; text-transform: uppercase;
-  color: var(--muted); margin: 0 0 .3rem;
-}
-.feed[data-state="needs"] .feed__state,
-.feed[data-state="drafted"] .feed__state { color: var(--accent-text); }
-.feed__what { margin: 0; font-size: .78rem; line-height: 1.5; color: var(--dim); }
-.feed__draft {
-  margin: .5rem 0 0; padding: .5rem .6rem;
-  border-left: 2px solid var(--accent-fill);
-  background: var(--sunk); border-radius: 0 6px 6px 0;
-  font-size: .78rem; line-height: 1.55; color: var(--ink);
-}
-.feed__acts { margin-top: .5rem; }
 .btn--sm { padding: .3rem .7rem; font-size: .74rem; }
 .btn--sm[disabled] { opacity: .5; cursor: default; }
 .card { padding: 1rem 1.1rem; border-bottom: 1px solid var(--line); background: var(--paper); }

@@ -117,6 +117,118 @@
   if (head) head.appendChild(back);
   stack.parentNode.insertBefore(wrap, stack);
 
+  /* ---- THE THIRD VIEW: ONE THING, OPENED ----------------------------------
+     The left rail is a list and this is where a list item lands - the same
+     relationship a mail client has between its sidebar and its reading pane,
+     or a chat app between its threads and the open one.
+
+     It replaced an accordion that expanded each row in place. That was wrong
+     for the same reason a mail client does not expand an email inside the
+     list: the list is for finding, the panel is for reading, and doing both
+     in one column makes the list jump around under the cursor. */
+  var detail = document.createElement("div");
+  detail.className = "detail";
+  detail.hidden = true;
+  detail.setAttribute("tabindex", "-1");
+  stack.parentNode.insertBefore(detail, stack);
+
+  function showDetail(d) {
+    /* ONE SELECTION FOR THE WHOLE RAIL. The two lists each cleared their own
+       rows and not the other's, so opening a TODAY bucket left the morning
+       item still marked - measured, two rows highlighted at once. The pane
+       owns the selection because the pane is what the selection refers to. */
+    document.querySelectorAll(".rail .is-reading").forEach(function (o) {
+      o.classList.remove("is-reading");
+    });
+    if (d.source) d.source.classList.add("is-reading");
+
+    detail.innerHTML = "";
+
+    var kind = document.createElement("p");
+    kind.className = "detail__kind mono";
+    kind.textContent = d.kind || "";
+    detail.appendChild(kind);
+
+    var title = document.createElement("h3");
+    title.className = "detail__title";
+    title.textContent = d.title || "";
+    detail.appendChild(title);
+
+    if (d.state) {
+      var st = document.createElement("p");
+      st.className = "detail__state mono";
+      st.setAttribute("data-state", d.stateKey || "");
+      st.textContent = d.state;
+      detail.appendChild(st);
+    }
+
+    if (d.draft) {
+      var q = document.createElement("p");
+      q.className = "detail__draft";
+      q.textContent = d.draft;
+      detail.appendChild(q);
+    }
+
+    if (d.why) {
+      var wlab = document.createElement("p");
+      wlab.className = "detail__wlab mono";
+      wlab.textContent = "Why this";
+      detail.appendChild(wlab);
+      var w = document.createElement("p");
+      w.className = "detail__why";
+      w.textContent = d.why;
+      detail.appendChild(w);
+    }
+
+    if (d.rows && d.rows.length) {
+      var ul = document.createElement("ul");
+      ul.className = "detail__rows";
+      d.rows.forEach(function (row) {
+        var li = document.createElement("li");
+        var b = document.createElement("b");
+        b.textContent = row[0];
+        var sp = document.createElement("span");
+        sp.textContent = row[1];
+        li.appendChild(b); li.appendChild(sp);
+        ul.appendChild(li);
+      });
+      detail.appendChild(ul);
+    }
+
+    if (d.actions && d.actions.length) {
+      var acts = document.createElement("div");
+      acts.className = "detail__acts";
+      d.actions.forEach(function (a) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn " + (a.primary ? "btn--accent" : "btn--quiet");
+        btn.textContent = a.label;
+        if (a.disabled) btn.disabled = true;
+        btn.addEventListener("click", function () {
+          if (a.go === "queue") { show("queue"); return; }
+          btn.disabled = true;
+          btn.textContent = a.done || "Done";
+          var st2 = detail.querySelector(".detail__state");
+          if (st2 && a.newState) { st2.textContent = a.newState; st2.setAttribute("data-state", "replied"); }
+          if (a.onDone) a.onDone();
+        });
+        acts.appendChild(btn);
+      });
+      detail.appendChild(acts);
+    }
+
+    wrap.hidden = true;
+    stack.hidden = true;
+    detail.hidden = false;
+    back.hidden = false;
+    queue.classList.add("is-drilled");
+    setCount(5, "need you");
+    detail.focus();
+    try {
+      window.dispatchEvent(new CustomEvent("cognivex:view", { detail: { view: "detail", item: d.title } }));
+    } catch (e) {}
+  }
+
   /* THREE NUMBERS THAT DISAGREE IS WORSE THAN NO NUMBER.
 
      Measured on screen at once: the header said "50 WAITING" (every card in
@@ -141,6 +253,7 @@
 
   function show(which) {
     var onQueue = which === "queue";
+    detail.hidden = true;
     wrap.hidden = onQueue;
     stack.hidden = !onQueue;
     back.hidden = !onQueue;
@@ -188,6 +301,7 @@
      drive it without clicking. */
   window.cognivexDigest = {
     show: show,
+    detail: showDetail,
     view: function () { return stack.hidden ? "digest" : "queue"; },
     groups: GROUPS
   };
