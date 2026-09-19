@@ -68,7 +68,16 @@
      the flare's bright inner third. It used to reserve 150 while rendering 124,
      which is what pushed it onto the film's bright band. */
   function starR() { return phone() ? 78 : 95; }
-  function lineW() { return phone() ? 256 : 304; }
+  /* THE MEASURE, MEASURED. These were 304 and 256 against a box that renders
+     at 20.5rem and 16rem - 328 and 256. The desktop number was 24px short, so
+     the stacked box was centred 12px off its own light and the beside/stacked
+     decision was taken against a box narrower than the one actually drawn.
+     Read the element; keep the constants only for the moment before it
+     exists. */
+  function lineW() {
+    var w = speech && speech.getBoundingClientRect().width;
+    return w > 4 ? w : (phone() ? 256 : 328);
+  }
   function gapW() { return phone() ? 26 : 38; }
 
   function sectionOf(el) { return el.closest("section") || el.parentElement || el; }
@@ -195,7 +204,9 @@
   /* IN THE FOOTER, IN THE FLOW - not fixed over the hero copy. */
   var note = document.createElement("p");
   note.className = "levi-note";
-  note.textContent =
+  /* states.footnote, and it is the ONE string in the set Levi never says out
+     loud. It is a note to the reader about him, not a line from him. */
+  note.textContent = (window.LEVI_VOICE && window.LEVI_VOICE.footnote) ||
     "Levi is in development. Its lines are scripted and the same for everyone.";
   var footHome = document.querySelector(".foot .wrap") ||
                  document.querySelector(".foot") || document.body;
@@ -225,6 +236,7 @@
     try { star.setPointerCapture(e.pointerId); } catch (err) {}
     root.classList.add("is-held");
     noteActivity();
+    speak(voice("state", "grabbed"));
   });
 
   star.addEventListener("pointermove", function (e) {
@@ -238,16 +250,20 @@
   function endDrag(e) {
     if (!drag || (e && e.pointerId !== drag.id)) return;
     var moved = dragMoved > 4;
-    if (moved) { parked = { x: drag.x, y: drag.y, zone: zoneName }; }
+    var drop = { x: drag.x, y: drag.y };
+    if (moved) { parked = { x: drop.x, y: drop.y, zone: zoneName }; }
     drag = null;
     root.classList.remove("is-held");
-    if (moved && !dismissed) {
-      say.classList.remove("is-quiet");
-      root.classList.remove("is-quiet");
-      setState("speaking");
-      sayLine("Fine. I will wait here.");
-      noteActivity();
-    }
+    if (!moved || dismissed) return;
+
+    /* WHERE IT LANDED PICKS THE LINE. droppedBad is not a mood - it is the
+       light being put somewhere it is not allowed to be, which is the demo
+       panel. It says so and gives the spot back rather than sitting there. */
+    var b = panelBox(), R = starR() + 12;
+    var bad = !!b && drop.x + R > b.left && drop.x - R < b.right &&
+                     drop.y + R > b.top  && drop.y - R < b.bottom;
+    if (bad) parked = null;
+    speak(voice("state", bad ? "droppedBad" : "droppedOk"));
   }
   star.addEventListener("pointerup", endDrag);
   star.addEventListener("pointercancel", endDrag);
@@ -276,6 +292,38 @@
       }
     }, 26);
   }
+  /* ---- THE VOICE ----------------------------------------------------------
+     Every line on the site now arrives through here. levi-voice.js owns which
+     one; this owns what happens when it hands back null, which it does as soon
+     as an array is spent. Null is not an error and not an empty box - the box
+     keeps the sentence it already had and the light still moves. Saying
+     nothing is the honest answer to being asked to repeat yourself. */
+  var V = window.LEVI_VOICE || null;
+
+  function voice(kind, key) {
+    if (!V) return null;
+    try {
+      if (kind === "line")  return V.line(key);
+      if (kind === "state") return V.state(key);
+      if (kind === "demo")  return V.demo(key);
+    } catch (e) {}
+    return null;
+  }
+
+  function speak(text, how) {
+    if (!text || dismissed) return false;
+    how = how || {};
+    savedLine = null; idleSpoken = false; idleTier = 0;
+    say.classList.remove("is-quiet");
+    root.classList.remove("is-quiet");
+    setState(how.state || "speaking");
+    sayLine(text);
+    if (how.glow) glow = how.glow;
+    lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
+    if (REDUCED) settleNow(); else run();
+    return true;
+  }
+
   var IDLE_LINES = window.LEVI_IDLE || ["Still here."];
 
   var STATES = ["is-idle", "is-speaking", "is-approved"];
@@ -300,6 +348,9 @@
   var frame = { x: 0, y: 0, vx: 0, vy: 0, glow: 1, spin: 0, alt: 0,
                 gx: 0, gy: 0, frames: 0 };
   var idleSpoken = false, savedLine = null, lure = null, stacked = false;
+  var idleTier = 0;          /* how far up the idle ladder this pause has got */
+  var burst = 0, burstSaid = false, burstT = null;   /* one flick of the wheel */
+  var greeting = false;      /* the hello is holding the box; do not read over it */
 
   /* ---- PICK HIM UP AND PUT HIM SOMEWHERE ------------------------------------
      drag   - where the pointer is, while it is down.
@@ -357,22 +408,55 @@
 
      No coverage floor: whichever section is most on screen wins, even if that
      is only a sliver, so no section can be silently skipped. */
+  /* HOW MUCH OF THIS SECTION IS SHOWING, not how much of the screen it fills.
+
+     Against the viewport, a short section can never win against a taller one
+     beside it however completely it is on display. That was invisible while
+     every zone lived on the homepage, whose sections are 600-1600px scenes -
+     and it made the other six pages' heroes unreachable the moment they got
+     zones: .phero is 364px and the section under it is 431px, so at the very
+     top of trust.html, with the hero entirely on screen and its h1 the only
+     thing anyone is looking at, the section BELOW it covered 377px of viewport
+     against the hero's 364 and took the line. Measured on all five prose
+     pages; the hero lost at every scroll position, including zero.
+
+     Divided by the section's own height instead, capped at the viewport so a
+     section taller than the screen is not punished for it: a 1,600px section
+     filling the screen scores 1.0, exactly like a 364px one entirely in view,
+     and between them it is the one showing more of itself that wins. */
   function coverOf(el) {
     var vh = document.documentElement.clientHeight;
     var r = sectionOf(el).getBoundingClientRect();
     var visible = Math.min(r.bottom, vh) - Math.max(r.top, 0);
-    return Math.max(0, visible) / vh;
+    if (visible <= 0) return 0;
+    return visible / Math.max(1, Math.min(r.height, vh));
   }
 
+  /* TWO ZONES CAN SHARE A SECTION, so the section cover cannot be the whole
+     answer. The hero holds both `hero` and `queue` - the headline at the top
+     and the demo panel below it - and they report an identical cover, because
+     cover is a fact about the section they are both inside. Strictly-greater
+     then hands it to whichever was declared first, every time, and `queue`
+     could never win: the demo would have had a line it was never able to say.
+
+     So the comparison is the pair, in order: the section first, and where that
+     ties, the band that has more of ITSELF on screen. Between two bands of one
+     section that is the only question there is. */
   function dominantZone() {
-    var best = null, bestR = 0;
+    var best = null, bestR = -1, bestB = -1;
+    var vh = document.documentElement.clientHeight;
     for (var i = 0; i < script.length; i++) {
       var name = script[i].zone;
       var el = zoneEl(name);
-      if (!visibleSlice(el)) continue;   /* the BAND must be on screen, not just
+      var slice = visibleSlice(el);
+      if (!slice) continue;              /* the BAND must be on screen, not just
                                             the section that contains it */
       var rr = Math.max(coverOf(el), ratio[name] || 0);
-      if (rr > bestR) { bestR = rr; best = { el: el, name: name, say: script[i].say }; }
+      var full = el.getBoundingClientRect().height;
+      var band = slice.height / Math.max(1, Math.min(full, vh));
+      var better = (rr > bestR + 1e-6) ||
+                   (Math.abs(rr - bestR) <= 1e-6 && band > bestB);
+      if (better) { bestR = rr; bestB = band; best = { el: el, name: name }; }
     }
     return best;
   }
@@ -411,17 +495,328 @@
      both. Offsets are computed from the LANE, which is a function of the
      viewport, never from p - deriving an offset from the light's own position
      is what sent it to -22322,-109726 once already. */
+  /* ==========================================================================
+     THE KEEP-OUT WAS ONLY EVER ENFORCED ON THE LIGHT.
+
+     keepOffPanel() moves the STAR off the demo. The words were never asked.
+     In the holding lane the box is stacked under the light at the page margin
+     and the lane runs straight down the left edge of the demo panel, so the
+     box sat on the rail: measured at 1536x830, 10 overlaps of body text, and
+     all ten with zoneName null and .app on screen. None inside a zone.
+
+     It stayed hidden because the lane also goes quiet - until watchQueue()
+     started reacting to approvals regardless of zone, which is right (the
+     visitor is clicking the queue; Levi should answer) and which is what makes
+     the box visible in the one place it has nowhere to be.
+
+     So the box is resolved here, once, for both branches:
+       1. where the offsets ask for it,
+       2. pushed clear BELOW the panel if that lands on it,
+       3. clamped inside the viewport,
+       4. and if the clamp puts it back on the panel, it is not drawn at all.
+
+     Two rectangles and four comparisons. No scanning, no candidate scoring.
+
+     RESOLVED AGAINST p, WRITTEN AS AN OFFSET FROM p, which is the shape that
+     does not run away: the resolved top depends on the panel and the viewport
+     only, so top = p.y + (top - p.y) is a fixed point rather than the feedback
+     loop that once put the star at -22322,-109726. p is checked for finiteness
+     first - the isFinite barrier in step() is the reason it can be trusted at
+     all, and a NaN here would write NaNpx and drop the transform.
+     ======================================================================== */
+  var MARGIN = 12;              /* clearance from the panel and the screen    */
+
+  /* ==========================================================================
+     "THE WORDS MAY NEVER OVERLAP COPY" WAS A COMMENT, NOT A CHECK.
+
+     Both placements were built to land somewhere empty and then trusted to
+     have done it. Inside a zone that holds up - the foot anchor is measured
+     and every zone came back clean. In the lane there is no section, so there
+     is no foot: the box hangs under the light at whatever height the light
+     happens to be holding, and the next section's eyebrow scrolling up into
+     that band is enough. Measured, box on `.cap` "See it work" at scrollY
+     1250, with the panel already cleared.
+
+     So ask. Not by walking the document sixty times a second - by asking the
+     browser the question it answers for every pointer move. Seven hit tests
+     name the handful of elements actually under the box, and only those get
+     measured properly, at glyph level, with a Range. Bounded either way.
+     ======================================================================== */
+  /* WHAT IS ALREADY ON SCREEN, AS LINE BOXES.
+
+     Point sampling was tried first and is wrong for this: seven hit tests
+     inside a 328x90 box miss a 93px run of type sitting between them, and
+     elementsFromPoint hands back the CONTAINER, whose own direct text is
+     empty - `<p class="cap"><span>See it work</span>` returned p.cap, which
+     owns no text of its own, so the check passed over the exact element it
+     was written to catch. Measured: still on `.cap` at 1250 and on the `em`
+     inside `.walk__h` at 1500.
+
+     A Range over an element's contents gives its real line boxes, which is
+     the thing a box must not cross - a paragraph whose last line is four
+     words wide reports a full-width border box and would silence Levi over
+     half the page. Measured at 1536x830: 1,129 candidate elements, 95 line
+     boxes on screen, 2.9ms to build and under 0.05ms to test a box against
+     them. Per frame the build would be a fifth of the frame; on a 150ms
+     throttle it is noise, and the verdict lags a scroll by less than the
+     300ms the box takes to fade anyway. */
+  var TEXTY = "p,h1,h2,h3,h4,h5,h6,li,dt,dd,blockquote,figcaption,label,td,th," +
+              "summary,span,em,strong,b,a,button,small,code,cite,time,legend";
+  var lines = { rects: [], at: -1e9, y: -1e9 };
+
+  function visible(el) {
+    /* opacity 0 is the data-rise start state - copy that has not arrived yet
+       does not get to silence the line. display:none has no rects at all. */
+    if (el.checkVisibility) {
+      return el.checkVisibility({ opacityProperty: true, visibilityProperty: true });
+    }
+    return true;
+  }
+
+  /* THE THROTTLE IS TIME, NOT DISTANCE. The first version also rebuilt on 24px
+     of scroll, which during a fast flick is every single frame - 2.9ms of a
+     16.7ms budget, spent to answer a question about a box that is usually not
+     even being drawn. Time caps it at about seven builds a second; a large
+     jump still forces one, because a teleport is not a scroll. */
+  /* WHAT THE BOX MUST NOT COVER ON A PHONE.
+
+     On a desktop the answer is all copy, and there is always a column free to
+     satisfy it. On a 390px screen the text column IS the screen - 342 of 390 -
+     so "never cross copy" resolves to "never speak", and the queue's line was
+     suppressed at every scroll position on the phone.
+
+     The box is not transparent. It is 93% opaque with its own border, so copy
+     behind it is covered the way a toast covers it, not smeared underneath it,
+     and the sentence that made the desktop rule - two texts on top of each
+     other are both unreadable - does not apply to it.
+
+     So on a phone the protected set is the demo's own content, which is what
+     was actually asked for: the card, the draft, and the three buttons. Their
+     whole boxes, not their line boxes, because a card is a solid object rather
+     than a run of type. */
+  var GUARDED = ".card, .card__draft, .card__why, .detail__why, .walk__panel," +
+                "[data-approve], [data-edit], [data-skip]";
+
+  function lineBoxes(now) {
+    var y = window.pageYOffset || 0;
+    if (now - lines.at < 150 && Math.abs(y - lines.y) < 400) return lines.rects;
+    lines.at = now; lines.y = y;
+    var de = document.documentElement;
+    var vh = de.clientHeight, vw = de.clientWidth;
+
+    var out = [], els = document.querySelectorAll(TEXTY);
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (root.contains(el) || say.contains(el)) continue;
+      var r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) continue;
+      if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
+      if (!/\S/.test(el.textContent) || !visible(el)) continue;
+      var rg = document.createRange();
+      rg.selectNodeContents(el);
+      var rs = rg.getClientRects();
+      for (var j = 0; j < rs.length; j++) {
+        var q = rs[j];
+        if (q.width < 4 || q.height < 4 || q.bottom < 0 || q.top > vh) continue;
+        out.push({ l: q.left, t: q.top, r: q.right, b: q.bottom, el: el });
+      }
+    }
+    lines.rects = out;
+    return out;
+  }
+
+  /* LAID OUT IS NOT PAINTED, AND getBoundingClientRect ONLY KNOWS THE FIRST.
+
+     `.app` is `overflow: hidden` and the approval log inside it is 2,615px of
+     content in a 650px panel. Every row below the fold of that panel still
+     reports an honest on-screen rect while being clipped to nothing: measured
+     at scrollY 2000, with `.app` itself 1,107px above the viewport, 219
+     candidate line boxes of which 11 were actually painted. Blocking on the
+     other 208 silenced Levi in the walk, tuesday and ledger zones - three
+     zones that had just measured clean.
+
+     elementFromPoint respects the clip, so it is the arbiter. Validating all
+     219 costs 11.9ms and cannot run on a throttle, let alone a frame; but a
+     rect only matters when it intersects the box, which is almost never, so
+     the hit test is paid per intersection instead of per rect. */
+  function painted(q) {
+    var de = document.documentElement;
+    var x = Math.max(2, Math.min(de.clientWidth - 2, (q.l + q.r) / 2));
+    var y = Math.max(2, Math.min(de.clientHeight - 2, (q.t + q.b) / 2));
+    var hit = document.elementFromPoint(x, y);
+    if (!hit) return false;
+    return hit === q.el || q.el.contains(hit) || hit.contains(q.el);
+  }
+
+  /* THE LAST RESORT, AND ONLY WHERE THE PAGE IS ONE COLUMN.
+
+     Below 1240 the layout is a single column and the text runs nearly edge to
+     edge - 342 of 390 on a phone, ~700 of 768 on a tablet - so "clear of all
+     copy" has no solution anywhere near the demo, and the hero and the queue
+     were suppressed at every scroll position on both. Above 1240 the desktop
+     rule is untouched: it works, and its one dead window is accepted.
+
+     So the strict rule stays the PREFERENCE at every width. Only when it has
+     produced nothing does a narrow screen fall back to this, which protects
+     what was actually asked for - the card, the draft, the three buttons - and
+     lets the box rest on ordinary copy. It is 93% opaque with its own border,
+     so it covers that copy the way a toast does rather than smearing through
+     it, which is the thing the desktop rule exists to prevent. */
+  function narrow() { return document.documentElement.clientWidth <= 1240; }
+
+  function onGuarded(l, t, w, h) {
+    var de = document.documentElement;
+    var vh = de.clientHeight, vw = de.clientWidth;
+    var r = l + w, b = t + h;
+    var els = document.querySelectorAll(GUARDED);
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (root.contains(el) || say.contains(el)) continue;
+      var q = el.getBoundingClientRect();
+      if (q.width < 4 || q.height < 4) continue;
+      if (q.bottom < 0 || q.top > vh || q.right < 0 || q.left > vw) continue;
+      if (!visible(el)) continue;
+      if (q.left < r - 1 && q.right > l + 1 && q.top < b - 1 && q.bottom > t + 1) return true;
+    }
+    return false;
+  }
+
+  function onWords(l, t, w, h, now) {
+    var rs = lineBoxes(now), r = l + w, b = t + h;
+    for (var i = 0; i < rs.length; i++) {
+      var q = rs[i];
+      if (q.l < r - 1 && q.r > l + 1 && q.t < b - 1 && q.b > t + 1 && painted(q)) return true;
+    }
+    return false;
+  }
+
+  /* HYSTERESIS, BECAUSE THE LIGHT DRIFTS. The wander is a few px per frame and
+     a verdict taken on every one of them would fade the box in and out across
+     a 300ms transition while it sat still. A verdict has to hold twice before
+     it changes anything. */
+  var occ = { hit: false, n: 0 };
+
+  function boxOnWords(l, t, w, h, now) {
+    var hit = onWords(l, t, w, h, now);
+    if (hit === occ.hit) { occ.n = 0; return occ.hit; }
+    if (++occ.n >= 2) { occ.hit = hit; occ.n = 0; }
+    return occ.hit;
+  }
+
+  function placeBox(tx, ty, sr) {
+    var de = document.documentElement;
+    var vw = de.clientWidth, vh = de.clientHeight;
+    if (!sr) sr = speech.getBoundingClientRect();
+    var bw = sr.width > 4 ? sr.width : lineW();
+    var bh = sr.height > 4 ? sr.height : 26;
+
+    /* The offsets are relative to the light, so the light is the origin. */
+    var ox = isFinite(p.x) ? p.x : goal.x, oy = isFinite(p.y) ? p.y : goal.y;
+    if (!isFinite(ox) || !isFinite(oy)) { ox = 0; oy = 0; }
+
+    var left = ox + tx, top = oy + ty;
+
+    /* ON A PHONE THE BOX IS HELD OFF THE CONTENT, NOT OFF THE WHOLE PANEL.
+
+       Keeping it off `.app` entirely is right on a desktop, where there is
+       always somewhere else to be. On a 390x844 phone the demo is 799px tall
+       under a 63px sticky masthead: above it leaves 45 usable pixels, below it
+       leaves none, and the box is 91. Measured - the queue's line was
+       suppressed at every scroll position on the phone, which is the same as
+       not writing it.
+
+       What actually has to stay clear is what Jordan asked for: the card, the
+       draft text and the three buttons. onWords() already guarantees exactly
+       that - every one of them is painted text, and buttons are in TEXTY - so
+       the box may rest on the panel's own empty chrome and nothing else. The
+       LIGHT keeps its full keep-out either way; keepOffPanel() is untouched. */
+    var box = panelBox();
+
+    function onPanel(l, t) {
+      return !!box &&
+             l < box.right + MARGIN && l + bw > box.left - MARGIN &&
+             t < box.bottom + MARGIN && t + bh > box.top - MARGIN;
+    }
+
+    var blocked = false;
+    if (onPanel(left, top)) {
+      /* DOWN ONLY. Above the panel is the hero's own display type and lede -
+         measured, the region above .app is copy at every scroll position where
+         there is room above it at all. Below it is the section's tail, which
+         is empty by construction. */
+      top = box.bottom + MARGIN;
+      if (top + bh > vh - MARGIN) blocked = true;
+    }
+    if (!blocked) {
+      left = Math.max(MARGIN, Math.min(left, vw - MARGIN - bw));
+      top  = Math.max(MARGIN, Math.min(top,  vh - MARGIN - bh));
+      if (onPanel(left, top)) blocked = true;   /* the clamp put it back on */
+    }
+
+    /* NOW ASK WHETHER ANYTHING IS ALREADY THERE. A short, FIXED list of named
+       alternatives - the two sides of the panel and the mirror of the stack -
+       tried in that order, and then the answer is no. It is a preference
+       order, not a scored search over the page: nothing here measures a
+       candidate against a candidate, which is what exiled this thing to the
+       right margin the last time.
+
+       Not asked at all while the box is not being drawn, which is most of the
+       scroll: between zones Levi holds in the lane with nothing to say, and
+       measuring what a hidden box would have crossed is work for no one. The
+       hysteresis is primed so the first verdict after it speaks again counts
+       immediately instead of costing a second frame. */
+    var mute = say.classList.contains("is-quiet") ||
+               say.classList.contains("is-gone") ||
+               say.classList.contains("is-boot");
+    var when = (window.performance && performance.now) ? performance.now() : Date.now();
+    if (mute) { occ.n = 1; }
+    else if (!blocked && boxOnWords(left, top, bw, bh, when)) {
+      var alts = [];
+      if (box) { alts.push(box.bottom + MARGIN); alts.push(box.top - MARGIN - bh); }
+      alts.push(oy - gapW() - bh);
+      var placed = false;
+      for (var ai = 0; ai < alts.length; ai++) {
+        var cand = alts[ai];
+        if (cand < MARGIN || cand + bh > vh - MARGIN) continue;
+        if (Math.abs(cand - top) < 1) continue;
+        if (onPanel(left, cand) || onWords(left, cand, bw, bh, when)) continue;
+        top = cand; placed = true;
+        occ.hit = false; occ.n = 0;
+        break;
+      }
+      if (!placed) blocked = true;
+    }
+
+    /* Nothing clear of the copy, and the page is one column: put it back where
+       the offsets asked, clamped on screen, provided it is off the demo's own
+       content. Saying it over a paragraph beats not saying it. */
+    if (blocked && !mute && narrow()) {
+      var fl = Math.max(MARGIN, Math.min(ox + tx, vw - MARGIN - bw));
+      var ft = Math.max(MARGIN, Math.min(oy + ty, vh - MARGIN - bh));
+      if (!onGuarded(fl, ft, bw, bh)) {
+        left = fl; top = ft; blocked = false;
+        occ.hit = false; occ.n = 0;
+      }
+    }
+
+    say.classList.toggle("is-blocked", blocked);
+    if (blocked) return;
+
+    var d = speech.style;
+    d.setProperty("--levi-tx", Math.round(left - ox) + "px");
+    d.setProperty("--levi-ty", Math.round(top - oy) + "px");
+  }
+
   function laneOffsets() {
     var de = document.documentElement;
     var R = starR(), lane = Math.max(PAD + R, Math.round(de.clientWidth * 0.094));
-    var d = speech.style;
-    d.setProperty("--levi-tx", Math.round(PAD - lane) + "px");
-    d.setProperty("--levi-ty", Math.round(R * 0.86 + gapW()) + "px");
+    placeBox(PAD - lane, Math.round(R * 0.86 + gapW()));
   }
 
   function retarget() {
     if (!zoneName) {
-      var h = keepOffPanel(holdPoint().x, holdPoint().y);
+      var hold = holdPoint();
+      var h = keepOffPanel(hold.x, hold.y);
       goal.x = h.x; goal.y = h.y; laneOffsets(); return;
     }
     /* Re-resolved every frame so the hand-off between two bands of the SAME
@@ -430,16 +825,20 @@
     var el = zoneEl(zoneName);
     var r = el && visibleSlice(el);
     if (!r) {
-      var hp = keepOffPanel(holdPoint().x, holdPoint().y);
+      var hp0 = holdPoint();
+      var hp = keepOffPanel(hp0.x, hp0.y);
       goal.x = hp.x; goal.y = hp.y; laneOffsets(); return;
     }
     zone = el;
-    var R = starR(), gap = gapW(), lw = lineW();
-    var sh = speech.getBoundingClientRect().height || 26;
+    var R = starR(), gap = gapW();
+    /* ONE rect read per frame, for both numbers. The width used to come from a
+       constant that disagreed with the stylesheet by 24px. */
+    var sr = speech.getBoundingClientRect();
+    var lw = sr.width > 4 ? sr.width : lineW();
+    var sh = sr.height || 26;
 
     stacked = (PAD + 2 * R + gap + lw + PAD) > r.width;
 
-    var d = speech.style;          /* scoped: .levi__speech owns --levi-tx/ty */
     /* THE LINE DECIDES THE HEIGHT, NOT THE LIGHT.
 
        Measured at 1425x820, the line overlapped page copy at five of nine
@@ -503,13 +902,8 @@
        into its own layout every frame; the star was measured at -22322,-109726
        three sections in. Everything below is an offset FROM the light, so
        nothing it does can move itself. */
-    if (!stacked) {
-      d.setProperty("--levi-tx", (R + gap) + "px");
-      d.setProperty("--levi-ty", (-sh / 2) + "px");
-    } else {
-      d.setProperty("--levi-tx", (-lw / 2) + "px");
-      d.setProperty("--levi-ty", (R * 0.86 + gap) + "px");
-    }
+    if (!stacked) placeBox(R + gap, -sh / 2, sr);
+    else          placeBox(-lw / 2, R * 0.86 + gap, sr);
   }
 
   /* ---- the loop ------------------------------------------------------------ */
@@ -733,10 +1127,15 @@
     raf = requestAnimationFrame(step);
   }
 
+  /* TWICE, AND THE SECOND ONE IS THE POINT. The box is resolved against where
+     the light IS, so resolving it before the teleport places it for a position
+     the light is about to leave - which under prefers-reduced-motion, where
+     settleNow() is the only placement that ever runs, is every placement. */
   function settleNow() {
-    retarget();
+    retarget();                       /* pick the goal */
     var g = lure || goal;
     p.x = g.x; p.y = g.y; v.x = 0; v.y = 0;
+    retarget();                       /* now place the words at the rest point */
     write(p.x, p.y);
   }
 
@@ -753,27 +1152,16 @@
      The gutter is the one column empty in every section: the wrap starts at
      about 13.4% of the viewport, so 9.4% is clear of it, and it is where the
      zones already put Levi in six sections out of eight. */
-  /* THE HERO'S LOWER BAND IS THE LEFT GUTTER, AND THE GUTTER IS MEASURED.
+  /* RETIRED: sizeHeroBand().
 
-     It was `left: 0; right: 66%`, tuned at 1440 where the demo panel happened
-     to start at 484 and the band ended at 484 - exactly zero overlap, and
-     exactly one viewport. At 1905 the same rule put the band 180px INSIDE the
-     interactive demo, so Levi sat on top of the approval queue: the one thing
-     on this page a visitor is meant to touch.
-
-     No percentage can track it, because .wrap is max-width 1180 but the hero
-     stage measures 1038. So the band is sized from the stage's own left edge,
-     once at startup and again on resize - never per frame. 12px of clearance
-     so the light never grazes the panel edge. */
-  function sizeHeroBand() {
-    var b = document.querySelector(".levi-zone--hero-b");
-    if (!b) return;
-    var stage = document.querySelector(".hero__stage") ||
-                document.querySelector(".hero .wrap");
-    if (!stage) return;
-    var left = stage.getBoundingClientRect().left;
-    b.style.width = Math.max(0, Math.round(left - 12)) + "px";
-  }
+     It wrote an inline width onto the hero's lower band from the demo stage's
+     real left edge, because no percentage could track a gutter whose width is
+     the difference between a 1180px .wrap and a 1038px stage. It was careful,
+     it was re-measured on settle as well as on resize, and it was solving the
+     wrong problem: the widest that gutter ever got was 158px against the
+     214px the light reserves, so the band it sized was rejected by fitsWidth()
+     every single time. The queue's band is the stage itself now and needs no
+     measuring - see .levi-zone--queue. */
 
   /* ==========================================================================
      THE DEMO IS THE PRODUCT. NOTHING CROSSES IT.
@@ -822,6 +1210,39 @@
     return { x: outs[0].x, y: outs[0].y };
   }
 
+  /* ==========================================================================
+     LEANING. The demo commentary has to point at what it is talking about, and
+     the one rule that cannot bend is that the light never covers a card, the
+     draft, or the three controls. So it does not fly TO the thing - it flies
+     to the nearest legal point beside it, level with it, on whichever side of
+     the panel has room. That reads as leaning toward it, and it is the same
+     `lure` mechanism the approve gesture already uses. */
+  function leanTo(el) {
+    if (!el || dismissed) return false;
+    var r = el.getBoundingClientRect();
+    if (r.width < 2 || r.bottom < 0 || r.top > document.documentElement.clientHeight) return false;
+    var de = document.documentElement;
+    var vw = de.clientWidth, vh = de.clientHeight;
+    var R = starR() + 12;
+    var y = Math.max(R, Math.min(vh - R, r.top + r.height / 2));
+    var box = panelBox();
+    var x;
+    if (box) {
+      var leftRoom = box.left - R, rightRoom = box.right + R;
+      var canLeft = leftRoom > R, canRight = rightRoom < vw - R;
+      /* Nearest side that exists. Left first when both do: the copy column on
+         this page is left, the panel is centred, and the left gutter is the
+         lane Levi already lives in. */
+      x = canLeft ? leftRoom : (canRight ? rightRoom : Math.round(vw * 0.06));
+    } else {
+      x = Math.max(R, Math.min(vw - R, r.left - R));
+    }
+    lure = { x: x, y: y };
+    run();
+    return true;
+  }
+  function releaseLean() { lure = null; run(); }
+
   function holdPoint() {
     var de = document.documentElement;
     var R = starR();
@@ -850,10 +1271,22 @@
     if (!z) { goQuiet(); return; }
     if (z.name === zoneName) return;          /* already here */
     zone = z.el; zoneName = z.name;
-    root.classList.remove("is-quiet");
-    sayLine(z.say);
+    /* A LEAN IS PER-SECTION. Whoever set it - the approve gesture or the demo
+       commentary - it points at something in the section being left, so it
+       cannot outlive the arrival in the next one. Belt and braces against the
+       timer in levi-demo.js: if anything ever forgets to release a lure, the
+       light still starts following the page again at the next section. */
+    lure = null;
+    /* ASKED AT ARRIVAL, NOT READ FROM THE SCRIPT. That is the whole reason
+       walking back up the page is a different sentence in the same section:
+       the script carries names now, and the words are fetched at the moment
+       the visitor gets there. */
+    var said = speak(voice("line", z.name), { glow: 3.2 });
+    if (said) return;
+    /* Spent. Show the box where it is and move, without a new line. */
     savedLine = null; idleSpoken = false;
     say.classList.remove("is-quiet");
+    root.classList.remove("is-quiet");
     setState("speaking");
     /* ARRIVAL IS VISIBLE. Peripheral vision catches a change in brightness,
        not a dot that quietly exists. */
@@ -867,18 +1300,6 @@
     if (dismissed) return;
     if (settleT) window.clearTimeout(settleT);
     settleT = window.setTimeout(function () {
-      /* RE-MEASURE THE GUTTER HERE, NOT ONLY ON RESIZE.
-
-         sizeHeroBand() writes an inline width onto the hero's lower band. It
-         ran once at startup, when the stage happened to be a different width,
-         and the stale 158px it left behind was below the 214px the light
-         needs - so the hero was the one section out of eight that stayed
-         unreachable after the other seven were fixed. Fonts landing, the cold
-         start finishing and ScrollTrigger building its pin all move that edge
-         after startup and none of them fire a resize.
-
-         One getBoundingClientRect, on settle, not per frame. */
-      sizeHeroBand();
       arrive(dominantZone());
     }, SETTLE_MS);
   }
@@ -905,6 +1326,13 @@
       setState("approved");
       glow = 3.4;
       try { btn.click(); } catch (e) {}
+      /* THE GESTURE GETS THE STATE LINES; the card's own buttons get the demo
+         ones. Both approve, but they are different acts: this one is the
+         visitor reaching for Levi, and the demo commentary would be the wrong
+         register for it. approvedLast only when nothing is left behind it. */
+      var left = document.querySelectorAll("[data-stack] [data-item]").length;
+      speak(voice("state", left <= 1 ? "approvedLast" : "approved"),
+            { state: "approved", glow: 3.4 });
     }, 430);
     window.setTimeout(function () {
       lure = null; run();
@@ -914,19 +1342,34 @@
 
   function noteActivity() {
     lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
+    idleTier = 0;
     if (idleSpoken && savedLine !== null) {
       sayLine(savedLine);
       savedLine = null; idleSpoken = false;
     }
   }
 
+  /* THREE TIERS, NOT ONE RANDOM PICK. The set separates idleShort, idleLong
+     and idleVeryLong because standing still for twenty seconds and standing
+     still for a minute and a half are different facts about the visitor. Each
+     tier fires once on the way up and the ladder resets the moment they move,
+     so nobody gets the whole ladder read to them for pausing to read. */
+  var IDLE_KEYS = ["idleShort", "idleLong", "idleVeryLong"];
   function checkIdle(now) {
-    if (idleSpoken || dismissed || REDUCED || !zone) return;
-    if (now - lastActivity < IDLE_MS) return;
-    idleSpoken = true;
-    savedLine = sayEl.textContent;
-    sayLine(IDLE_LINES[Math.floor(Math.random() * IDLE_LINES.length)]);
-    glow = 2.4;
+    if (dismissed || REDUCED || !zone) return;
+    var waited = now - lastActivity;
+    var want = waited >= IDLE_MS * 4 ? 3 : waited >= IDLE_MS * 2 ? 2 :
+               waited >= IDLE_MS ? 1 : 0;
+    if (!want || want <= idleTier) return;
+    if (!idleSpoken) savedLine = sayEl.textContent;
+    var line = voice("state", IDLE_KEYS[want - 1]);
+    idleTier = want;
+    if (!line) return;
+    /* speak() clears these, and idle is the one caller that must not - the
+       saved line is how noteActivity puts the section's sentence back. */
+    var keep = savedLine;
+    speak(line, { glow: 2.4 });
+    savedLine = keep; idleSpoken = true; idleTier = want;
   }
 
   star.addEventListener("click", function (e) { e.preventDefault(); gesture(); });
@@ -958,6 +1401,18 @@
     if (REDUCED) { settleNow(); return; }
     var y = window.pageYOffset || 0, d = y - lastScrollY;
     lastScrollY = y;
+
+    /* PAST A FEW. Said DURING the flick, not after it: by the time the scroll
+       settles the visitor has arrived somewhere and that section's own line is
+       the right thing to be reading. This one belongs to the travelling. */
+    burst += Math.abs(d);
+    if (!burstSaid && burst > document.documentElement.clientHeight * 2.5) {
+      burstSaid = true;
+      speak(voice("state", "scrolledFast"));
+    }
+    if (burstT) window.clearTimeout(burstT);
+    burstT = window.setTimeout(function () { burst = 0; burstSaid = false; }, 400);
+
     v.y += Math.max(-820, Math.min(820, -d * 7));
     v.x += Math.max(-260, Math.min(260, -d * 1.1));
     run();
@@ -975,17 +1430,32 @@
     dismissed = true; done = true;
     if (remember) { try { window.sessionStorage.setItem(KEY, "1"); } catch (e) {} }
     if (raf) { cancelAnimationFrame(raf); raf = null; }
-    [root, say, note].forEach(function (n) {
+    /* THE FOOTNOTE STAYS. It is a note in the footer about what Levi is, in
+       the page's own voice and in the normal flow - not a thing he carries
+       around with him. Dismissing him does not retract the disclosure. */
+    [root, say].forEach(function (n) {
       if (n.parentNode) n.parentNode.removeChild(n);
     });
   }
 
   function dismiss() {
     if (dismissed) return;
-    root.classList.add("is-gone");
-    say.classList.add("is-gone");
-    note.style.opacity = "0";
-    window.setTimeout(function () { leave(true); }, REDUCED ? 0 : 280);
+    /* One line on the way out, and it has to be said BEFORE dismissed is set,
+       because speak() refuses once it is. The fade is long enough to read it
+       and the node is not removed until leave(). */
+    var bye = voice("state", "dismissed");
+    var hold = 0;
+    if (bye) {
+      sayLine(bye);
+      say.classList.remove("is-quiet");
+      say.classList.remove("is-blocked");
+      hold = REDUCED ? 900 : 1700;      /* long enough to read it */
+    }
+    window.setTimeout(function () {
+      root.classList.add("is-gone");
+      say.classList.add("is-gone");
+      window.setTimeout(function () { leave(true); }, REDUCED ? 0 : 280);
+    }, hold);
     try { window.sessionStorage.setItem(KEY, "1"); } catch (e) {}
   }
 
@@ -997,7 +1467,6 @@
        the window again never brought it back. Go quiet instead, and return when
        a zone is usable again. */
     forgetShown(); forgetEls();   /* a media query may have flipped */
-    sizeHeroBand();
     if (!anyZoneUsable()) { goQuiet(); return; }
     observeZones();
     readPosition();
@@ -1124,6 +1593,14 @@
       return r.width > 4 && r.bottom > 40 && r.top < vh - 40;
     }
 
+    function appVisible() {
+      var el = document.querySelector(".app");
+      if (!el) return false;
+      var r = el.getBoundingClientRect();
+      var vh = document.documentElement.clientHeight;
+      return r.width > 4 && r.bottom > 40 && r.top < vh - 40;
+    }
+
     function speakActive() {
       if (dismissed || !queueVisible()) return;
       var card = stack.querySelector("[data-item].is-active");
@@ -1145,21 +1622,53 @@
        the queue does underneath it. */
     document.addEventListener("click", function (e) {
       var t = e.target;
-      var b = t && t.closest ? t.closest("[data-approve],[data-skip]") : null;
+      var b = t && t.closest ? t.closest("[data-approve],[data-skip],[data-edit]") : null;
       if (!b || !stack.contains(b) || dismissed || !queueVisible()) return;
-      var approved = b.hasAttribute("data-approve");
+      var key = b.hasAttribute("data-approve") ? "afterApprove"
+              : b.hasAttribute("data-edit")    ? "afterEdit"
+              : "afterSkip";
       lastSaid = null;
-      savedLine = null; idleSpoken = false;
-      say.classList.remove("is-quiet");     /* it may have been holding quietly */
-      root.classList.remove("is-quiet");
-      setState(approved ? "approved" : "speaking");
-      sayLine(approved
-        ? "Sent. That one is done with."
-        : "Skipped. It stays in the list.");
-      noteActivity();
-      /* Let the reaction be read before the next card introduces itself. */
+      speak(voice("demo", key),
+            { state: key === "afterApprove" ? "approved" : "speaking" });
       cancelPending();
-      pending = window.setTimeout(speakActive, 1500);
+      /* TWO QUESTIONS, TWO DELAYS, and conflating them lost one of them.
+
+         Whether the queue just emptied has to be asked almost at once: site.js
+         restarts the whole demo 1,800ms after the last card goes, so asking on
+         the same 1,500ms beat as everything else raced the refill and lost -
+         measured, the stack was empty and then back to 61 items, and
+         demo.empty never fired once in a full run to zero. 250ms is enough for
+         site.js to take the node out of the tree and nowhere near the restart.
+
+         Whether the NEXT card should introduce itself is the opposite: it must
+         wait for the reaction to have been read.
+
+         Both go through `pending` so cancelPending() can actually cancel them.
+         The first version scheduled a bare window.setTimeout, so clearing
+         `pending` cancelled nothing and sixty-two approvals in a row left
+         sixty-two live timers arguing about what to say. */
+      pending = window.setTimeout(function () {
+        pending = null;
+        if (dismissed) return;
+        if (!stack.querySelector("[data-item]")) {
+          /* THE APP, NOT THE QUEUE. queueVisible() measures [data-queue], and
+             an empty queue is exactly when that element stops being
+             measurable - the view swaps and it collapses to a zero rect.
+             Measured: qv went to 0 on the same frame the last card left, so
+             the guard blocked the one line written for that moment, every
+             time. What has to be on screen for "that is all of them" to make
+             sense is the product surface, which is still there. */
+          if (!appVisible()) return;
+          lastSaid = null;
+          speak(voice("demo", "empty"), { glow: 2.6 });
+          return;
+        }
+        if (!queueVisible()) return;
+        pending = window.setTimeout(function () {
+          pending = null;
+          if (!dismissed && queueVisible()) speakActive();
+        }, 1250);
+      }, 250);
     }, true);
 
     if (window.MutationObserver) {
@@ -1193,18 +1702,40 @@
   }
   watchQueue();
 
-  sizeHeroBand();
   setState("idle");
   lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
   observeZones();
-  arrive(dominantZone());   /* geometric, so this is correct straight away */
+
+  /* HELLO FIRST, THEN THE SECTION. Landing straight on the hero's line means
+     Levi never introduces himself; speaking over the hello a beat later means
+     nobody reads it. So he says one line about arriving, holds it long enough
+     to be read, and only then reads the section the visitor is actually in.
+     Second page of the same session gets states.returning instead, which is
+     the shorter one, because the introduction has already happened. */
+  var hello = voice("state", (V && V.returning) ? "returning" : "arrival");
+  if (hello) {
+    greeting = true;
+    speak(hello, { glow: 3.2 });
+    window.setTimeout(function () {
+      greeting = false;
+      if (!dismissed) { zoneName = null; arrive(dominantZone()); }
+    }, REDUCED ? 700 : 2400);
+  } else {
+    arrive(dominantZone());   /* geometric, so this is correct straight away */
+  }
   /* THE OBSERVER'S FIRST CALLBACK LANDS AFTER THIS LINE, so at init every ratio
      is still 0, no zone wins and Levi starts quiet - measured, it stayed silent
      at y0 until the visitor scrolled, which is the worst possible first
      impression. Read again once the observer has actually reported. */
-  window.setTimeout(function () { if (!zoneName) arrive(dominantZone()); }, 260);
-  window.setTimeout(function () { if (!zoneName) arrive(dominantZone()); }, 900);
-  if (zone) { retarget(); p.x = goal.x; p.y = goal.y; write(p.x, p.y); }
+  /* THESE MUST NOT TALK OVER THE GREETING. Both fire while the hello is still
+     being read, both see zoneName null because the greeting deliberately does
+     not set one, and the 260ms one was measured replacing "I am Levi" with the
+     section line before anyone could have read it - and spending the section's
+     first line, the one the set says to keep strongest, on a box that was on
+     screen for a quarter of a second. */
+  window.setTimeout(function () { if (!zoneName && !greeting) arrive(dominantZone()); }, 260);
+  window.setTimeout(function () { if (!zoneName && !greeting) arrive(dominantZone()); }, 900);
+  if (zone) { retarget(); p.x = goal.x; p.y = goal.y; retarget(); write(p.x, p.y); }
 
   if (BOOTING) {
     root.classList.add("is-boot");
@@ -1224,6 +1755,14 @@
 
   window.cognivexLevi = {
     root: root, say: say, star: star, speech: speech, note: note,
+
+    /* FOR levi-demo.js, which owns the running commentary but owns no UI.
+       It decides WHAT to say and WHAT to point at; everything about how the
+       light moves and where the words are allowed to land stays in here. */
+    speak: function (text, how) { return speak(text, how); },
+    voice: function (kind, key) { return voice(kind, key); },
+    leanTo: leanTo,
+    releaseLean: releaseLean,
     /* Always present, even before the gate opens, so a check can tell the
        difference between "not started yet" and "not here at all". */
     started: function () { return started; },

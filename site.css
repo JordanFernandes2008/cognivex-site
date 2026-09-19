@@ -156,8 +156,14 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
   border: 1px solid transparent; border-radius: 7px;
   font: inherit; font-weight: var(--w-do); font-size: .84rem;
   text-decoration: none; cursor: pointer;
+  /* --t-fast, NOT --t-micro. --t-micro is .68rem, a font size. A transition
+     component with a length where a duration belongs is invalid, and one
+     invalid component invalidates the WHOLE comma-separated declaration - so
+     every .btn on the site had no transition at all, including the two
+     components that were correct. Leftover from the rename; see the token
+     block. */
   transition: background var(--t-fast) var(--ease-soft), border-color var(--t-fast) var(--ease-soft),
-              color var(--t-micro) var(--ease-soft), transform var(--t-micro) var(--spring);
+              color var(--t-fast) var(--ease-soft), transform var(--t-fast) var(--spring);
 }
 .btn--accent { background: var(--accent-fill); color: var(--on-accent); }
 .btn--accent:hover { background: var(--accent-deep); }
@@ -397,8 +403,20 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
   font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase;
   color: var(--accent-text); opacity: .85;
 }
+/* THE HIT AREA IS THE FLOOR, NOT THE TYPE SIZE. This is micro type with .2rem
+   of padding, which measured 30.3px tall on a phone - the only control on the
+   site under the floor the rest of the demo chrome keeps. The box grows; the
+   label does not.
+
+   44, AND 44 IS NOT ARBITRARY: `.wrap` carries `scale(.88)` on a phone, so
+   every control inside the demo renders at 88% of what it declares. The
+   approve buttons declare 44 and measure 38.7 on screen. 36 here measured
+   31.7 - still under the floor, which is how the first attempt at this was
+   caught. Declare what the rest of the panel declares and it lands where the
+   rest of the panel lands. */
 .queue__back {
   margin-left: auto; background: none; border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; min-height: 44px;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: var(--t-micro); letter-spacing: .06em; color: var(--dim); padding: .2rem .3rem;
 }
@@ -1994,7 +2012,7 @@ html:has(.void-page) { background: #05070a; }
   color: var(--dim); cursor: pointer;
   white-space: nowrap;
   transition: background-color var(--t-fast) var(--ease-out),
-              color var(--t-micro) var(--ease-out);
+              color var(--t-fast) var(--ease-out);
 }
 .walk__tab:last-child { border-right: 0; }
 .walk__tabn { color: var(--edge); font-variant-numeric: tabular-nums; }
@@ -2077,7 +2095,7 @@ html:has(.void-page) { background: #05070a; }
   font: inherit; font-size: var(--t-small); font-weight: var(--w-do);
   cursor: pointer;
   transition: border-color var(--t-fast) var(--ease-out),
-              background-color var(--t-micro) var(--ease-out);
+              background-color var(--t-fast) var(--ease-out);
 }
 @media (hover: hover) { .walk__nav:hover { border-color: var(--edge); } }
 .walk__nav--go {
@@ -2719,6 +2737,14 @@ body:not(.void-page) .levi__flare { display: none; }
 
 .levi__speech { transition: opacity 300ms var(--ease-out); }
 .levi-say.is-quiet .levi__speech { opacity: 0; }
+/* NOTHING TO SAY vs NOWHERE TO SAY IT. Two different facts, and they were one
+   class, so they fought: watchQueue() clears is-quiet to react to an approval,
+   which is correct, and placement had no way to answer "not here". In the
+   holding lane the box is stacked under the light at the page margin, and the
+   lane runs straight down the demo panel - measured, 10 overlaps at 1536x830,
+   every one of them with no zone and the panel on screen. is-blocked is owned
+   by placeBox() and says only that the words have nowhere legal to land. */
+.levi-say.is-blocked .levi__speech { opacity: 0; }
 /* No zone owns this part of the page, so there is nothing here to be. */
 /* is-quiet is now a state of the LINE only - see goQuiet() in levi.js, and
    the rule for it is a few lines above. The object itself is never faded for
@@ -2929,23 +2955,88 @@ section { position: relative; }
   top: 3%; bottom: auto;
   height: 270px;
 }
-/* THE HERO'S SECOND BAND. The first covers only the top 485px of a 1,677px
-   section, so from scrollY 485 to about 1,400 the hero still dominated and had
-   nowhere to put the light. The lower half of the hero has a free column to
-   the left of the queue - measured 0..484 at 1440 wide, against a queue that
-   starts at 484 - and that is this band. Stacked arrangement: star above, line
-   underneath, because the column is too narrow to sit them side by side. */
-/* Width is set by levi.js from the hero stage's real left edge - see
-   sizeHeroBand(). The 33% here is only a floor for the instant before that
-   runs, and for JS-off, where the zone is never used anyway. */
-.levi-zone--hero-b {
-  left: 0; right: auto;
-  width: 33%;
-  top: 49%; bottom: 4%;
+/* THE QUEUE'S BAND IS THE STAGE. Retired: .levi-zone--hero-b, a 33%-wide
+   column to the left of the demo whose measured width was 158px at 1536
+   against the 214 the light reserves, so fitsWidth() rejected it every time it
+   was asked and the band was never usable at any scroll position. That is the
+   whole of "the hero goes silent below 30%" - not a tuning problem, a column
+   that was never wide enough.
+
+   The stage is the demo's own box: 1,180px wide, as tall as the panel, and on
+   screen exactly when the demo is. Levi is kept off the panel itself by
+   keepOffPanel(), and the words are pushed clear below it by placeBox(). */
+.hero__stage { position: relative; }
+.levi-zone--queue {
+  inset: 0;
+  left: 0; right: 0; top: 0; bottom: 0;
   height: auto;
 }
+/* Desktop only - on a phone the hero's band is .levi-zone--hero-m below. */
+.levi-zone--hero-m { display: none; }
+
+/* --- BELOW 1240: THE HERO IS ONE COLUMN ------------------------------------
+   The right-half band beside the headline stops existing, and withdrawing it
+   used to mean the two most important sections of the site - the hero and the
+   demo - had no Levi at all for every phone and tablet visitor.
+
+   Both get full-width bands instead. The hero's is the gap between the end of
+   its copy and the top of the demo, anchored to the stage so it tracks however
+   the headline wraps. The demo keeps the stage itself.
+
+   The line stacks under the light rather than sitting beside it without any
+   rule being added for it: retarget() already stacks when
+   PAD + 2R + gap + line + PAD exceeds the band, which on a phone is
+   40 + 156 + 26 + 256 + 40 = 518 against a 390px screen. */
 @media (max-width: 1240px) {
-  .levi-zone--hero, .levi-zone--hero-b { display: none; }
+  .levi-zone--hero { display: none; }
+  .levi-zone--hero-m {
+    display: block;
+    left: 0; right: 0;
+    top: auto;
+    bottom: 100%;          /* the free gap directly above the demo */
+    /* 250, NOT 200, BECAUSE THE STAGE IS SCALED. .wrap carries scale(.88) on a
+       phone, and this band is inside it - so 200px of CSS measured 176px on
+       screen, under the 180 the light reserves, and visibleSlice() rejected
+       the band at every scroll position. Placement reads the RENDERED rect,
+       so the declared height has to be the rendered one divided by the scale.
+
+       340 x .88 = 299 rendered. 250 was the first attempt and it was too
+       short in the other direction: the band ran 722..942 against an 844px
+       screen, so at the very top of the page only 122px of it was showing
+       against the 180 floor and the hero - the first thing anyone sees - had
+       no usable band until they had already scrolled a hundred pixels.
+
+       340 fixed the phone and left the tablet: at 768x1024 the light reserves
+       214 rather than 180, the band ran 853..1152 against a 1024 screen, and
+       171 visible pixels was still short - the hero was silent for the first
+       120px of scroll. 420 x .88 = 370 rendered, which puts 272 on screen at
+       390x844 and 242 at 768x1024, clear of both floors from the first paint.
+
+       The band now overlaps the tail of the hero copy, which costs nothing:
+       the light is allowed to cross copy, and the words are held off it by
+       placeBox(). */
+    height: 420px;
+  }
+}
+
+/* --- THE OTHER SIX PAGES ---------------------------------------------------
+   These are compact prose, not the homepage's 600-1600px scenes, so where the
+   band's foot lands decides whether Levi can speak at all: the box is anchored
+   to it, and a box that lands on copy is suppressed rather than drawn.
+
+   Measured at 1536x830 on trust.html, which is the densest of them - every
+   .prose section leaves 123-152px between its last line of type and its own
+   bottom edge, and the box is 90. The default band, whose foot is the section
+   foot, lands the box inside that tail with room to spare. Nothing to do.
+
+   The page hero is the exception. Its tail is 67px, so the box overhangs into
+   the lede - measured, .phero was the one section of seven that was silent on
+   arrival, with the box suppressed at 360..450 against type ending at 393.
+   Its band reaches into the gap below the section instead, where the next
+   section's own 110px of headroom is empty by construction. */
+.phero .levi-zone {
+  height: 220px;
+  bottom: -72px;
 }
 /* Measured at 1536x830: the hero has 70px above the copy, 70px below it and
    170px to the right of the copy BOX - none of which holds a 396px zone. The

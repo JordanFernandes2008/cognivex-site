@@ -25,10 +25,17 @@ def digest(name):
         return hashlib.sha256(fh.read()).hexdigest()[:8]
 
 
-ASSETS = ['site.css', 'site.js', 'motion.js', 'cursor.js', 'walk.js', 'film.js', 'levi.js', 'levi-home.js',
-          # levi3d.js is a module and is stamped like the rest; vendor/ is
-          # not, matching how gsap and lenis are already loaded.
-          'levi3d.js',
+ASSETS = ['site.css', 'site.js', 'motion.js', 'cursor.js', 'walk.js', 'film.js', 'levi.js',
+          # levi-home.js is gone. It carried one hard-coded line per homepage
+          # section and nothing else; levi-lines.js replaces it with the whole
+          # site's script, levi-voice.js chooses from it and remembers what has
+          # already been said, and levi-demo.js narrates the demo. All three
+          # load on every page except levi-demo.js, which is home only.
+          'levi-lines.js', 'levi-voice.js', 'levi-demo.js',
+          # levi3d.js is NOT here. It is in the repo and no page loads it, so
+          # stamping it only hashed a file nothing requests - and made the
+          # script fail loudly if it were ever deleted. Put it back on this
+          # list on the same commit that puts its <script> tag back.
           'queue-butler.js',
           'queue-data.js',
           'digest.js',

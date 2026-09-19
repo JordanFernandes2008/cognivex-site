@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-levi-page="capabilities">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=6aed934b">
+<link rel="stylesheet" href="site.css?v=fe242ada">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -68,6 +68,10 @@
 <main id="main">
 
   <section class="phero">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space: absolutely
+       positioned, zero layout height, and the section around it is its
+       positioning context. Levi may only exist inside one of these. -->
+  <div class="levi-zone" data-levi-zone="hero" aria-hidden="true"></div>
     <div class="wrap">
       <p class="pill" data-rise><span class="pill__dot" aria-hidden="true"></span>Capabilities</p>
       <h1 class="phero__title" data-words data-rise data-rise-delay="50">Four things, <em>done properly.</em></h1>
@@ -76,6 +80,10 @@
   </section>
 
   <section class="prose" id="inbox">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space: absolutely
+       positioned, zero layout height, and the section around it is its
+       positioning context. Levi may only exist inside one of these. -->
+  <div class="levi-zone" data-levi-zone="inbox" aria-hidden="true"></div>
     <div class="wrap prose__grid">
       <div class="prose__side" data-rise><p class="mono">One</p></div>
       <div class="prose__body" data-rise data-rise-delay="60">
@@ -93,6 +101,10 @@
   </section>
 
   <section class="prose prose--alt" id="invoices">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space: absolutely
+       positioned, zero layout height, and the section around it is its
+       positioning context. Levi may only exist inside one of these. -->
+  <div class="levi-zone" data-levi-zone="invoices" aria-hidden="true"></div>
     <div class="wrap prose__grid">
       <div class="prose__side" data-rise><p class="mono">Two</p></div>
       <div class="prose__body" data-rise data-rise-delay="60">
@@ -113,6 +125,10 @@
   </section>
 
   <section class="prose" id="posts">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space: absolutely
+       positioned, zero layout height, and the section around it is its
+       positioning context. Levi may only exist inside one of these. -->
+  <div class="levi-zone" data-levi-zone="posts" aria-hidden="true"></div>
     <div class="wrap prose__grid">
       <div class="prose__side" data-rise><p class="mono">Three</p></div>
       <div class="prose__body" data-rise data-rise-delay="60">
@@ -130,6 +146,10 @@
   </section>
 
   <section class="prose prose--alt" id="memory">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space: absolutely
+       positioned, zero layout height, and the section around it is its
+       positioning context. Levi may only exist inside one of these. -->
+  <div class="levi-zone" data-levi-zone="memory" aria-hidden="true"></div>
     <div class="wrap prose__grid">
       <div class="prose__side" data-rise><p class="mono">Four</p></div>
       <div class="prose__body" data-rise data-rise-delay="60">
@@ -146,6 +166,10 @@
   </section>
 
   <section class="prose">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space: absolutely
+       positioned, zero layout height, and the section around it is its
+       positioning context. Levi may only exist inside one of these. -->
+  <div class="levi-zone" data-levi-zone="limits" aria-hidden="true"></div>
     <div class="wrap prose__grid">
       <div class="prose__side" data-rise><p class="mono">Not built</p></div>
       <div class="prose__body" data-rise data-rise-delay="60">
@@ -164,6 +188,10 @@
   </section>
 
   <section class="pclose">
+  <!-- LEVI'S ZONE. Declared space, not negotiated space: absolutely
+       positioned, zero layout height, and the section around it is its
+       positioning context. Levi may only exist inside one of these. -->
+  <div class="levi-zone" data-levi-zone="close" aria-hidden="true"></div>
     <div class="wrap pclose__inner" data-rise>
       <div>
         <h2 class="pclose__h">The obvious next question is whether to trust it.</h2>
@@ -203,6 +231,11 @@
 <script src="vendor/lenis.min.js"></script>
 <script src="site.js?v=d3f3e002"></script>
 <script src="cursor.js?v=f97330b9"></script>
+<!-- Levi, on every page. The set is data, the picker chooses and
+     remembers, levi.js is the light itself. -->
+<script src="levi-lines.js?v=ef91c32a"></script>
+<script src="levi-voice.js?v=226bc9eb"></script>
+<script src="levi.js?v=02866cad"></script>
 <script src="motion.js?v=bc725647"></script>
 </body>
 </html>

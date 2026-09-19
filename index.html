@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-levi-page="home">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=6aed934b">
+<link rel="stylesheet" href="site.css?v=fe242ada">
 <!-- The cold start, in the head deliberately: it has to add its class before
      <body> exists so the black is on the first paint rather than a flash of
      the page and then a cover. It builds its own markup, so with JavaScript
@@ -179,10 +179,33 @@
     <!-- The hero's second band, beside the queue. A direct child of .hero so it
          is measured against the whole 1,677px section, not against .hero__void.
          Without it the hero had nowhere to put the light below scrollY 485. -->
-    <div class="levi-zone levi-zone--hero-b" data-levi-zone="hero" aria-hidden="true"></div>
+
 
     <!-- The product surface. Real chrome, real density, genuinely operable. -->
     <div class="wrap hero__stage" data-scale-in>
+      <!-- THE QUEUE'S OWN ZONE, and it is the stage itself.
+
+           This was the hero's second band: the free column to the LEFT of the
+           demo, 158px wide at 1536. The light reserves 214, so fitsWidth()
+           rejected it at every scroll position and the band was never once
+           usable - which is the whole of "the hero is silent below 30%". A
+           column that narrow was never going to be the answer.
+
+           The stage is 1,180px wide and exactly as tall as the demo, so the
+           band is on screen precisely when the demo is. The light is kept off
+           the panel by keepOffPanel() and the words are pushed below it by
+           placeBox(), both of which already existed. -->
+      <div class="levi-zone levi-zone--queue" data-levi-zone="queue" aria-hidden="true"></div>
+      <!-- THE HERO'S BAND ON A PHONE. A NAME MAY DECLARE SEVERAL BANDS, and
+           this is the hero's second: the desktop one is the empty right half
+           beside the headline, which stops existing the moment the hero is a
+           single column. Measured at 390x844, the hero's own copy ends at 701
+           and the demo starts at 942 - 241px of nothing, which holds the 180
+           the light reserves and the 90 the line needs with room over.
+
+           Anchored to the stage with bottom:100% rather than to a pixel, so
+           it is the gap ABOVE the demo whatever the copy above it wraps to. -->
+      <div class="levi-zone levi-zone--hero-m" data-levi-zone="hero" aria-hidden="true"></div>
       <div class="app">
         <div class="app__bar">
           <span class="app__id"><i aria-hidden="true"></i>Cognivex</span>
@@ -917,8 +940,14 @@
 <script src="cursor.js?v=f97330b9"></script>
 <script src="walk.js?v=e324178f"></script>
 <script src="film.js?v=5366d4e8"></script>
-<script src="levi-home.js?v=192e7ec9"></script>
-<script src="levi.js?v=afb9d3b4"></script>
+<!-- THE LINE SET, THE PICKER, THEN LEVI. levi-lines.js is data and
+     nothing else; levi-voice.js decides which line of it a visitor gets
+     and remembers what they have already been told; levi.js is the light.
+     levi-demo.js is home-only and narrates the demo on top. -->
+<script src="levi-lines.js?v=ef91c32a"></script>
+<script src="levi-voice.js?v=226bc9eb"></script>
+<script src="levi.js?v=02866cad"></script>
+<script src="levi-demo.js?v=3337a1e7"></script>
       <!-- levi3d.js is NOT loaded. It built Levi from a flat-shaded
            icosahedron with four octahedron spikes, lit by two directional
            lights - which is a faceted rock, and reads as one. The whole reason
