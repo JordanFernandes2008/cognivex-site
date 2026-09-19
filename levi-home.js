@@ -1,37 +1,39 @@
 /* ============================================================================
    LEVI — the homepage script.
 
-   THESE LINES EXPLAIN THE SITE, not the section's contents. The previous set
-   read out what was already on screen - "Forty-one came in overnight", "Four
-   kinds of work" - which is the one thing a guide never needs to do, because
-   the visitor can see it. A guide says what the thing IS and what to do next.
+   THESE EXPLAIN THE FUNCTIONS. Not the section's contents, which the visitor
+   can already see, and not a tour of the layout. Each line says what that part
+   of the product actually DOES, in the order someone would need to hear it.
 
-   Every line is checked against the heading it sits under, so none of it is
-   invented:
+   Every number and every noun below is checked against the page it sits under,
+   so none of it is invented:
      hero       "Other AI tools wait for instructions. Cognivex hands you
                  finished work."
      walk       "One night, item by item. Click through what it actually did."
      tuesday    "Everything that came in, and what was ready for you."
+     nightwork  41 arrived / 38 handled / 3 need you
      loop       "Three steps. You are the third one."
-     ledger     "Four things, done properly."
+     ledger     Inbox triage / Invoices and follow-up / Social posts /
+                Memory and priorities
      position   "Approval is not a safety setting. It is the product."
      closing    "Where this actually is."
 
-   The closing line carries the status, in Levi's own voice rather than only in
-   the footnote, because that is the section where the page says it too.
+   The closing line carries the status in Levi's own voice, because that is the
+   section where the page says it too. The footnote in the footer still carries
+   it independently.
 
-   Five to ten words each, flat, spoken. No exclamation marks and no adjectives
-   doing sales work.
+   Nine to thirteen words. The chatbox reserves two lines, so anything in that
+   range fills the box without resizing it.
    ========================================================================== */
 window.LEVI_SCRIPT = [
-  { zone: "hero",      say: "I am Levi. Let me show you how this works." },
-  { zone: "walk",      say: "Click any one of these. See what happened to it." },
-  { zone: "tuesday",   say: "This is a Tuesday morning, already sorted for you." },
-  { zone: "nightwork", say: "The work happens overnight. You read it in the morning." },
-  { zone: "loop",      say: "Three steps here, and the last one is yours." },
-  { zone: "ledger",    say: "Four kinds of work. Each one leaves a record." },
-  { zone: "position",  say: "Approval is not a setting here. It is the point." },
-  { zone: "closing",   say: "This is not running yet. That is the honest part." }
+  { zone: "hero",      say: "I am Levi. I read what comes in and draft what goes out." },
+  { zone: "walk",      say: "Open any item to see the reasoning that came attached to it." },
+  { zone: "tuesday",   say: "One morning, already triaged. You read it, you did not sort it." },
+  { zone: "nightwork", say: "Forty-one arrived. Thirty-eight were handled. Three need a decision." },
+  { zone: "loop",      say: "It prepares, you approve, it sends. Never in any other order." },
+  { zone: "ledger",    say: "Inbox triage, invoices, social posts, and what is due next." },
+  { zone: "position",  say: "Other tools wait for a prompt. This one arrives with the work done." },
+  { zone: "closing",   say: "None of this is running yet. I will not dress that up." }
 ];
 
 /* What it says when you stop. A timer, and the line says only what a timer

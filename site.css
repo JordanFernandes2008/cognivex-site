@@ -655,9 +655,28 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
    viewport - not of the viewport itself. */
 .aurora i {
   position: absolute; display: block; border-radius: 50%;
-  filter: blur(56px);
   will-change: transform;
 }
+
+/* NO BLUR. THIS WAS THE THING BURNING THE MACHINE.
+
+   These four were `filter: blur(56px)` on elements up to 780x780, each with a
+   CSS animation running infinitely - so the GPU ran a 56px separable
+   convolution over 1.55 MEGAPIXELS, every composited frame, forever. Measured
+   across the page: 5.11MP of blurred area, 4.3x the whole viewport.
+
+   And it bought nothing. Every one of these is a radial-gradient that already
+   fades to transparent by 64-68%, sitting at 42% layer opacity on a near-black
+   page. Rendered side by side with the filter forced off, the two screenshots
+   are indistinguishable - a soft gradient does not get meaningfully softer by
+   being blurred.
+
+   The stops below are widened slightly to give back the few pixels of falloff
+   the blur was contributing at the rim. */
+.aurora__a { background: radial-gradient(circle at 50% 50%, rgb(255 138 46 / 52%) 0%, rgb(255 138 46 / 26%) 34%, transparent 72%) !important; }
+.aurora__b { background: radial-gradient(circle at 50% 50%, rgb(255 96 12 / 42%) 0%, rgb(255 96 12 / 21%) 34%, transparent 70%) !important; }
+.aurora__c { background: radial-gradient(circle at 50% 50%, rgb(96 142 255 / 32%) 0%, rgb(96 142 255 / 16%) 34%, transparent 72%) !important; }
+.aurora__d { background: radial-gradient(circle at 50% 50%, rgb(255 178 92 / 46%) 0%, rgb(255 178 92 / 23%) 34%, transparent 74%) !important; }
 .aurora__a {
   width: max(46vw, 420px); height: max(46vw, 420px); left: 0%; top: 6%;
   background: radial-gradient(circle at 50% 50%, rgb(255 138 46 / 62%), transparent 66%);
@@ -2297,8 +2316,12 @@ html:has(.void-page) { background: #05070a; }
 }
 .levi__star:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 10px; }
 
-/* Its footprint on the ground. */
-.levi__shadow {
+/* REPLACED BY THE CHATBOX. Kept as a no-op so any stale markup cannot paint.
+   The cast-light experiment is finished: it read as shading on the artwork
+   rather than as something Levi threw, and the box says more. */
+.levi__shadow { display: none !important; }
+
+.levi__shadow--retired {
   position: absolute;
   left: 50%; top: 50%;
   width: 210px; height: 68px;
@@ -2431,27 +2454,73 @@ body:not(.void-page) .levi__ring {
    how the line ended up wrapping one word per row against the screen edge.
    It is body size, not micro, and it does not compress: if it will not fit
    beside the star, levi.js moves the star. */
+/* A CHATBOX, NOT A VEIL.
+
+   This was bare text sitting on a radial darkening, on the principle that a
+   companion should have no container. In practice the words floated with no
+   edge, and on a page that is already mostly dark gradient there was nothing
+   to tell the eye where Levi stopped and the page began.
+
+   A box is also honest about what this is: a thing talking to you. The surface
+   is the page's own dark, not a white or orange floating panel, and the only
+   ornament is a hairline and one caret pointing back at the light. */
 .levi__speech {
   position: absolute;
   left: 0; top: 0;
-  width: 19rem;                 /* ~304px, about 34 characters */
-  min-width: 19rem;
+  width: 20.5rem;
+  min-width: 20.5rem;
   transform: translate(var(--levi-tx, 0px), var(--levi-ty, 0px));
   pointer-events: none;
+  padding: .72rem .9rem .78rem;
+  border-radius: 13px;
+  background: rgb(11 13 17 / 93%);
+  border: 1px solid rgb(255 255 255 / 11%);
+  box-shadow: 0 12px 34px rgb(0 0 0 / 52%), inset 0 1px 0 rgb(255 255 255 / 5%);
 }
-.levi__speech::before {
+/* The caret. Points left, back toward the light that is speaking. */
+.levi__speech::after {
   content: "";
   position: absolute;
-  left: -9%; top: -34%;
-  width: 118%; height: 168%;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(ellipse 50% 50% at 50% 50%,
-    rgb(3 5 8 / 80%) 0%, rgb(3 5 8 / 60%) 40%,
-    rgb(3 5 8 / 24%) 64%, rgb(3 5 8 / 6%) 80%, transparent 92%);
+  left: -6px; top: 18px;
+  width: 10px; height: 10px;
+  transform: rotate(45deg);
+  background: rgb(11 13 17 / 93%);
+  border-left: 1px solid rgb(255 255 255 / 11%);
+  border-bottom: 1px solid rgb(255 255 255 / 11%);
+  border-radius: 2px;
+}
+/* Who is speaking, once, small. */
+.levi__who {
+  display: block;
+  margin: 0 0 .28rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: var(--t-micro);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  opacity: .92;
+}
+/* The cursor that blinks while a line is being typed out. */
+.levi__caret {
+  display: inline-block;
+  width: .52em; height: 1.02em;
+  margin-left: .08em;
+  vertical-align: -.16em;
+  background: var(--accent-fill);
+  opacity: .9;
+  animation: levi-blink 1.05s steps(1, end) infinite;
+}
+.levi__speech.is-done .levi__caret { display: none; }
+@keyframes levi-blink { 0%, 55% { opacity: .9 } 56%, 100% { opacity: 0 } }
+@media (prefers-reduced-motion: reduce) {
+  .levi__caret { animation: none; display: none; }
 }
 .levi__line {
   margin: 0;
+  /* Two lines reserved. Without this the box grows as the text is typed, which
+     changes speech.getBoundingClientRect().height, which moves goal.y, which
+     makes Levi bob while it is talking. */
+  min-height: 2.7em;
   font-size: var(--t-body, 1rem);
   line-height: 1.35;
   color: var(--ink);

@@ -164,18 +164,17 @@
     '<i class="levi__ring"   aria-hidden="true"></i>' +
     '<i class="levi__core"   aria-hidden="true"></i>';
 
-  var shadow = document.createElement("i");
-  shadow.className = "levi__shadow";
-  shadow.setAttribute("aria-hidden", "true");
+  /* No shadow element any more - the chatbox replaced it. */
 
   var say = document.createElement("div");
   say.className = "levi-say is-quiet";
 
   var speech = document.createElement("div");
   speech.className = "levi__speech";
-  speech.innerHTML = '<p class="levi__line" data-levi-say></p>';
+  speech.innerHTML =
+    '<b class="levi__who">Levi</b>' +
+    '<p class="levi__line"><span data-levi-say></span><i class="levi__caret" aria-hidden="true"></i></p>';
 
-  root.appendChild(shadow);
   root.appendChild(star);
   say.appendChild(speech);
   host.appendChild(root);
@@ -204,6 +203,29 @@
   }
 
   var sayEl = speech.querySelector("[data-levi-say]");
+
+  /* TYPED, NOT PASTED. A line that appears whole is a tooltip; a line that
+     arrives at reading speed is someone talking. Two characters every 26ms is
+     about 77 a second - quick enough never to be a wait, slow enough to read
+     as speech. Reduced motion gets the whole line at once, and the caret goes.
+
+     This is a text write on one node, so it costs nothing measurable. */
+  var typeT = null;
+  function sayLine(text) {
+    if (typeT) { window.clearInterval(typeT); typeT = null; }
+    if (REDUCED) { sayEl.textContent = text; speech.classList.add("is-done"); return; }
+    sayEl.textContent = "";
+    speech.classList.remove("is-done");
+    var i = 0;
+    typeT = window.setInterval(function () {
+      i += 2;
+      sayEl.textContent = text.slice(0, i);
+      if (i >= text.length) {
+        window.clearInterval(typeT); typeT = null;
+        speech.classList.add("is-done");
+      }
+    }, 26);
+  }
   var IDLE_LINES = window.LEVI_IDLE || ["Still here."];
 
   var STATES = ["is-idle", "is-speaking", "is-approved"];
@@ -217,7 +239,7 @@
   var mouse = { x: 0, y: 0, fresh: 0 };
   var lastT = 0, raf = null, flareTimer = null, settleT = null;
   var spin = 0, glow = 1, lastScrollY = 0, lastActivity = 0;
-  var alt = 0, wanderA = 0;
+  var alt = 0, wanderA = 0, tripD0 = 0;   /* distance at the start of the current trip */
   var ticking = false;   /* true while the simulation is being driven by hand */   /* how high it is flying, and which way it is
                                  currently drifting off the direct line */
 
@@ -467,14 +489,36 @@
     var want = MAXV * Math.min(1, dist / SLOW_R);
     var wvx = tox / dist * want, wvy = toy / dist * want;
 
-    /* WANDER. A bee does not fly down the line between two points, and the
-       single cheapest thing that stops this looking mechanical is a bias that
-       turns slowly and is strongest in open flight, fading out as it closes
-       in so the arrival is still accurate. */
-    wanderA += (Math.sin(now / 2100) + Math.sin(now / 4900) * 0.7) * dt * 2.2;
-    var wob = Math.min(1, dist / 340) * 165;
-    wvx += Math.cos(wanderA) * wob;
-    wvy += Math.sin(wanderA * 1.27) * wob * 0.8;
+    /* A FIXED PATH, NOT A RANDOM WALK.
+
+       The wander was noise: two sines accumulating into an angle, so the route
+       between the same two points was different every time and nothing about
+       it could be designed or predicted. This is a deterministic arc instead -
+       the bow is always perpendicular to the direction of travel, always the
+       same size for the same trip, and it collapses to nothing as Levi closes
+       in so the arrival stays exact.
+
+       Same journey, same curve, every time. That is what makes it read as a
+       flight path rather than a drunk insect. */
+    var nx = tox / dist, ny = toy / dist;      /* unit vector along the route  */
+
+    /* The bow peaks at the MIDDLE of the journey and is zero at both ends, so
+       the route is a clean arc from A to B rather than a swerve near one of
+       them. It needs the distance the trip STARTED at, not the distance left -
+       measuring against the remaining distance put the widest part of the
+       curve 210px from the destination, which is a last-second swerve. */
+    if (dist > tripD0) tripD0 = dist;          /* a new, longer target          */
+    var prog = tripD0 > 1 ? 1 - Math.min(1, dist / tripD0) : 1;
+    var reach = Math.min(1, tripD0 / 520);     /* short hops stay straight      */
+    var side = ny >= 0 ? 1 : -1;               /* always bow the same way       */
+    var arc = Math.sin(prog * Math.PI) * reach * 190 * side;
+    wvx += -ny * arc;                          /* perpendicular to travel       */
+    wvy +=  nx * arc;
+    if (dist < ARRIVE_R) tripD0 = 0;           /* arrived; next trip starts new */
+
+    /* A slow vertical breath so holding station is not dead still. Bounded,
+       deterministic, and far too small to move it out of its zone. */
+    wvy += Math.sin(now / 1750) * 26 * (1 - reach * Math.sin(prog * Math.PI));
 
     /* MAXV HAS TO BE A CEILING, NOT A SUGGESTION. The wander is added
        VECTORIALLY on top of a desired velocity that is already at full cruise,
@@ -585,16 +629,8 @@
     frame.gx = goal.x; frame.gy = goal.y; frame.frames = (frame.frames | 0) + 1;
     root.style.setProperty("--levi-spin", spin.toFixed(1) + "deg");
     root.style.setProperty("--levi-glow", glow.toFixed(3));
-    /* THE CAST, SEPARATING WITH HEIGHT. It read as shading because it was
-       welded to the object: the old offset moved between 52 and 70px, so it
-       looked like a soft edge belonging to the star rather than something
-       lying on the page underneath it. Measured on the reference, its
-       character's cast ran from (+81, +171) high to (+36, -9) low - the
-       separation is the altitude cue, and it has to be big. */
-    root.style.setProperty("--levi-shx", (12 + v.x * 0.05 + alt * 28).toFixed(1) + "px");
-    root.style.setProperty("--levi-shy", (26 + alt * 152).toFixed(1) + "px");
-    root.style.setProperty("--levi-shs", (0.70 + alt * 1.05).toFixed(3));
-    root.style.setProperty("--levi-sho", (0.66 - alt * 0.38).toFixed(3));
+    /* The cast-light variables are gone with the shadow - four fewer style
+       writes per frame, and one less thing pretending to be physics. */
 
     if (!ticking) raf = requestAnimationFrame(step);
   }
@@ -649,7 +685,7 @@
     if (z.name === zoneName) return;          /* already here */
     zone = z.el; zoneName = z.name;
     root.classList.remove("is-quiet");
-    sayEl.textContent = z.say;
+    sayLine(z.say);
     savedLine = null; idleSpoken = false;
     say.classList.remove("is-quiet");
     setState("speaking");
@@ -701,7 +737,7 @@
   function noteActivity() {
     lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
     if (idleSpoken && savedLine !== null) {
-      sayEl.textContent = savedLine;
+      sayLine(savedLine);
       savedLine = null; idleSpoken = false;
     }
   }
@@ -711,7 +747,7 @@
     if (now - lastActivity < IDLE_MS) return;
     idleSpoken = true;
     savedLine = sayEl.textContent;
-    sayEl.textContent = IDLE_LINES[Math.floor(Math.random() * IDLE_LINES.length)];
+    sayLine(IDLE_LINES[Math.floor(Math.random() * IDLE_LINES.length)]);
     glow = 2.4;
   }
 
