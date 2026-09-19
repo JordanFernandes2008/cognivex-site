@@ -738,14 +738,54 @@
              t < box.bottom + MARGIN && t + bh > box.top - MARGIN;
     }
 
+    /* FOUR WAYS OFF THE PANEL, IN A FIXED ORDER.
+
+       This was "down only", and down alone is not enough. The demo grows as
+       you scroll - .hero__stage is scale-animated - so on a 1920x900 desktop
+       it reaches 1,093 x 740 in a 900px viewport: nothing fits below it, and
+       above it is the masthead. Meanwhile the GUTTERS beside it measure 406px
+       against a 328px box, which is room to spare.
+
+       The box never looked there. keepOffPanel() pushes the LIGHT into that
+       gutter, and the box is then laid out BESIDE the light - to its right,
+       which is back onto the panel. Light at x 299, box at 432..760, panel
+       starting at 406. So the one place with room was the one place the box
+       could not be put, and the line went dark for the whole demo. That is
+       the "textbox not visible" in the report.
+
+       Gutters are tried on the light's own side first, so the words stay with
+       the thing that is speaking them. The vertical offset there is the
+       stacked one - under the light, not across it, or the light sits on top
+       of its own box. */
     var blocked = false;
     if (onPanel(left, top)) {
-      /* DOWN ONLY. Above the panel is the hero's own display type and lede -
-         measured, the region above .app is copy at every scroll position where
-         there is room above it at all. Below it is the section's tail, which
-         is empty by construction. */
-      top = box.bottom + MARGIN;
-      if (top + bh > vh - MARGIN) blocked = true;
+      var stackTop = oy + starR() * 0.86 + gapW();
+      var leftGut  = box.left - MARGIN - bw;      /* box's left edge if parked left  */
+      var rightGut = box.right + MARGIN;          /* box's left edge if parked right */
+      var nearLeft = (ox <= (box.left + box.right) / 2);
+
+      var tries = [
+        { l: left, t: box.bottom + MARGIN },      /* below the panel */
+        { l: left, t: box.top - MARGIN - bh }     /* above it */
+      ];
+      var gutters = [
+        { l: Math.min(Math.max(ox - bw / 2, MARGIN), leftGut), t: stackTop, ok: leftGut >= MARGIN },
+        { l: Math.max(Math.min(ox - bw / 2, vw - MARGIN - bw), rightGut), t: stackTop,
+          ok: rightGut + bw <= vw - MARGIN }
+      ];
+      if (!nearLeft) gutters.reverse();
+      tries = tries.concat(gutters.filter(function (g) { return g.ok; }));
+
+      var got = null;
+      for (var ti = 0; ti < tries.length; ti++) {
+        var c = tries[ti];
+        if (c.t < MARGIN || c.t + bh > vh - MARGIN) continue;
+        if (c.l < MARGIN || c.l + bw > vw - MARGIN) continue;
+        if (onPanel(c.l, c.t)) continue;
+        got = c; break;
+      }
+      if (got) { left = got.l; top = got.t; }
+      else blocked = true;
     }
     if (!blocked) {
       left = Math.max(MARGIN, Math.min(left, vw - MARGIN - bw));
