@@ -66,7 +66,19 @@
   --ease-out:  cubic-bezier(.23, 1, .32, 1);
   --ease-soft: cubic-bezier(.32, .72, 0, 1);
   --spring:    cubic-bezier(.34, 1.4, .64, 1);
-  --t-micro: 150ms;
+
+  /* RENAMED FROM --t-micro, WHICH IT WAS SILENTLY DESTROYING.
+
+     --t-micro is declared above as .68rem, the smallest type size, and is used
+     as a font-size in twenty places. This line redeclared the same name as a
+     duration on the same :root, so the duration won everywhere and every one of
+     those twenty `font-size: var(--t-micro)` declarations was invalid - the
+     browser dropped them and the text fell back to inherited 16px.
+
+     That is why small labels across the site rendered at body size: the eyebrow
+     rows, the walk and night-work meta, the queue chrome and the reading pane's
+     "WRITTEN, NOT SENT". One character of overlap in a token name. */
+  --t-fast: 150ms;
 
   --shadow-sm: 0 1px 2px rgb(20 22 26 / 6%), 0 4px 12px -6px rgb(20 22 26 / 10%);
   --shadow-lg: 0 1px 2px rgb(20 22 26 / 5%), 0 30px 60px -30px rgb(20 22 26 / 22%);
@@ -144,7 +156,7 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
   border: 1px solid transparent; border-radius: 7px;
   font: inherit; font-weight: var(--w-do); font-size: .84rem;
   text-decoration: none; cursor: pointer;
-  transition: background var(--t-micro) var(--ease-soft), border-color var(--t-micro) var(--ease-soft),
+  transition: background var(--t-fast) var(--ease-soft), border-color var(--t-fast) var(--ease-soft),
               color var(--t-micro) var(--ease-soft), transform var(--t-micro) var(--spring);
 }
 .btn--accent { background: var(--accent-fill); color: var(--on-accent); }
@@ -187,7 +199,7 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .brand__mark { width: 15px; height: 15px; flex: 0 0 auto; border-radius: 4px; background: linear-gradient(140deg, var(--accent-fill), var(--accent-deep)); }
 
 .nav { display: none; margin-left: auto; gap: .1rem; }
-.nav a { padding: .42rem .72rem; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: .88rem; font-weight: var(--w-do); transition: color var(--t-micro) var(--ease-out), background-color var(--t-micro) var(--ease-out); }
+.nav a { padding: .42rem .72rem; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: .88rem; font-weight: var(--w-do); transition: color var(--t-fast) var(--ease-out), background-color var(--t-fast) var(--ease-out); }
 .nav a:hover { color: var(--ink); background: var(--alt); }
 .nav a[aria-current="page"] { color: var(--ink); font-weight: var(--w-do); background: var(--alt); }
 
@@ -308,7 +320,27 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
    Demo 1 — the approval queue
    ========================================================================== */
 
-.queue { position: relative; min-width: 0; background: var(--paper); }
+/* ONE HEIGHT FOR EVERY VIEW.
+
+   The briefing, the reading pane and the approval list are different lengths -
+   measured at 651, 607 and 802px - so switching between them resized the whole
+   window and shoved the page under the cursor. A panel that changes size when
+   you click inside it is the thing that reads as "bugging out".
+
+   The window is fixed and the CONTENT scrolls, which is how every mail client
+   and chat app has always worked. 650px matches what the briefing already
+   needed, so the default view is unchanged. */
+.queue {
+  position: relative; min-width: 0; background: var(--paper);
+  display: flex; flex-direction: column;
+  /* HEIGHT, NOT MIN-HEIGHT. min-height is a floor, so the approval list grew
+     to its content and took the window to 4,452px - worse than the 151px shift
+     it was meant to cure. A fixed height is what makes the children scroll. */
+  height: 650px;
+}
+.queue > .digest,
+.queue > .detail,
+.queue > .queue__stack { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .queue__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem 1.1rem; border-bottom: 1px solid var(--line); }
 .queue__title { font-size: .88rem; font-weight: var(--w-read); color: var(--ink); }
 .queue__count { color: var(--dim); display: inline-flex; align-items: baseline; gap: .32em; }
@@ -325,8 +357,6 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
    more" without becoming the page. */
 .queue__stack {
   position: relative;
-  max-height: 340px;
-  overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
@@ -515,7 +545,7 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .ledger__note { color: var(--dim); font-size: .9rem; }
 .ledger__rows { border-top: 1px solid var(--line-2); }
 .row { border-bottom: 1px solid var(--line-2); }
-.row__link { position: relative; display: grid; gap: .3rem 1.5rem; align-items: center; padding: 1.15rem .4rem; color: inherit; text-decoration: none; transition: background var(--t-micro) var(--ease-soft), padding-inline-start var(--t-micro) var(--ease-soft); }
+.row__link { position: relative; display: grid; gap: .3rem 1.5rem; align-items: center; padding: 1.15rem .4rem; color: inherit; text-decoration: none; transition: background var(--t-fast) var(--ease-soft), padding-inline-start var(--t-fast) var(--ease-soft); }
 .row__link:hover, .row__link:focus-visible { background: var(--paper); padding-inline-start: 1rem; }
 .row__link::after { content: ""; position: absolute; left: 0; top: 18%; bottom: 18%; width: 2px; background: var(--accent-fill); transform: scaleY(0); transform-origin: center; transition: transform 260ms var(--spring); }
 .row__link:hover::after, .row__link:focus-visible::after { transform: scaleY(1); }
@@ -547,7 +577,7 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .foot__inner { display: grid; gap: 1.5rem; }
 .foot__by { margin-top: .6rem; color: #9aa0a8; font-size: .86rem; max-width: 38ch; }
 .foot__nav { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; }
-.foot__nav a { color: #c9ccd1; text-decoration: none; font-size: .88rem; transition: color var(--t-micro) var(--ease-out); }
+.foot__nav a { color: #c9ccd1; text-decoration: none; font-size: .88rem; transition: color var(--t-fast) var(--ease-out); }
 .foot__nav a:hover { color: #fff; }
 
 /* ============================================================================
@@ -644,7 +674,7 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
   padding: .5rem 1.05rem; border-radius: 999px;
   background: var(--ink); color: var(--paper);
   font-size: .85rem; font-weight: var(--w-do); text-decoration: none; white-space: nowrap;
-  transition: background var(--t-micro) var(--ease-soft), transform var(--t-micro) var(--spring);
+  transition: background var(--t-fast) var(--ease-soft), transform var(--t-fast) var(--spring);
 }
 .masthead__cta:hover { background: #2a2e35; }
 .masthead__cta:active { transform: scale(.97); }
@@ -1777,7 +1807,7 @@ html.lenis, html.lenis body { height: auto; }
 /* Enough lift to track one line across four columns, which is what a wide
    table actually needs. Hover only — it is not a control. */
 @media (hover: hover) {
-  .nw__row { transition: background-color var(--t-micro) var(--ease-out); }
+  .nw__row { transition: background-color var(--t-fast) var(--ease-out); }
   .nw__row:hover { background: var(--alt); }
 }
 
@@ -1963,7 +1993,7 @@ html:has(.void-page) { background: #05070a; }
   letter-spacing: .1em; text-transform: uppercase;
   color: var(--dim); cursor: pointer;
   white-space: nowrap;
-  transition: background-color var(--t-micro) var(--ease-out),
+  transition: background-color var(--t-fast) var(--ease-out),
               color var(--t-micro) var(--ease-out);
 }
 .walk__tab:last-child { border-right: 0; }
@@ -2046,7 +2076,7 @@ html:has(.void-page) { background: #05070a; }
   background: var(--paper); color: var(--ink);
   font: inherit; font-size: var(--t-small); font-weight: var(--w-do);
   cursor: pointer;
-  transition: border-color var(--t-micro) var(--ease-out),
+  transition: border-color var(--t-fast) var(--ease-out),
               background-color var(--t-micro) var(--ease-out);
 }
 @media (hover: hover) { .walk__nav:hover { border-color: var(--edge); } }
