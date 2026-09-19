@@ -717,6 +717,37 @@
      it changes anything. */
   var occ = { hit: false, n: 0 };
 
+  /* ==========================================================================
+     THE WORDS DO NOT FOLLOW THE BREATHING.
+
+     step() wanders the light every frame - amp 12 idle plus a second sine at
+     half that, so roughly +/-18px on a 2.6 second period - and placeBox()
+     derived the box from p on every one of those frames. Anywhere near a
+     constraint boundary that is fatal: the verdict flips as the light drifts
+     across it and back, so the box fades out and in every couple of seconds,
+     forever. Reported as flickering, and the 2-frame hysteresis is no defence
+     at all against an oscillation measured in seconds.
+
+     So the box is ANCHORED. It is placed when something real changes - the
+     section, the scroll, the viewport, the size of the box, or the light
+     actually travelling somewhere - and it holds that viewport position while
+     the light breathes underneath it. 40px is the threshold because it is
+     comfortably above the wander and comfortably below a flight.
+
+     The offsets are still written relative to p, so the light stays the
+     origin and nothing here can feed position back into itself. */
+  var anchor = null;
+
+  function anchorStale(ox, oy, bw, bh, vw, vh) {
+    if (!anchor) return true;
+    if (anchor.zone !== zoneName) return true;
+    if (anchor.vw !== vw || anchor.vh !== vh) return true;
+    if (Math.abs(anchor.bw - bw) > 2 || Math.abs(anchor.bh - bh) > 2) return true;
+    if (Math.abs(anchor.sy - (window.pageYOffset || 0)) > 12) return true;
+    if (Math.abs(ox - anchor.px) > 40 || Math.abs(oy - anchor.py) > 40) return true;
+    return false;
+  }
+
   function boxOnWords(l, t, w, h, now) {
     var hit = onWords(l, t, w, h, now);
     if (hit === occ.hit) { occ.n = 0; return occ.hit; }
@@ -736,6 +767,16 @@
     if (!isFinite(ox) || !isFinite(oy)) { ox = 0; oy = 0; }
 
     var left = ox + tx, top = oy + ty;
+
+    /* Held where it was put, unless something other than the wander moved. */
+    if (!anchorStale(ox, oy, bw, bh, vw, vh)) {
+      if (anchor.blocked) { say.classList.add("is-blocked"); return; }
+      say.classList.remove("is-blocked");
+      var d = speech.style;
+      d.setProperty("--levi-tx", Math.round(anchor.left - ox) + "px");
+      d.setProperty("--levi-ty", Math.round(anchor.top - oy) + "px");
+      return;
+    }
 
     /* ON A PHONE THE BOX IS HELD OFF THE CONTENT, NOT OFF THE WHOLE PANEL.
 
@@ -900,6 +941,10 @@
         occ.hit = false; occ.n = 0;
       }
     }
+
+    anchor = { left: left, top: top, px: ox, py: oy, bw: bw, bh: bh,
+               vw: vw, vh: vh, sy: (window.pageYOffset || 0),
+               zone: zoneName, blocked: blocked };
 
     say.classList.toggle("is-blocked", blocked);
     if (blocked) return;
