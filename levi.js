@@ -1373,11 +1373,26 @@
        the visitor gets there. */
     var said = speak(voice("line", z.name), { glow: 3.2 });
     if (said) return;
-    /* Spent. Show the box where it is and move, without a new line. */
+
+    /* SPENT - AND AN EMPTY BOX IS WORSE THAN A QUIET ONE.
+
+       This revealed the box regardless, on the reasoning that it still holds
+       the previous sentence. It does, unless there has not BEEN one: late in a
+       session every array can be spent, and on a fresh load of a page in that
+       state nothing has been typed yet, so what got revealed was an empty box
+       with a LEVI label and no line under it. Caught on the live site after a
+       day of test loads had run the set down.
+
+       The zone is kept either way, so placement still tracks the section. */
     savedLine = null; idleSpoken = false;
-    say.classList.remove("is-quiet");
-    root.classList.remove("is-quiet");
-    setState("speaking");
+    if ((sayEl.textContent || "").replace(/\s/g, "")) {
+      say.classList.remove("is-quiet");
+      root.classList.remove("is-quiet");
+      setState("speaking");
+    } else {
+      say.classList.add("is-quiet");
+      setState("idle");
+    }
     /* ARRIVAL IS VISIBLE. Peripheral vision catches a change in brightness,
        not a dot that quietly exists. */
     glow = 3.2;
