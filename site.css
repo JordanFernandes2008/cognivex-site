@@ -2628,7 +2628,20 @@ section { position: relative; }
   top: 3%; bottom: auto;
   height: 270px;
 }
-@media (max-width: 1100px) { .levi-zone--hero { display: none; } }
+/* THE HERO'S SECOND BAND. The first covers only the top 485px of a 1,677px
+   section, so from scrollY 485 to about 1,400 the hero still dominated and had
+   nowhere to put the light. The lower half of the hero has a free column to
+   the left of the queue - measured 0..484 at 1440 wide, against a queue that
+   starts at 484 - and that is this band. Stacked arrangement: star above, line
+   underneath, because the column is too narrow to sit them side by side. */
+.levi-zone--hero-b {
+  left: 0; right: 66%;
+  top: 49%; bottom: 4%;
+  height: auto;
+}
+@media (max-width: 1240px) {
+  .levi-zone--hero, .levi-zone--hero-b { display: none; }
+}
 /* Measured at 1536x830: the hero has 70px above the copy, 70px below it and
    170px to the right of the copy BOX - none of which holds a 396px zone. The
    copy TEXT, though, stops around x 730 while its box runs to 1350, so the

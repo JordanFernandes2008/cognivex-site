@@ -58,21 +58,61 @@
   function lineW() { return phone() ? 256 : 304; }
   function gapW() { return phone() ? 26 : 38; }
 
-  function zoneEl(name) { return document.querySelector('[data-levi-zone="' + name + '"]'); }
   function sectionOf(el) { return el.closest("section") || el.parentElement || el; }
+
+  /* Can a band of this width hold the light and the line at full measure, in
+     either arrangement? */
+  function fitsWidth(w) {
+    var R = starR();
+    return (PAD + 2 * R + gapW() + lineW() + PAD) <= w ||
+           (PAD + Math.max(2 * R, lineW()) + PAD) <= w;
+  }
+
+  /* THE PART OF A BAND THAT IS ACTUALLY ON SCREEN, or null.
+
+     This is the whole fix. Placement used to read the band's raw rect, so a
+     band that had scrolled off the top was still a valid target: measured at
+     scrollY 1400 the hero band sat 1,081px above the viewport and Levi was
+     dutifully sent there. It was on screen for two of eight sampled scroll
+     positions. Nothing reads a raw zone rect any more. */
+  function visibleSlice(el) {
+    if (!el) return null;
+    var cs = getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden") return null;
+    var vh = document.documentElement.clientHeight;
+    var r = el.getBoundingClientRect();
+    var top = Math.max(r.top, 0), bottom = Math.min(r.bottom, vh);
+    var h = bottom - top;
+    if (h < 2 * PAD + 2 * starR()) return null;
+    if (!fitsWidth(r.width)) return null;
+    return { left: r.left, width: r.width, top: top, height: h };
+  }
+
+  /* A NAME MAY DECLARE SEVERAL BANDS. The hero is 1,677px tall and declared one
+     band across its top 485px; past that the band was gone while the section
+     still dominated. A tall section declares more than one, and whichever has
+     the most of itself on screen is the one Levi uses. */
+  function zoneEls(name) {
+    return document.querySelectorAll('[data-levi-zone="' + name + '"]');
+  }
+  function zoneEl(name) {
+    var all = zoneEls(name), best = null, bestH = 0;
+    for (var i = 0; i < all.length; i++) {
+      var s = visibleSlice(all[i]);
+      if (s && s.height > bestH) { bestH = s.height; best = all[i]; }
+    }
+    /* Falling back to the first keeps anyZoneUsable() a question about the
+       MARKUP. A scroll gap must not be able to decide Levi does not exist. */
+    return best || all[0] || null;
+  }
 
   function zoneUsable(el) {
     if (!el) return false;
     var cs = getComputedStyle(el);
     if (cs.display === "none" || cs.visibility === "hidden") return false;
     var r = el.getBoundingClientRect();
-    var R = starR();
-    if (r.height < 2 * PAD + 2 * R) return false;
-    /* Beside, or stacked - either is fine, but it must hold one of them with
-       the line at full measure. */
-    var beside = (PAD + 2 * R + gapW() + lineW() + PAD) <= r.width;
-    var stacked = (PAD + Math.max(2 * R, lineW()) + PAD) <= r.width;
-    return beside || stacked;
+    if (r.height < 2 * PAD + 2 * starR()) return false;
+    return fitsWidth(r.width);
   }
 
   /* ---- markup --------------------------------------------------------------
@@ -188,7 +228,8 @@
     for (var i = 0; i < script.length; i++) {
       var name = script[i].zone;
       var el = zoneEl(name);
-      if (!zoneUsable(el)) continue;
+      if (!visibleSlice(el)) continue;   /* the BAND must be on screen, not just
+                                            the section that contains it */
       var rr = Math.max(coverOf(el), ratio[name] || 0);
       if (rr > bestR) { bestR = rr; best = { el: el, name: name, say: script[i].say }; }
     }
@@ -218,8 +259,14 @@
 
   /* ---- placement, which is arithmetic -------------------------------------- */
   function retarget() {
-    if (!zone) return;
-    var r = zone.getBoundingClientRect();
+    if (!zoneName) return;
+    /* Re-resolved every frame so the hand-off between two bands of the SAME
+       zone happens without a change of line - arrive() returns early when the
+       name has not changed, so it would never have swapped the element. */
+    var el = zoneEl(zoneName);
+    var r = el && visibleSlice(el);
+    if (!r) return;      /* hold where it is; never aim off screen */
+    zone = el;
     var R = starR(), gap = gapW(), lw = lineW();
     var sh = speech.getBoundingClientRect().height || 26;
 

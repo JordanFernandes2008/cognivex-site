@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="site.css?v=04e44a29">
+<link rel="stylesheet" href="site.css?v=51a92304">
 <!-- The cold start, in the head deliberately: it has to add its class before
      <body> exists so the black is on the first paint rather than a flash of
      the page and then a cover. It builds its own markup, so with JavaScript
@@ -175,6 +175,11 @@
       </div>
     </div>
     </div><!-- /.hero__void -->
+
+    <!-- The hero's second band, beside the queue. A direct child of .hero so it
+         is measured against the whole 1,677px section, not against .hero__void.
+         Without it the hero had nowhere to put the light below scrollY 485. -->
+    <div class="levi-zone levi-zone--hero-b" data-levi-zone="hero" aria-hidden="true"></div>
 
     <!-- The product surface. Real chrome, real density, genuinely operable. -->
     <div class="wrap hero__stage" data-scale-in>
@@ -904,7 +909,7 @@
 <script src="walk.js?v=e324178f"></script>
 <script src="film.js?v=5366d4e8"></script>
 <script src="levi-home.js?v=aeadc34b"></script>
-<script src="levi.js?v=fce72361"></script>
+<script src="levi.js?v=6b8bf373"></script>
 <script src="motion.js?v=bc725647"></script>
 </body>
 </html>
