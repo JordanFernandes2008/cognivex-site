@@ -44,6 +44,19 @@
   var BOOTING = !!(window.__coldStart && window.__coldStart.pending);
 
   var K = 150, D = 17, MAX_DT = 1 / 30;
+
+  /* FLIGHT, MEASURED. Four frames of the reference about 1.2s apart put its
+     character at 415, 372 and 645 px of travel per step - roughly 310 to 540
+     px/s, never a straight line between two points, and always decelerating
+     into where it stops rather than snapping there.
+
+     MAXF is the important one. A spring can change direction instantly if the
+     target jumps; a thing with mass cannot, and that limit is most of what
+     separates flying from being dragged. */
+  var MAXV = 520;      /* px/s cruise ceiling                                */
+  var MAXF = 2400;     /* px/s^2 - how hard it can turn or accelerate        */
+  var SLOW_R = 210;    /* start easing off this far from the target          */
+  var ARRIVE_R = 30;   /* inside this it is hovering, not travelling         */
   var CURSOR_PULL = 30, CURSOR_REACH = 460;
   var PAD = 40;
   var IDLE_MS = 22000;
@@ -186,12 +199,15 @@
   var mouse = { x: 0, y: 0, fresh: 0 };
   var lastT = 0, raf = null, flareTimer = null, settleT = null;
   var spin = 0, glow = 1, lastScrollY = 0, lastActivity = 0;
+  var alt = 0, wanderA = 0;   /* how high it is flying, and which way it is
+                                 currently drifting off the direct line */
 
   /* WHAT THE 3D RENDERER READS. levi3d.js draws a real object at this point
      and nothing else; every decision - which zone, which line, where the
      keep-out is, how hard the spring pulls - stays here, already measured.
      If levi3d.js never loads this object is simply never read. */
-  var frame = { x: 0, y: 0, vx: 0, vy: 0, glow: 1, spin: 0 };
+  var frame = { x: 0, y: 0, vx: 0, vy: 0, glow: 1, spin: 0, alt: 0,
+                gx: 0, gy: 0, frames: 0 };
   var idleSpoken = false, savedLine = null, lure = null, stacked = false;
 
   function write(x, y) {
@@ -266,13 +282,13 @@
 
   /* ---- placement, which is arithmetic -------------------------------------- */
   function retarget() {
-    if (!zoneName) return;
+    if (!zoneName) { var h = holdPoint(); goal.x = h.x; goal.y = h.y; return; }
     /* Re-resolved every frame so the hand-off between two bands of the SAME
        zone happens without a change of line - arrive() returns early when the
        name has not changed, so it would never have swapped the element. */
     var el = zoneEl(zoneName);
     var r = el && visibleSlice(el);
-    if (!r) return;      /* hold where it is; never aim off screen */
+    if (!r) { var h = holdPoint(); goal.x = h.x; goal.y = h.y; return; }
     zone = el;
     var R = starR(), gap = gapW(), lw = lineW();
     var sh = speech.getBoundingClientRect().height || 26;
@@ -280,16 +296,69 @@
     stacked = (PAD + 2 * R + gap + lw + PAD) > r.width;
 
     var d = document.documentElement.style;
+    /* THE LINE DECIDES THE HEIGHT, NOT THE LIGHT.
+
+       Measured at 1425x820, the line overlapped page copy at five of nine
+       scroll positions. The cause is geometry: the light is 190px across and
+       the line 304px, and no 384px-wide vertical strip on this page is free of
+       text, so beside the star is always inside the text column.
+
+       They are different kinds of thing and get different rules. The LIGHT may
+       pass over copy - it is an additive glow, the reference flies its
+       character straight across its display type, and you read through it. The
+       WORDS may never overlap copy, because two texts on top of each other are
+       both unreadable.
+
+       The strip between a section's last line of copy and its bottom edge
+       measured 51-139px in every section: too short for the light, ample for a
+       two-line sentence. So the light is placed by where its LINE has to land
+       - low in the band, with the words sitting in that free foot - and the
+       light hangs above and slightly out of the section, which costs nothing.
+       One number off the band box, no rect scanning. */
+    /* Anchor to the foot ONLY when the band's real bottom is on screen. When
+       the band runs off below, visibleSlice's foot is the viewport edge, not
+       the section's free tail - and anchoring to that drops the line into the
+       middle of the copy. Measured at scrollY 924 in the hero: two hits. */
+    var vhNow = document.documentElement.clientHeight;
+    var footOK = el.getBoundingClientRect().bottom <= vhNow + 2;
+    var foot = r.top + r.height;
     if (!stacked) {
       goal.x = r.left + PAD + R;
-      goal.y = r.top + r.height / 2;
+      goal.y = footOK ? Math.max(r.top + r.height / 2, foot - 10 - sh / 2)
+                      : r.top + r.height / 2;
+    } else {
+      goal.x = r.left + r.width / 2;
+      goal.y = footOK ? Math.max(r.top + PAD + R * 0.78, foot - 10 - sh - gap - R * 0.86)
+                      : r.top + PAD + R * 0.78;
+    }
+
+    /* ---- THE LIGHT AND THE WORDS ARE NOT THE SAME PROBLEM ------------------
+       Measured at 1425x820, the line overlapped page text at five of nine
+       scroll positions - on the ledger rows, the loop steps, the night-work
+       summary. The cause is geometry, not placement luck: the light is 190px
+       across and the line is 304px, and there is no 384px-wide vertical strip
+       anywhere on this page that is free of copy. Beside the star, the line is
+       always in the text column.
+
+       So they separate, on the principle that they are different kinds of
+       thing. The LIGHT may pass over anything - it is an additive glow, that
+       is what the reference's character does to its display type, and it
+       costs nothing to read through. The WORDS may not overlap anything ever,
+       because two texts on top of each other are both unreadable.
+
+       The strip between the last line of a section's copy and its bottom edge
+       measured 51 to 139px in every section - far too short for the light, and
+       ample for a two-line sentence. That is where the words go. No rect
+       scanning, no candidate scoring: one number off the section box. */
+    /* RELATIVE OFFSETS ONLY. The first attempt pinned the line to viewport
+       coordinates with (lineY - p.y), which fed the light's own position back
+       into its own layout every frame; the star was measured at -22322,-109726
+       three sections in. Everything below is an offset FROM the light, so
+       nothing it does can move itself. */
+    if (!stacked) {
       d.setProperty("--levi-tx", (R + gap) + "px");
       d.setProperty("--levi-ty", (-sh / 2) + "px");
     } else {
-      /* THE STAR MOVES, NOT THE TEXT. Star high in the zone, full-measure line
-         underneath it. */
-      goal.x = r.left + r.width / 2;
-      goal.y = r.top + PAD + R * 0.78;
       d.setProperty("--levi-tx", (-lw / 2) + "px");
       d.setProperty("--levi-ty", (R * 0.86 + gap) + "px");
     }
@@ -299,7 +368,22 @@
   function step(now) {
     raf = null;
     if (done) return;
-    var dt = Math.min(MAX_DT, (now - lastT) / 1000 || MAX_DT);
+    /* dt MUST BE POSITIVE, AND THIS IS NOT PEDANTRY.
+
+       run() seeds lastT from performance.now(), and the timestamp rAF then
+       hands step() is the START of that frame - which can be EARLIER. So
+       now - lastT comes out negative, and Math.min(MAX_DT, negative) happily
+       keeps the negative.
+
+       The old spring survived that: a negative dt just took one tiny step
+       backwards and the next frame recovered. The force limiter does not.
+       cap = MAXF * dt goes negative, `fm > cap` is then true for every fm,
+       and the steering force is scaled by a negative number - so it
+       accelerates directly AWAY from the target, harder every frame, forever.
+       Measured before this guard: the star reached -25539,-126876. */
+    var dt = (now - lastT) / 1000;
+    if (!(dt > 0)) dt = 1 / 60;          /* first frame, clock step, anything odd */
+    if (dt > MAX_DT) dt = MAX_DT;
     lastT = now;
 
     retarget();
@@ -324,12 +408,55 @@
     var g = lure || goal;
     var gx = g.x + dx + cx, gy = g.y + dy + cy;
 
-    v.x += ((gx - p.x) * K - v.x * D) * dt;
-    v.y += ((gy - p.y) * K - v.y * D) * dt;
+    /* ---- STEERING, NOT A SPRING --------------------------------------------
+       The spring was the reason it read as teleporting. A spring's speed is
+       proportional to how far it has to go, so a zone change 900px away threw
+       it across the screen in three frames and a change 40px away crawled -
+       the same motion at two completely different speeds, neither of them a
+       flight. This is the standard arrive-and-wander steering instead: one
+       cruise speed whatever the distance, an easing radius at the end, and a
+       cap on how fast the velocity itself may change. */
+    var tox = gx - p.x, toy = gy - p.y;
+    var dist = Math.hypot(tox, toy) || 1;
+
+    /* Full speed until SLOW_R, then ramp down into the target. */
+    var want = MAXV * Math.min(1, dist / SLOW_R);
+    var wvx = tox / dist * want, wvy = toy / dist * want;
+
+    /* WANDER. A bee does not fly down the line between two points, and the
+       single cheapest thing that stops this looking mechanical is a bias that
+       turns slowly and is strongest in open flight, fading out as it closes
+       in so the arrival is still accurate. */
+    wanderA += (Math.sin(now / 2100) + Math.sin(now / 4900) * 0.7) * dt * 2.2;
+    var wob = Math.min(1, dist / 340) * 165;
+    wvx += Math.cos(wanderA) * wob;
+    wvy += Math.sin(wanderA * 1.27) * wob * 0.8;
+
+    /* Force limit: mass. Without this the wander becomes a jitter. */
+    var fx = wvx - v.x, fy = wvy - v.y;
+    var fm = Math.hypot(fx, fy), cap = MAXF * dt;
+    if (fm > cap && fm > 0) { fx = fx / fm * cap; fy = fy / fm * cap; }
+    v.x += fx; v.y += fy;
+
+    /* Belt and braces. Nothing decorative should be able to leave the page
+       whatever the clock does. */
+    var sp0 = Math.hypot(v.x, v.y), lim = MAXV * 2.2;
+    if (sp0 > lim) { v.x = v.x / sp0 * lim; v.y = v.y / sp0 * lim; }
+
+    /* Hovering, not travelling - bleed off speed so it holds station. */
+    if (dist < ARRIVE_R) { v.x *= 0.88; v.y *= 0.88; }
+
     p.x += v.x * dt; p.y += v.y * dt;
 
     spin = (spin + dt * 6 + Math.sin(now / 5200) * dt * 8) % 360;
-    var lift = Math.min(1, Math.abs(v.y) / 900);
+
+    /* ALTITUDE. Nothing here is really 3D, so height is inferred from effort:
+       crossing the page means climbing, holding station means settling. This
+       one number drives the whole cast-light behaviour below, which is what
+       the reference uses to tell you how high its character is. */
+    var sp = Math.hypot(v.x, v.y);
+    alt += (Math.min(1, sp / MAXV) - alt) * Math.min(1, dt * 2.6);
+    var lift = alt;
 
     /* The trail: each point chases the one in front, and the whole thing is
        only visible while there is real speed to leave a mark. */
@@ -351,11 +478,22 @@
 
     write(p.x, p.y);
     frame.vx = v.x; frame.vy = v.y; frame.glow = glow; frame.spin = spin;
+    frame.alt = alt;
+    /* Published so a check can see what the light is AIMING at, not only where
+       it ended up. Chasing a runaway without the goal in view is guesswork. */
+    frame.gx = goal.x; frame.gy = goal.y; frame.frames = (frame.frames | 0) + 1;
     root.style.setProperty("--levi-spin", spin.toFixed(1) + "deg");
     root.style.setProperty("--levi-glow", glow.toFixed(3));
-    root.style.setProperty("--levi-shx", (20 + v.x * 0.014).toFixed(1) + "px");
-    root.style.setProperty("--levi-shy", (52 + lift * 18).toFixed(1) + "px");
-    root.style.setProperty("--levi-shs", (1 + lift * 0.24).toFixed(3));
+    /* THE CAST, SEPARATING WITH HEIGHT. It read as shading because it was
+       welded to the object: the old offset moved between 52 and 70px, so it
+       looked like a soft edge belonging to the star rather than something
+       lying on the page underneath it. Measured on the reference, its
+       character's cast ran from (+81, +171) high to (+36, -9) low - the
+       separation is the altitude cue, and it has to be big. */
+    root.style.setProperty("--levi-shx", (12 + v.x * 0.05 + alt * 28).toFixed(1) + "px");
+    root.style.setProperty("--levi-shy", (26 + alt * 152).toFixed(1) + "px");
+    root.style.setProperty("--levi-shs", (0.70 + alt * 1.05).toFixed(3));
+    root.style.setProperty("--levi-sho", (0.66 - alt * 0.38).toFixed(3));
 
     raf = requestAnimationFrame(step);
   }
@@ -379,10 +517,29 @@
      section owns one - the hero below 1200px, for instance - the light goes
      too. Without this it parked at the layer origin, which measured as a star
      at (0,0) and a line 150px off the left edge of the screen. */
+  /* THE HOLDING LANE. Between two zones there is nowhere Levi is allowed to
+     be, and the old answer was to fade it to opacity 0 and fade it back in
+     wherever the next zone was - which is exactly the teleport. It flies to
+     the left gutter instead and waits there in plain sight.
+
+     The gutter is the one column empty in every section: the wrap starts at
+     about 13.4% of the viewport, so 9.4% is clear of it, and it is where the
+     zones already put Levi in six sections out of eight. */
+  function holdPoint() {
+    var de = document.documentElement;
+    var R = starR();
+    return {
+      x: Math.max(PAD + R, Math.round(de.clientWidth * 0.094)),
+      y: Math.min(de.clientHeight - PAD - R, Math.max(PAD + R, p.y))
+    };
+  }
+
+  /* THE LINE goes quiet. THE OBJECT does not. Those were one function and
+     that conflation is what made a gap in the zones look like a disappearance
+     rather than a pause in the conversation. */
   function goQuiet() {
     zone = null; zoneName = null;
     say.classList.add("is-quiet");
-    root.classList.add("is-quiet");
     setState("idle");
   }
 
@@ -561,25 +718,55 @@
   }
 
   /* ---- start --------------------------------------------------------------- */
-  if (!anyZoneUsable()) {
-    var table = zoneTable();
-    [root, say, note].forEach(function (n) {
-      if (n.parentNode) n.parentNode.removeChild(n);
-    });
-    window.cognivexLevi = {
-      unavailable: true,
-      reason: "no [data-levi-zone] is large enough here (needs " +
-              (2 * PAD + 2 * starR()) + "px tall)",
-      zones: function () { return table; },
-      ratios: function () { return {}; },
-      restingPoint: function () { return null; },
-      stats: function () { return { unavailable: true }; },
-      dismiss: function () {}, settle: function () { return null; },
-      readPosition: function () {}
-    };
-    return;
+  /* ---- NEVER DECIDE THIS ONCE ----------------------------------------------
+     This used to tear the nodes out of the DOM and replace the whole API with
+     a stub the moment one measurement came back unusable. Caught in the act:
+     at init every zone reported width 0, and starR() returned 78 - the PHONE
+     radius - because documentElement.clientWidth had not been established yet.
+     A 1425px desktop was measured as a phone with zero-width zones, Levi
+     deleted itself, and nothing ever re-checked. Fonts landing, a restored
+     window, a slow stylesheet or GSAP building its pin can all produce the
+     same first measurement.
+
+     So the check is now a gate, not a verdict. Levi stays hidden and keeps
+     asking - on load, on resize, when fonts settle, and on a short timer -
+     and starts the moment the page can actually hold it. After about seven
+     seconds it stops asking, but it never destroys itself: a later resize
+     still brings it back. */
+  var started = false;
+
+  function begin() {
+    if (started) return true;
+    if (!anyZoneUsable()) return false;
+    started = true;
+    root.classList.remove("is-boot");
+    say.classList.remove("is-boot");
+    startLevi();
+    return true;
   }
 
+  if (!begin()) {
+    root.classList.add("is-boot");
+    say.classList.add("is-boot");
+    var tries = 0, timer = null;
+    var stopAsking = function () {
+      if (timer) { window.clearInterval(timer); timer = null; }
+      window.removeEventListener("load", poke);
+    };
+    var poke = function () {
+      if (begin() || ++tries > 30) stopAsking();
+    };
+    timer = window.setInterval(poke, 220);
+    window.addEventListener("load", poke);
+    /* resize is deliberately NOT removed - a window that becomes wide enough
+       later is exactly the case this exists for. */
+    window.addEventListener("resize", function () { begin(); }, { passive: true });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { begin(); }).catch(function () {});
+    }
+  }
+
+  function startLevi() {
   setState("idle");
   lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
   observeZones();
@@ -606,9 +793,13 @@
   } else {
     run();
   }
+  }   /* end startLevi */
 
   window.cognivexLevi = {
     root: root, say: say, star: star, speech: speech, note: note,
+    /* Always present, even before the gate opens, so a check can tell the
+       difference between "not started yet" and "not here at all". */
+    started: function () { return started; },
     zones: zoneTable,
     frame: frame,
     ratios: function () { return ratio; },

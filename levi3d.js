@@ -178,12 +178,15 @@ import * as THREE from "./vendor/three.module.min.js";
         levi.rotation.set(0, 0, 0);
       }
 
-      var g = f.glow || 1;
+      var g = f.glow || 1, a = f.alt || 0;
       coreMat.emissiveIntensity = 0.40 + g * 0.30;
       spikeMat.emissiveIntensity = 0.30 + g * 0.24;
-      corona.material.opacity = Math.min(1, 0.52 + g * 0.30);
-      var puff = 1 + Math.min(0.5, speed / 2600);
-      corona.scale.set(230 * puff * g, 230 * puff * g, 1);
+      /* Climbing spreads the corona and thins it, the same way the cast light
+         on the page below spreads and fades. The two have to agree or the
+         altitude reads as two different heights at once. */
+      corona.material.opacity = Math.min(1, (0.54 + g * 0.28) * (1 - a * 0.26));
+      var puff = (1 + a * 0.30) * g;
+      corona.scale.set(230 * puff, 230 * puff, 1);
 
     }
 

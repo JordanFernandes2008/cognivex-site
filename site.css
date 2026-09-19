@@ -2306,8 +2306,20 @@ html:has(.void-page) { background: #05070a; }
              translate(var(--levi-shx, 20px), var(--levi-shy, 52px))
              scale(var(--levi-shs, 1));
   border-radius: 50%;
+  opacity: var(--levi-sho, .6);
+  /* A POOL OF LIGHT, NOT A DARK PATCH. This was black at 52%, and on a page
+     whose background is already near-black a black shadow has nothing to
+     darken - the only place it showed at all was where it dulled the film's
+     orange band, which is precisely why it read as shading on the artwork
+     instead of as something cast by Levi.
+
+     Levi is a light. A light does not cast a shadow of itself downwards; it
+     lights the surface under it. So this is what it actually throws: warm,
+     tight and bright when it is hovering low, wide and faint when it climbs. */
   background: radial-gradient(ellipse 50% 50% at 50% 50%,
-    rgb(0 0 0 / 52%) 0%, rgb(0 0 0 / 30%) 38%, rgb(0 0 0 / 10%) 64%, transparent 84%);
+    rgb(255 190 120 / 34%) 0%, rgb(255 146 52 / 20%) 30%,
+    rgb(229 106 13 / 8%) 58%, rgb(229 106 13 / 2%) 76%, transparent 88%);
+  mix-blend-mode: screen;
   pointer-events: none;
 }
 
@@ -2459,7 +2471,11 @@ body:not(.void-page) .levi__ring {
 .levi__speech { transition: opacity 300ms var(--ease-out); }
 .levi-say.is-quiet .levi__speech { opacity: 0; }
 /* No zone owns this part of the page, so there is nothing here to be. */
-.levi.is-quiet { opacity: 0; transition: opacity 300ms var(--ease-out); }
+/* is-quiet is now a state of the LINE only - see goQuiet() in levi.js, and
+   the rule for it is a few lines above. The object itself is never faded for
+   want of a zone; it flies to the holding lane and waits there, because a
+   companion that blinks out of existence every time you cross a section
+   boundary is not a companion. */
 .levi.is-gone, .levi-say.is-gone { opacity: 0; transition: opacity 260ms var(--ease-out); }
 .levi.is-boot, .levi-say.is-boot { visibility: hidden; }
 
