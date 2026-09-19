@@ -186,9 +186,16 @@
   var mouse = { x: 0, y: 0, fresh: 0 };
   var lastT = 0, raf = null, flareTimer = null, settleT = null;
   var spin = 0, glow = 1, lastScrollY = 0, lastActivity = 0;
+
+  /* WHAT THE 3D RENDERER READS. levi3d.js draws a real object at this point
+     and nothing else; every decision - which zone, which line, where the
+     keep-out is, how hard the spring pulls - stays here, already measured.
+     If levi3d.js never loads this object is simply never read. */
+  var frame = { x: 0, y: 0, vx: 0, vy: 0, glow: 1, spin: 0 };
   var idleSpoken = false, savedLine = null, lure = null, stacked = false;
 
   function write(x, y) {
+    frame.x = x; frame.y = y;
     var d = document.documentElement.style;
     d.setProperty("--levi-x", x.toFixed(1) + "px");
     d.setProperty("--levi-y", y.toFixed(1) + "px");
@@ -343,6 +350,7 @@
     }
 
     write(p.x, p.y);
+    frame.vx = v.x; frame.vy = v.y; frame.glow = glow; frame.spin = spin;
     root.style.setProperty("--levi-spin", spin.toFixed(1) + "deg");
     root.style.setProperty("--levi-glow", glow.toFixed(3));
     root.style.setProperty("--levi-shx", (20 + v.x * 0.014).toFixed(1) + "px");
@@ -602,6 +610,7 @@
   window.cognivexLevi = {
     root: root, say: say, star: star, speech: speech, note: note,
     zones: zoneTable,
+    frame: frame,
     ratios: function () { return ratio; },
     gesture: function () { gesture(); },
     forceIdle: function () { lastActivity = -1e9; checkIdle(1e9); },
