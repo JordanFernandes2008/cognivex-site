@@ -420,13 +420,19 @@
   }
 
   function retarget() {
-    if (!zoneName) { var h = holdPoint(); goal.x = h.x; goal.y = h.y; laneOffsets(); return; }
+    if (!zoneName) {
+      var h = keepOffPanel(holdPoint().x, holdPoint().y);
+      goal.x = h.x; goal.y = h.y; laneOffsets(); return;
+    }
     /* Re-resolved every frame so the hand-off between two bands of the SAME
        zone happens without a change of line - arrive() returns early when the
        name has not changed, so it would never have swapped the element. */
     var el = zoneEl(zoneName);
     var r = el && visibleSlice(el);
-    if (!r) { var h = holdPoint(); goal.x = h.x; goal.y = h.y; laneOffsets(); return; }
+    if (!r) {
+      var hp = keepOffPanel(holdPoint().x, holdPoint().y);
+      goal.x = hp.x; goal.y = hp.y; laneOffsets(); return;
+    }
     zone = el;
     var R = starR(), gap = gapW(), lw = lineW();
     var sh = speech.getBoundingClientRect().height || 26;
@@ -488,6 +494,10 @@
        measured 51 to 139px in every section - far too short for the light, and
        ample for a two-line sentence. That is where the words go. No rect
        scanning, no candidate scoring: one number off the section box. */
+    /* The zone put it somewhere; the panel gets the final say. */
+    var safe = keepOffPanel(goal.x, goal.y);
+    goal.x = safe.x; goal.y = safe.y;
+
     /* RELATIVE OFFSETS ONLY. The first attempt pinned the line to viewport
        coordinates with (lineY - p.y), which fed the light's own position back
        into its own layout every frame; the star was measured at -22322,-109726
@@ -763,6 +773,53 @@
     if (!stage) return;
     var left = stage.getBoundingClientRect().left;
     b.style.width = Math.max(0, Math.round(left - 12)) + "px";
+  }
+
+  /* ==========================================================================
+     THE DEMO IS THE PRODUCT. NOTHING CROSSES IT.
+
+     Every general placement rule tried so far has traded one overlap for
+     another, because this page has no column wide enough for the light AND the
+     box. This is the narrow version of that problem, and the narrow version is
+     solvable: there is exactly one element a visitor is meant to reach into,
+     and the light may never be on top of it.
+
+     One named element, read in retarget() which already reads geometry, and
+     pushed out along whichever axis needs least movement. Not a scan, not a
+     candidate score - a single rectangle that is off limits.
+     ======================================================================== */
+  function panelBox() {
+    var a = document.querySelector(".app");
+    if (!a) return null;
+    var r = a.getBoundingClientRect();
+    if (r.width < 4 || r.bottom < 0 || r.top > document.documentElement.clientHeight) return null;
+    return r;
+  }
+
+  function keepOffPanel(gx, gy) {
+    var box = panelBox();
+    if (!box) return { x: gx, y: gy };
+    var R = starR() + 12;
+    var inside = gx + R > box.left && gx - R < box.right &&
+                 gy + R > box.top  && gy - R < box.bottom;
+    if (!inside) return { x: gx, y: gy };
+
+    var de = document.documentElement;
+    var vw = de.clientWidth, vh = de.clientHeight;
+
+    /* Four ways out. Pick the shortest that is still on screen. */
+    var outs = [
+      { x: box.left - R,  y: gy, d: gx - (box.left - R),  ok: box.left - R > R },
+      { x: box.right + R, y: gy, d: (box.right + R) - gx, ok: box.right + R < vw - R },
+      { x: gx, y: box.top - R,    d: gy - (box.top - R),    ok: box.top - R > R },
+      { x: gx, y: box.bottom + R, d: (box.bottom + R) - gy, ok: box.bottom + R < vh - R }
+    ].filter(function (o) { return o.ok; })
+     .sort(function (a, b) { return Math.abs(a.d) - Math.abs(b.d); });
+
+    /* Nowhere legal - the panel fills the screen. Sit in the left margin and
+       let the light pass over it rather than leave the viewport. */
+    if (!outs.length) return { x: Math.max(R, Math.round(vw * 0.06)), y: gy };
+    return { x: outs[0].x, y: outs[0].y };
   }
 
   function holdPoint() {
