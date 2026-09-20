@@ -73,7 +73,7 @@
     return (h >>> 0).toString(36);
   }
 
-  var mem = { at: {}, said: {} };
+  var mem = { at: {}, said: {}, cyc: {} };
   try {
     var raw = window.sessionStorage.getItem(KEY);
     if (raw) {
@@ -81,6 +81,7 @@
       if (got && typeof got === "object") {
         mem.at = got.at || {};
         mem.said = got.said || {};
+        mem.cyc = got.cyc || {};
       }
     }
   } catch (e) {}
@@ -119,6 +120,35 @@
     return null;                       /* spent */
   }
 
+  /* ---- banter --------------------------------------------------------------
+
+     A DIFFERENT PICK, AND IT HAS TO BE. take() walks a bank and SKIPS any line
+     already said anywhere in the session, which is right for section lines -
+     nobody wants to read the same sentence twice on one page - and wrong for
+     banter, for two reasons.
+
+     First, the order IS the joke. banter.clicked escalates from "Yes?" through
+     "Do you have a business to run?" to "That is the last one. Probably." and
+     then "It is not." Skipping any line collapses the build.
+
+     Second, take() would actually skip some: "Still here." lives in
+     banter.clicked, banter.abandoned AND states.idleShort, so one idle pause
+     would silently delete the second click. Measured against the shipped set,
+     not hypothetical.
+
+     So this cycles strictly in order and wraps. It never consults mem.said,
+     never goes spent, and the index is kept in sessionStorage so the count
+     survives moving between pages - the joke is cumulative across the site,
+     not restarted by a nav click. */
+  function cycle(arr, id) {
+    if (!arr || !arr.length) return null;
+    var i = mem.cyc[id] || 0;
+    var line = arr[i % arr.length];
+    mem.cyc[id] = (i + 1) % arr.length;
+    save();
+    return line;
+  }
+
   function group(name) {
     return (LINES.states && LINES.states[name]) || null;
   }
@@ -138,6 +168,20 @@
        not worth saying again. */
     state: function (key) {
       return take(group(key), "states." + key);
+    },
+
+    /* A banter line. Always returns something while the bank has content. */
+    banter: function (key) {
+      var b = LINES.banter || {};
+      return cycle(b[key], "banter." + key);
+    },
+
+    /* Verification only - where the cycle currently sits, and the bank itself,
+       so a test can assert the order without reaching into storage. */
+    banterAt: function (key) { return mem.cyc["banter." + key] || 0; },
+    banterBank: function (key) {
+      var b = LINES.banter || {};
+      return (b[key] || []).slice();
     },
 
     /* The demo commentary. Home only; every other page has no demo key. */

@@ -2839,6 +2839,41 @@ body:not(.void-page) .levi__flare { display: none; }
 /* RETIRED WITH THE FOLLOWING. The tail pointed back at the light, which was
    the point of it while the box sat beside him. Docked, it points at the edge
    of the screen. A tail aimed at nothing is worse than no tail. */
+/* ---- BANTER WEARS A DIFFERENT BOX --------------------------------------
+
+   "Yes?" inside a 328px fixed-width card with a LEVI label over it and a 34px
+   drop shadow under it does not read as a throwaway remark. It reads as a
+   system notification about nothing, and that is the exact failure the
+   reference exposed: the bee's lines carry no information, and the treatment
+   is why they still land.
+
+   So the panel becomes a bubble. It hugs the text instead of holding a fixed
+   measure, it loses the label - a two-word aside does not need attributing,
+   he is the only one here - it loses most of the shadow, and the radius goes
+   to a pill so the silhouette itself says "remark" before a word is read.
+
+   Same dock, same colours, same contrast. Only the chrome changes, so there
+   is no jump between a section line and a remark. */
+.levi-say.is-banter .levi__speech {
+  width: auto;
+  min-width: 0;
+  max-width: 21rem;
+  padding: .42rem .82rem .48rem;
+  border-radius: 999px;
+  box-shadow: 0 5px 16px rgb(0 0 0 / 34%);
+}
+.levi-say.is-banter .levi__who { display: none; }
+.levi-say.is-banter .levi__line {
+  font-size: .95rem;
+  white-space: nowrap;
+}
+/* Only the ones that genuinely are short get to stay on one line; the longest
+   in the bank is nine words and would otherwise run off the viewport. */
+@media (max-width: 560px) {
+  .levi-say.is-banter .levi__line { white-space: normal; }
+  .levi-say.is-banter .levi__speech { border-radius: 16px; }
+}
+
 .levi__speech::after { content: none; }
 .levi__speech--tail::after {
   content: "";

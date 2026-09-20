@@ -251,12 +251,29 @@
   star.addEventListener("pointerdown", function (e) {
     if (dismissed) return;
     drag = { id: e.pointerId, x: p.x, y: p.y, ox: e.clientX - p.x, oy: e.clientY - p.y };
-    dragMoved = 0;
+    dragMoved = 0; dragSaid = false;
     try { star.setPointerCapture(e.pointerId); } catch (err) {}
     root.classList.add("is-held");
     noteActivity();
     speak(voice("state", "grabbed"));
   });
+
+  /* A GRAZE IS NOT A HOVER. The star is 104px and sits in the margin the
+     pointer crosses on the way to everything else, so firing on pointerenter
+     would have him chirping at people who were reaching for the nav. He wants
+     420ms of actually being pointed at, and then leaves it alone for half a
+     minute. */
+  star.addEventListener("pointerenter", function () {
+    if (dismissed || drag) return;
+    window.clearTimeout(hoverT);
+    hoverT = window.setTimeout(function () {
+      var now = Date.now();
+      if (now - hoverAt < 30000) return;
+      hoverAt = now;
+      banter("hovered");
+    }, 420);
+  });
+  star.addEventListener("pointerleave", function () { window.clearTimeout(hoverT); });
 
   star.addEventListener("pointermove", function (e) {
     if (!drag || e.pointerId !== drag.id) return;
@@ -264,6 +281,9 @@
     dragMoved += Math.abs(nx - drag.x) + Math.abs(ny - drag.y);
     drag.x = nx; drag.y = ny;
     if (dragMoved > 4) e.preventDefault();
+    /* Once he is genuinely being carried, not on the press - states.grabbed
+       already covers the press. */
+    if (dragMoved > 30 && !dragSaid) { dragSaid = true; banter("dragged"); }
   });
 
   function endDrag(e) {
@@ -282,7 +302,8 @@
     var bad = !!b && drop.x + R > b.left && drop.x - R < b.right &&
                      drop.y + R > b.top  && drop.y - R < b.bottom;
     if (bad) parked = null;
-    speak(voice("state", bad ? "droppedBad" : "droppedOk"));
+    if (bad) banter("droppedSomewhereOdd");
+    else speak(voice("state", "droppedOk"));
   }
   star.addEventListener("pointerup", endDrag);
   star.addEventListener("pointercancel", endDrag);
@@ -333,6 +354,12 @@
     if (!text || dismissed) return false;
     how = how || {};
     savedLine = null; idleSpoken = false; idleTier = 0;
+    /* THE TREATMENT FOLLOWS THE LINE, NOT THE OTHER WAY ROUND. A two-word
+       remark in the full panel looks like a system message about nothing,
+       which was the entire finding from the reference. site.css strips the
+       box down for this class. */
+    if (how.banter) say.classList.add("is-banter");
+    else say.classList.remove("is-banter");
     say.classList.remove("is-quiet");
     root.classList.remove("is-quiet");
     setState(how.state || "speaking");
@@ -341,6 +368,48 @@
     lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
     if (REDUCED) settleNow(); else run();
     return true;
+  }
+
+  /* ---- BANTER --------------------------------------------------------------
+
+     Two banks, wired differently, and the difference is the whole point.
+
+     A SECTION LINE is scroll-driven and informative: it tells you what this
+     part of the page is. BANTER is event-driven and carries no information at
+     all - it is what the reference bee does, and why the bee reads as alive
+     while a narrator reads as a tooltip. Clicking the bee tells you nothing;
+     it just answers.
+
+     Banter OUTRANKS the section line, because if the visitor did something
+     then reacting to that is more alive than carrying on narrating. It holds
+     until the next scroll, and then the section's own sentence comes back -
+     so banter is an interruption, never a replacement. */
+  var banterHold = false, sectionLine = null, banterT = 0;
+  /* HOW LONG A REMARK GETS BEFORE THE PAGE TAKES THE FLOOR BACK.
+
+     "The next scroll" is not the scroll that CAUSED the remark. scrollingFast
+     is triggered from inside the scroll handler, and that same handler calls
+     readPosition(), whose settle timer then fires ~260ms later and restores
+     the section line. Measured before this: "There is no rush" appeared and
+     was gone 180ms later, which is below the threshold at which anyone reads
+     anything. The remark was firing perfectly and nobody would ever have seen
+     one. */
+  var BANTER_DWELL = 1500;
+  var hoverAt = 0, hoverT = null, dragSaid = false;
+  var backUp = 0, backSaid = false, backT = null;
+  var approvedEver = false, demoNagged = false, allDoneSaid = false;
+
+  function banter(key, how) {
+    if (dismissed) return false;
+    var V = window.LEVI_VOICE;
+    var line = V && V.banter ? V.banter(key) : null;
+    if (!line) return false;
+    var keep = sectionLine;                 /* speak() must not lose it */
+    how = how || {};
+    how.banter = true;
+    var said = speak(line, how);
+    if (said) { banterHold = true; sectionLine = keep; banterT = Date.now(); }
+    return said;
   }
 
   var IDLE_LINES = window.LEVI_IDLE || ["Still here."];
@@ -1557,8 +1626,9 @@
        walking back up the page is a different sentence in the same section:
        the script carries names now, and the words are fetched at the moment
        the visitor gets there. */
-    var said = speak(voice("line", z.name), { glow: 3.2 });
-    if (said) return;
+    var sl = voice("line", z.name);
+    var said = speak(sl, { glow: 3.2 });
+    if (said) { sectionLine = sl; banterHold = false; return; }
 
     /* SPENT - AND AN EMPTY BOX IS WORSE THAN A QUIET ONE.
 
@@ -1591,6 +1661,20 @@
     if (dismissed) return;
     if (settleT) window.clearTimeout(settleT);
     settleT = window.setTimeout(function () {
+      /* BANTER LASTS UNTIL THE NEXT SCROLL, AND NOT ONE SCROLL LONGER.
+         arrive() returns early when the section has not changed, so without
+         this a remark would sit there for the rest of the section - the
+         visitor clicks once and Levi stops narrating the page. */
+      if (banterHold) {
+        /* Still his turn. Skipping arrive() too is deliberate: banter outranks
+           the section line, and that has to include the section he is
+           arriving in, or a remark made mid-flight is overwritten by the
+           landing. */
+        if (Date.now() - banterT < BANTER_DWELL) return;
+        banterHold = false;
+        var z0 = dominantZone();
+        if (z0 && z0.name === zoneName && sectionLine) { speak(sectionLine); return; }
+      }
       arrive(dominantZone());
     }, SETTLE_MS);
   }
@@ -1609,13 +1693,22 @@
     for (var i = 0; i < all.length; i++) {
       if (onScreenEl(all[i])) { btn = all[i]; break; }
     }
-    if (!btn) return;
+    /* NOTHING TO APPROVE, SO THE CLICK BECOMES THE OTHER THING IT IS FOR.
+
+       This is where gesture() already gave up silently - it looked for an
+       approve control on screen and returned. That silent return was the
+       whole of the conflict Jordan asked about, and there is not one: the
+       approve path is untouched and keeps first refusal, banter only gets the
+       clicks that would previously have done nothing at all. Which is most of
+       them, on six of the seven pages, where no queue exists. */
+    if (!btn) { banter("clicked"); return; }
     var r = btn.getBoundingClientRect();
     lure = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     run();
     window.setTimeout(function () {
       setState("approved");
       glow = 3.4;
+      approvedEver = true;
       try { btn.click(); } catch (e) {}
       /* THE GESTURE GETS THE STATE LINES; the card's own buttons get the demo
          ones. Both approve, but they are different acts: this one is the
@@ -1653,6 +1746,15 @@
                waited >= IDLE_MS ? 1 : 0;
     if (!want || want <= idleTier) return;
     if (!idleSpoken) savedLine = sayEl.textContent;
+    /* The third rung of the ladder is not a longer idle line any more, it is
+       banter: at that point he has been left alone long enough that
+       commenting on the page is the wrong register. */
+    if (want >= 3) {
+      var keepA = idleSpoken ? savedLine : sayEl.textContent;
+      idleTier = want;
+      if (banter("abandoned")) { savedLine = keepA; idleSpoken = true; }
+      return;
+    }
     var line = voice("state", IDLE_KEYS[want - 1]);
     idleTier = want;
     if (!line) return;
@@ -1677,7 +1779,19 @@
 
   document.addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("[data-approve]");
-    if (!b || REDUCED || dismissed) return;
+    if (!b || dismissed) return;
+    approvedEver = true;
+    /* THE LAST ONE IS A DIFFERENT EVENT FROM ANY OTHER ONE. Checked after the
+       click has been handled, because the card is removed by the handler this
+       one runs alongside. */
+    window.setTimeout(function () {
+      if (allDoneSaid || dismissed) return;
+      var stack = document.querySelector("[data-stack]");
+      if (!stack || stack.querySelectorAll("[data-item]").length) return;
+      allDoneSaid = true;
+      banter("afterAllDone");
+    }, 900);
+    if (REDUCED) return;
     setState("approved");
     if (flareTimer) window.clearTimeout(flareTimer);
     flareTimer = window.setTimeout(function () {
@@ -1689,7 +1803,19 @@
   window.addEventListener("scroll", function () {
     noteActivity();
     readPosition();
-    if (REDUCED) { settleNow(); return; }
+
+    /* THE DELTAS ARE READ BEFORE THE REDUCED-MOTION RETURN, NOT AFTER.
+
+       This used to return here, which was right when everything below was
+       motion - the wander, the kick. It is not right any more, because three
+       banter triggers now live below it: scrollingFast, scrolledBack and
+       neverTriedDemo. A visitor who asks for reduced motion is asking for
+       less MOVEMENT, not less of what Levi says, and silently deleting a
+       quarter of the banter for them is a content decision wearing an
+       accessibility label.
+
+       So the counters and the remarks run for everyone, and only the physics
+       is skipped. */
     var y = window.pageYOffset || 0, d = y - lastScrollY;
     lastScrollY = y;
 
@@ -1699,10 +1825,37 @@
     burst += Math.abs(d);
     if (!burstSaid && burst > document.documentElement.clientHeight * 2.5) {
       burstSaid = true;
-      speak(voice("state", "scrolledFast"));
+      banter("scrollingFast");
     }
     if (burstT) window.clearTimeout(burstT);
     burstT = window.setTimeout(function () { burst = 0; burstSaid = false; }, 400);
+
+    /* GOING BACK UP IS A DIFFERENT ACT FROM GOING DOWN. Reading forwards is
+       the default; turning round and climbing means something did not land.
+       Accumulated rather than taken per event, because a trackpad emits
+       upward deltas constantly during ordinary reading - it wants a viewport
+       and a half of real travel, and the accumulator decays. */
+    if (d < 0) backUp += -d; else backUp = 0;
+    if (!backSaid && backUp > document.documentElement.clientHeight * 1.5) {
+      backSaid = true;
+      banter("scrolledBack");
+    }
+    if (backT) window.clearTimeout(backT);
+    backT = window.setTimeout(function () { backUp = 0; backSaid = false; }, 1200);
+
+    /* REACHED THE BOTTOM WITHOUT EVER APPROVING ANYTHING. He has spent the
+       whole page saying the product is one decision, and the visitor has read
+       about it without making one. Once per session; the flag is never reset.
+       Only where the demo exists to be tried. */
+    if (!demoNagged && !approvedEver && document.querySelector("[data-approve]")) {
+      var de0 = document.documentElement;
+      if (y + de0.clientHeight >= de0.scrollHeight - de0.clientHeight * 0.6) {
+        demoNagged = true;
+        banter("neverTriedDemo");
+      }
+    }
+
+    if (REDUCED) { settleNow(); return; }    /* motion only from here down */
 
     kickBy(Math.max(-26, Math.min(26, -d * 0.11)),
            Math.max(-70, Math.min(70, -d * 0.55)));

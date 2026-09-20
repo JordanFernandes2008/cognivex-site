@@ -49,6 +49,98 @@ window.LEVI_LINES = {
       "Edit the wording if it is not how you talk."
     ],
 
+
+    /* ----------------------------------------------------------------------
+       THE DEMO, ITEM BY ITEM.
+       Levi's main job is here. These are spoken as the visitor moves through
+       the queue, not as one line for the whole section. Key them to the item
+       currently in focus and to what the visitor just did.
+       -------------------------------------------------------------------- */
+    demo: {
+
+      /* Spoken once, when the surface first comes into view. */
+      intro: [
+        "This is the product. Everything else on the page describes it.",
+        "Three items, each already drafted. Nothing has been sent.",
+        "Watch one go through, or do it yourself.",
+        "The left rail is the argument: forty-one in, three out."
+      ],
+
+      /* Per item type, as it comes into focus. */
+      emailReply: [
+        "Priya asked about an invoice. The reply is written.",
+        "Eighteen days overdue, so the tone is a reminder, not a demand.",
+        "It stays in the same thread, so she is not starting again.",
+        "Read the reasoning under it. That is where you check my work."
+      ],
+      invoice: [
+        "Fairlane's retainer is due. The invoice is filled in already.",
+        "Same amount, same terms, new month. Nothing invented.",
+        "I prepared it. Sending it is still your click."
+      ],
+      socialPost: [
+        "You said the walnut bench. This is the post.",
+        "Queued for Friday, because that is when you said.",
+        "Change the words if it does not sound like you."
+      ],
+      complaint: [
+        "A complaint. This one I will not answer alone.",
+        "Wrong item arrived. The apology needs your name on it.",
+        "I drafted it, but you should read every word."
+      ],
+      repeatQuestion: [
+        "Opening hours, asked three times this week.",
+        "Same answer each time. It never reached you.",
+        "This is the kind of thing that eats a morning."
+      ],
+      noise: [
+        "Filed, not answered. Nothing here needs a person.",
+        "Receipts, alerts, confirmations. You can look if you want."
+      ],
+
+      /* The reasoning block. */
+      why: [
+        "Every draft says why it is worded that way.",
+        "If the reasoning is wrong, the draft is wrong. Say so.",
+        "You are checking my thinking, not just my spelling."
+      ],
+
+      /* Controls, spoken on hover or first focus. */
+      controls: [
+        "Approve, edit, or skip. There is no fourth button.",
+        "Edit opens the words. Approve is the only thing that sends.",
+        "Skip does not delete it. It waits."
+      ],
+
+      /* After each action. */
+      afterApprove: [
+        "Gone, because you said so. Two left.",
+        "That is one decision made. The counter moved.",
+        "Approved. It was never going anywhere without that."
+      ],
+      afterEdit: [
+        "Your wording now. I kept the rest.",
+        "Better. That is how you would have said it."
+      ],
+      afterSkip: [
+        "Skipped. Still there when you come back.",
+        "Fine. It waits rather than disappearing."
+      ],
+
+      /* Queue empty. */
+      empty: [
+        "That is the morning. Three decisions, nothing else needed you.",
+        "Empty queue. The other thirty-eight were handled beneath it.",
+        "Done. Replay it if you want to see it again."
+      ],
+
+      /* If they just watch. */
+      watching: [
+        "You can take over whenever you want.",
+        "I will keep going. Stop me by clicking anything."
+      ]
+    },
+
     /* .walk — "One night, item by item..." */
     walk: [
       "Six kinds of thing arrive. Here is each one.",
@@ -112,121 +204,7 @@ window.LEVI_LINES = {
       "Nothing went out that you did not approve.",
       "That is the morning you did not spend in your inbox.",
       "Three decisions. Everything else handled beneath them."
-    ],
-
-    /* ======================================================================
-       DEMO — RUNNING COMMENTARY, NOT A SECTION LINE.
-
-       ⚠ DRAFTED BY CLAUDE, AWAITING JORDAN'S WORDS. Everything else in this
-       file is Jordan's. This block was not in the supplied line set and the
-       wiring needs all thirteen keys, so it is written to the voice rules at
-       the top of this file and to the copy actually on the page. Replace the
-       strings; the keys and the code reading them do not need to change.
-
-       Every fact below is checked against index.html:
-         emailReply      Priya Nair, invoice 0142, 2nd chase, 18 days overdue
-         invoice         Fairlane Studio, September retainer, same terms as August
-         socialPost      the walnut bench, from this week's photos, queued Friday
-         complaint       order 2213, wrong item, received 6:12am, first contact
-         repeatQuestion  three people, separately, 6:40 / 7:15 / 8:02
-         noise           20 of the morning's 41 items, newsletters and promotions
-
-       WHERE EACH KEY FIRES. The six item keys are the WALKTHROUGH's six
-       scripted panels - the only place on the site those six types exist. The
-       approval queue's 65 items carry eleven different kinds (Email reply,
-       Reminder, Invoice, Social post, Payment, Booking, Subscription, Order,
-       Document, Delivery, Calendar) and there is no complaint, repeat question
-       or noise among them. intro, why, controls, afterApprove, afterEdit,
-       afterSkip, empty and watching fire on the app window, which is the only
-       surface with Approve / Edit / Skip, a counter that empties, and WATCH.
-       ================================================================== */
-    demo: {
-
-      /* The app surface first comes into view. */
-      intro: [
-        "This is the product. The rest of the page describes it.",
-        "Three want you. The others are already handled.",
-        "The whole morning, sorted, with nothing sent.",
-        "Open one. The reasoning came attached to it."
-      ],
-
-      /* --- one per scripted item, as it comes into focus ----------------- */
-      emailReply: [
-        "A supplier chasing an invoice. Second time asking.",
-        "Priya replied on the old thread, so this stays there.",
-        "Second chase. The first one did not land."
-      ],
-      invoice: [
-        "Same retainer as August, same terms. Built, not issued.",
-        "It sits in Drafted until you say otherwise.",
-        "I can write an invoice. I cannot send one."
-      ],
-      socialPost: [
-        "A post from this week's photos, queued for Friday.",
-        "Queued, not published. You approve the post itself.",
-        "Your bench, and your words if you have them."
-      ],
-      complaint: [
-        "Wrong item shipped. This one arrived at 6:12.",
-        "An apology has to sound like you. Read it.",
-        "First contact. Nothing has been said back yet."
-      ],
-      repeatQuestion: [
-        "Three people asked the same thing, separately.",
-        "Same answer three times. Worth having ready.",
-        "Not a decision. It just needs answering."
-      ],
-      noise: [
-        "Twenty of the forty-one were newsletters and promotions.",
-        "Filed, unread. This is the part you never see.",
-        "Nothing to do here. That is the point of it."
-      ],
-
-      /* The reasoning block is revealed or focused. */
-      why: [
-        "That is the reasoning. If it is wrong, the draft is.",
-        "Every draft carries one of these. Read it or do not.",
-        "Disagree with this part before you approve the part above."
-      ],
-
-      /* First hover or focus of Approve / Edit / Skip. */
-      controls: [
-        "Approve, edit the wording, or skip. There is no fourth.",
-        "Three answers, and skip is not delete.",
-        "Edit changes my wording, not your approval."
-      ],
-
-      /* Immediately after each action. */
-      afterApprove: [
-        "Approved. In the product, that one would go now.",
-        "Done, because you said so. Not before.",
-        "That is one. It does not generalise to the next."
-      ],
-      afterEdit: [
-        "Your words now. Mine were a starting point.",
-        "Edited. It still waits for the approval.",
-        "Better. You know how you talk."
-      ],
-      afterSkip: [
-        "Skipped. It stays in the list.",
-        "Fine. It waits rather than disappears.",
-        "Not deleted. It will be here later."
-      ],
-
-      /* The queue clears. */
-      empty: [
-        "That is all of them. Morning closed.",
-        "You are through them. Nothing is waiting.",
-        "Empty. That is what the end looks like."
-      ],
-
-      /* They sat through WATCH mode without acting. */
-      watching: [
-        "It is playing itself. Click anything to take over.",
-        "You can watch, or you can decide. Either is fine.",
-        "This runs on its own until you touch it."
-      ]
-    }
+    ]
   },
 
   /* ==========================================================================
@@ -470,6 +448,104 @@ window.LEVI_LINES = {
     "Nothing at this one. Try the home page.",
     "This is the one page I cannot draft a reply for."
   ],
+
+
+  /* ==========================================================================
+     BANTER — the second bank.
+     Studied from the reference: its bee never explains the site. Clicking it
+     cycles through short remarks, and scrolling fast gets you told off. The
+     lines carry no information at all, which is exactly why the character
+     reads as alive rather than as a tooltip.
+     These are NOT section lines. They fire on what the visitor DOES.
+     Keep them 2-6 words. Dry. Never cute, never eager.
+     ====================================================================== */
+  banter: {
+
+    /* Clicking Levi repeatedly cycles this bank, in order, then loops.
+       The first few are the ones most people will see. */
+    clicked: [
+      "Yes?",
+      "Still here.",
+      "That is twice.",
+      "Keep going, see what happens.",
+      "Nothing new yet.",
+      "You are testing me.",
+      "Fine. Another one.",
+      "I can do this longer than you.",
+      "Do you have a business to run?",
+      "This is not in the demo.",
+      "Nobody has clicked this many times.",
+      "Now you are just poking.",
+      "The queue is over there.",
+      "I would draft a reply, but you keep clicking.",
+      "Try approving something instead.",
+      "Still nothing sent.",
+      "You could be reading the page.",
+      "I am not going anywhere.",
+      "Persistent.",
+      "Fine, one more.",
+      "That is the last one. Probably.",
+      "It is not."
+    ],
+
+    /* Fired when the visitor scrolls hard and fast. */
+    scrollingFast: [
+      "Slow down.",
+      "You went past three.",
+      "Nothing to catch up to.",
+      "There is no rush.",
+      "You are missing the good part."
+    ],
+
+    /* Scrolled back up. */
+    scrolledBack: [
+      "Changed your mind.",
+      "Same as before.",
+      "It has not moved."
+    ],
+
+    /* Cursor hovering near Levi without clicking. */
+    hovered: [
+      "Go on.",
+      "Click, if you like.",
+      "I do not bite."
+    ],
+
+    /* Dragged somewhere. */
+    dragged: [
+      "Where are we going?",
+      "Careful.",
+      "This is new.",
+      "Put me down gently."
+    ],
+    droppedSomewhereOdd: [
+      "Really. Here.",
+      "I cannot read from here.",
+      "Fine. Your page."
+    ],
+
+    /* Visitor does nothing for a long time. */
+    abandoned: [
+      "Still here.",
+      "Nothing moves without you.",
+      "Take your time.",
+      "I will wait. It is most of the job."
+    ],
+
+    /* Visitor reached the bottom without touching the demo. */
+    neverTriedDemo: [
+      "You never approved anything.",
+      "The demo is back up there.",
+      "You read about it. You could try it."
+    ],
+
+    /* Rare — only after the visitor has approved everything. */
+    afterAllDone: [
+      "That is the whole morning.",
+      "Now you know what it does.",
+      "Nothing left to decide."
+    ]
+  },
 
   /* ==========================================================================
      STATES — not tied to a section
