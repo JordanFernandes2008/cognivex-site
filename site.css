@@ -590,7 +590,25 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .slot__what { margin-top: .25rem; font-weight: var(--w-read); font-size: 1rem; color: var(--ink); }
 .slot__why { margin-top: .35rem; font-size: .86rem; color: var(--muted); }
 
-.foot { padding-block: 2.5rem; background: var(--ink); color: #c9ccd1; }
+/* THE FOOTER IS A DARK SURFACE ON SIX LIGHT PAGES, AND NOW IT SAYS SO.
+
+   --dim and --accent-text are tuned for WHITE (7.17 and 6.98 there). The
+   footer paints --ink, and anything inside it that reached for either token
+   inherited the light-page value onto a near-black ground:
+
+     .levi-note       --dim        2.53:1   (1.51 with its opacity: .5)
+     focus ring       --accent-text 2.60:1   below the 3:1 non-text floor
+
+   Measured on all six light pages; the homepage passed only because its body
+   already redefines both tokens globally. Rescoping them here fixes both at
+   the cause, and matches the footer to the homepage's own dark values rather
+   than inventing new ones: #9aa0a8 is what .foot__by already uses (6.9:1), and
+   #ff9d52 is the homepage's dark-surface orange (8.8:1 on this ink). */
+.foot {
+  padding-block: 2.5rem; background: var(--ink); color: #c9ccd1;
+  --dim: #9aa0a8;
+  --accent-text: #ff9d52;
+}
 .foot .brand { color: #fff; }
 .foot__inner { display: grid; gap: 1.5rem; }
 .foot__by { margin-top: .6rem; color: #9aa0a8; font-size: .86rem; max-width: 38ch; }
@@ -2965,9 +2983,13 @@ body:not(.void-page) .levi__flare { display: none; }
   letter-spacing: .01em;
   line-height: 1.5;
   color: var(--dim);
-  opacity: .5;
+  /* No opacity. It was .5, which halves contrast on top of whatever the colour
+     already achieves - the note measured 1.51:1 on the light pages and 3.26:1
+     on the homepage. It is a disclosure about Levi, so it has to be readable;
+     "quieter than the footer links" is done by size and colour, not by fading
+     it out. The text-shadow went with it: it existed for when this sat fixed
+     over the hero, and on a solid footer it only softens the edges. */
   pointer-events: none;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 70%);
 }
 
 @media (max-width: 700px) {

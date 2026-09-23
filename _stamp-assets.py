@@ -57,8 +57,14 @@ for page in PAGES:
     for name, ver in stamps.items():
         esc = re.escape(name)
         attr = 'href' if name.endswith('.css') else 'src'
-        text = re.sub(r'%s="%s(?:\?v=[0-9a-f]+)?"' % (attr, esc),
-                      '%s="%s?v=%s"' % (attr, name, ver), text)
+        # (/?) because 404.html uses ROOT-relative refs: Vercel serves it for
+        # any missing path, and a relative "site.css" requested from
+        # /some/deep/url resolves to /some/deep/site.css and 404s. Without
+        # the optional slash this pattern silently stops matching those refs
+        # and the 404 page serves stale cached assets forever after.
+        text = re.sub(r'%s="(/?)%s(?:\?v=[0-9a-f]+)?"' % (attr, esc),
+                      lambda m, a=attr, n=name, v=ver: '%s="%s%s?v=%s"' % (a, m.group(1), n, v),
+                      text)
     if text != before:
         io.open(path, 'w', encoding='utf-8', newline='').write(text)
         print('stamped %s' % page)
