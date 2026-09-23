@@ -341,7 +341,8 @@
      section's sentence out again from the first letter. */
   function sayLine(text, instant) {
     if (typeT) { window.clearInterval(typeT); typeT = null; }
-    if (REDUCED || instant) { sayEl.textContent = text; speech.classList.add("is-done"); return; }
+    if (REDUCED || instant) { stopTalk(); sayEl.textContent = text; speech.classList.add("is-done"); return; }
+    startTalk();
     sayEl.textContent = "";
     speech.classList.remove("is-done");
     var i = 0;
@@ -351,6 +352,9 @@
       if (i >= text.length) {
         window.clearInterval(typeT); typeT = null;
         speech.classList.add("is-done");
+        stopTalk();
+        /* the box is at its final size now - the right moment to re-check */
+        window.setTimeout(chooseSaySide, 30);
       }
     }, 26);
   }
@@ -579,18 +583,54 @@
   var body = root.querySelector(".levi__body");
   var blinkT = null;
 
-  /* Irregular on purpose - a blink on a fixed interval reads as a cursor. */
+  /* A BLINK YOU CAN SEE. The first version closed in 70ms and opened in
+     110: technically a blink, practically invisible - a real one closes over
+     about a tenth of a second and HOLDS shut for a beat, and that hold is
+     most of what the eye registers. One in five is a double, because nobody
+     blinks with metronome regularity. Irregular interval for the same reason:
+     on a fixed one it reads as a cursor. */
+  function blinkOnce(twice) {
+    if (!window.gsap || !body || document.hidden) return;
+    var tl = gsap.timeline()
+      .to(body, { "--e-h": "1.5px", duration: 0.09, ease: "power2.in" })
+      .to(body, { "--e-h": "10px",  duration: 0.14, ease: "power2.out", delay: 0.05 });
+    if (twice) tl.to(body, { "--e-h": "1.5px", duration: 0.08, ease: "power2.in", delay: 0.06 })
+                 .to(body, { "--e-h": "10px",  duration: 0.13, ease: "power2.out", delay: 0.04 });
+  }
   function blink() {
     window.clearTimeout(blinkT);
     blinkT = window.setTimeout(function () {
-      if (window.gsap && body && !document.hidden) {
-        gsap.timeline()
-          .to(body, { "--e-h": "2px",  duration: 0.07, ease: "power2.in" })
-          .to(body, { "--e-h": "10px", duration: 0.11, ease: "power2.out" });
-      }
+      blinkOnce(Math.random() < 0.2);
       blink();
-    }, 2600 + Math.random() * 4200);
+    }, 2400 + Math.random() * 3600);
   }
+
+  /* ---- HE TALKS ------------------------------------------------------------
+     While a line is typing, the mouth moves: an irregular four-step open/close
+     pattern that loops at roughly 4-5 syllables a second, which is about the
+     pace of speech - fast enough to read as talking, slow enough not to look
+     like chattering. It stops the moment the line is finished and eases back
+     into the smile. Lines that come back WHOLE (already read) do not lip-sync:
+     he is not saying them again. The mouth and the blink animate different
+     properties, so he can blink mid-sentence. */
+  var talkTl = null;
+  function startTalk() {
+    if (!window.gsap || !body || REDUCED) return;
+    if (talkTl) talkTl.kill();
+    talkTl = gsap.timeline({ repeat: -1 })
+      .to(body, { "--m-w": "17px", "--m-h": "15px", "--m-rt": "7px", "--m-rb": "9px",  duration: 0.11, ease: "power1.out" })
+      .to(body, { "--m-w": "21px", "--m-h": "8px",  "--m-rt": "2px", "--m-rb": "17px", duration: 0.10, ease: "power1.in" })
+      .to(body, { "--m-w": "18px", "--m-h": "13px", "--m-rt": "6px", "--m-rb": "10px", duration: 0.09, ease: "power1.out" })
+      .to(body, { "--m-w": "21px", "--m-h": "6px",  "--m-rt": "1px", "--m-rb": "18px", duration: 0.12, ease: "power1.in" });
+  }
+  function stopTalk() {
+    if (talkTl) { talkTl.kill(); talkTl = null; }
+    if (window.gsap && body) {
+      gsap.to(body, { "--m-w": "22px", "--m-h": "11px", "--m-rt": "0px", "--m-rb": "22px",
+                      duration: 0.2, ease: "power2.out", overwrite: "auto" });
+    }
+  }
+
 
   /* ---- THE FLIGHT PATH ----------------------------------------------------
 
@@ -622,20 +662,17 @@
      frame p is a point on a curve between two finite endpoints - it cannot be
      anything else, which is a stronger guarantee than the three guards it
      replaces. */
-  var CRUISE = 640;        /* px/s - the speed he crosses the page at        */
-  var flight = null, qx = null, qy = null, flyNext = false;
+  var CRUISE = 560;        /* px/s average; sine.inOut peaks ~1.57x this      */
+  var flight = null, flyNext = false;
+  /* px/s. Above the flight's own average (CRUISE) so the follow is never the
+     slower of the two, and well under the ~4,600px/s the eased follow hit. */
+  var FOLLOW_MAX = 900;
   var fromP = { x: 0, y: 0 }, ctrlP = { x: 0, y: 0 }, toP = { x: 0, y: 0 };
   var prog = { t: 0 };
   var lastP = { x: 0, y: 0 };
   var kick = { x: 0, y: 0 };
 
   function qbez(a, c, b, t) { var u = 1 - t; return u * u * a + 2 * u * t * c + t * t * b; }
-
-  function ensureFollow() {
-    if (qx || !window.gsap) return;
-    qx = gsap.quickTo(p, "x", { duration: 0.55, ease: "power3" });
-    qy = gsap.quickTo(p, "y", { duration: 0.55, ease: "power3" });
-  }
 
   function writeKick() {
     root.style.setProperty("--levi-kx", kick.x.toFixed(2) + "px");
@@ -711,7 +748,12 @@
     ctrlP.x = (fromP.x + tx) / 2 + (-dy / d) * bow;
     ctrlP.y = (fromP.y + ty) / 2 + ( dx / d) * bow;
 
-    var dur = Math.max(0.42, Math.min(1.5, d / CRUISE));
+    /* NO 1.5s CEILING ON LONG TRIPS. With one, a flight across most of the
+       page had to cover ~1,400px in 1.5s, and power2.inOut peaks at twice
+       its average - measured 32px in a single frame mid-arc, which reads as
+       a jump, not a flight. Now a long trip simply takes longer, on sine,
+       whose peak is ~1.57x its average: about 14px a frame at most. */
+    var dur = Math.max(0.45, Math.min(2.8, d / CRUISE));
     if (flight) flight.kill();
     prog.t = 0;
 
@@ -724,12 +766,12 @@
     }
 
     flight = gsap.to(prog, {
-      t: 1, duration: dur, ease: "power2.inOut",
+      t: 1, duration: dur, ease: "sine.inOut",
       onUpdate: function () {
         p.x = qbez(fromP.x, ctrlP.x, toP.x, prog.t);
         p.y = qbez(fromP.y, ctrlP.y, toP.y, prog.t);
       },
-      onComplete: function () { flight = null; }
+      onComplete: function () { flight = null; chooseSaySide(); }
     });
   }
 
@@ -810,7 +852,7 @@
     headBottom = m ? Math.max(0, Math.round(m.getBoundingClientRect().bottom)) : 0;
   }
   function headEdge() { if (headBottom < 0) readHead(); return headBottom; }
-  window.addEventListener("resize", readHead, { passive: true });
+  window.addEventListener("resize", function () { readHead(); chooseSaySide(); }, { passive: true });
   window.addEventListener("scroll", readHead, { passive: true });
 
   /* WHERE IT GOES. Beside him when a side fits - right by default, left near
@@ -832,37 +874,236 @@
     sayMode = m;
   }
 
+  /* ---- WHICH SIDE: DECIDED AT REST, AGAINST REAL TEXT -------------------
+     Beside him is the default, but "beside" was measured sitting on 8 lines
+     of the hero paragraph at 1300x760 - he parks at the left edge and a
+     328px box to his right lands squarely across the copy. So when he comes
+     to rest, each of the four placements is tested against the page's actual
+     LINE BOXES (a Range per text element, so a wide <p> with a short last
+     line only counts where there are words) and the first one that covers
+     none wins - right, then left, then below, then above; if none is clean,
+     the one that covers least.
+
+     Decided at rest and ONLY at rest - after settling, after a flight lands,
+     when a line finishes typing (its final size), on resize. Every frame just
+     applies the stored choice. That is what keeps this from being the
+     per-frame hunting that made the old box flicker: the text scrolls with
+     the section he is standing in, so a side that was clear stays clear. */
+  var sayPref = "right";
+
+  function geomFor(m, x, y, vw, vh) {
+    var R = bodyR(), GAP = 16, M = 10, top0 = headEdge() + 8, l, t;
+    if (m === "right" || m === "left") {
+      l = m === "right" ? x + R + GAP : x - R - GAP - sayW;
+      if (m === "right" ? l + sayW > vw - M : l < M) return null;
+      t = Math.max(top0, Math.min(vh - sayH - M, y - 30));
+    } else {
+      t = m === "below" ? y + R + GAP : y - R - GAP - sayH;
+      if (m === "below" ? t + sayH > vh - M : t < top0) return null;
+      l = Math.max(M, Math.min(vw - sayW - M, x - sayW / 2));
+    }
+    return { l: l, t: t };
+  }
+
+  function textLines() {
+    var out = [], vh = document.documentElement.clientHeight;
+    var els = document.querySelectorAll("main p, main h1, main h2, main h3, main h4, main li, main dt, main dd, main blockquote, main figcaption");
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.closest(".levi, .levi-say")) continue;
+      var r = el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > vh || r.width < 2 || !(el.textContent || "").trim()) continue;
+      /* NO OPACITY TEST. That was the bug in Jordan's screenshot: the hero
+         paragraph is data-rise, and it sits at opacity 0 for over a second
+         while the page settles - so this skipped it, called the space empty,
+         put the box there, and the paragraph faded in underneath. Text that is
+         about to appear is text. Only something with no layout box is not. */
+      var rg = document.createRange(); rg.selectNodeContents(el);
+      var q = rg.getClientRects();
+      for (var k = 0; k < q.length; k++) if (q[k].width > 2 && q[k].height > 4) out.push(q[k]);
+    }
+    return out;
+  }
+
+  function coverage(g, rects) {
+    var n = 0, r2 = g.l + sayW, b2 = g.t + sayH;
+    for (var i = 0; i < rects.length; i++) {
+      var q = rects[i];
+      if (!(r2 <= q.left || g.l >= q.right || b2 <= q.top || g.t >= q.bottom)) n++;
+    }
+    return n;
+  }
+
+  /* HIS OWN SPOT, TOO. At 1300px he never rested on text; at 950px he did,
+     at two of eight positions, because the column is nearly the whole width
+     there. So before choosing the box's side, check where HE will rest: if
+     his body would sit on a line, slide him vertically to the nearest clear
+     spot within 240px, inside the screen and under the header. Stored as an
+     offset from where his section put him (nudgeY), so it scrolls with the
+     section instead of being a fixed screen position; cleared when he
+     arrives somewhere new. Vertical only - he keeps his lane. */
+  var nudgeX = 0, nudgeY = 0;
+  /* The clearance includes his BREATH. The station is still, but the body
+     drifts +/-18px sideways and +/-13px up and down around it, so a spot
+     cleared by 4px measured clear and then dipped into the next line at the
+     bottom of a breath - seen at 950px, where the hero's lines are close. */
+  function bodyClear(x, y, rects, tight) {
+    var RX = bodyR() + (tight ? 3 : 20), RY = bodyR() + (tight ? 3 : 15);
+    var l = x - RX, t = y - RY, r2 = x + RX, b2 = y + RY;
+    for (var i = 0; i < rects.length; i++) {
+      var q = rects[i];
+      if (!(r2 <= q.left || l >= q.right || b2 <= q.top || t >= q.bottom)) return false;
+    }
+    return true;
+  }
+  /* The least text any side of the box would cover at (x, y). */
+  function boxCovAt(x, y, rects, vw, vh) {
+    var sides = ["right", "left", "below", "above"], least = 1e9;
+    for (var i = 0; i < sides.length; i++) {
+      var g = geomFor(sides[i], x, y, vw, vh);
+      if (g) least = Math.min(least, coverage(g, rects));
+      if (least === 0) break;
+    }
+    return least;
+  }
+  /* A side for the box at (x, y) that covers no text at all? */
+  function boxClearAt(x, y, rects, vw, vh) {
+    var sides = ["right", "left", "below", "above"];
+    for (var i = 0; i < sides.length; i++) {
+      var g = geomFor(sides[i], x, y, vw, vh);
+      if (g && coverage(g, rects) === 0) return true;
+    }
+    return false;
+  }
+
+  /* TWO-DIMENSIONAL, BECAUSE ONE WAS NOT ENOUGH. A vertical-only nudge
+     failed at 950px: the hero's left side is heading, paragraph and button
+     stacked solid, so there was no clear spot above or below him within
+     reach - while the right half of the hero (the black-hole art) sat empty.
+     So: the NEAREST spot where his body AND some side for his box are both
+     text-free, searched in rings of increasing cost and stopped at the first
+     hit. Horizontal distance costs more than vertical, so he prefers to stay
+     near his lane and only crosses the page when he has to. Runs at rest
+     only; the result is stored as an offset from his section's spot. */
+  function settleSpot(rects) {
+    if (drag || parked || lure || !sayW) return;
+    var de = document.documentElement, vw = de.clientWidth, vh = de.clientHeight;
+    if (bodyClear(goal.x, goal.y, rects) && boxClearAt(goal.x, goal.y, rects, vw, vh)) return;
+    var R = bodyR(), lo = headEdge() + R + 12, hi = vh - R - 10, lft = R + 8, rgt = vw - R - 8;
+    var cand = [], STEP = 28;
+    for (var dy = -420; dy <= 420; dy += STEP) {
+      for (var dx = -vw; dx <= vw; dx += STEP) {
+        var x = goal.x + dx, y = goal.y + dy;
+        if (x < lft || x > rgt || y < lo || y > hi) continue;
+        cand.push({ x: x, y: y, c: dx * dx * 1.6 + dy * dy });
+      }
+    }
+    cand.sort(function (p1, p2) { return p1.c - p2.c; });
+    /* First choice: the nearest spot where body AND box are both clear.
+       Where the page is too dense for that anywhere on screen (measured once
+       at 950px, just past the hero), the spot where the box covers the
+       FEWEST lines - not merely the nearest clear body. Bounded to the 400
+       nearest clear spots so a dense page cannot make the search expensive. */
+    /* IN TIERS, because a phone can be all text. At 390px, scrolled onto the
+       demo, the panel fills the screen with rows and there is no hole big
+       enough for his body PLUS its breathing - so the strict pass found
+       nothing and left him on five lines. Tier two drops the breathing
+       margin (clear at rest, may brush a line at the bottom of a breath).
+       Only if even that fails does he take the spot touching fewest lines. */
+    var best = null, bestCov = 1e9;
+    for (var tier = 0; tier < 2 && !best; tier++) {
+      var seen = 0;
+      for (var i = 0; i < cand.length && seen < 400; i++) {
+        var c = cand[i];
+        if (!bodyClear(c.x, c.y, rects, tier === 1)) continue;
+        seen++;
+        var cov = boxCovAt(c.x, c.y, rects, vw, vh);
+        if (cov === 0) { best = c; bestCov = 0; break; }
+        if (cov < bestCov) { best = c; bestCov = cov; }
+      }
+    }
+    if (!best) {
+      var leastHit = 1e9;
+      for (var j = 0; j < cand.length && j < 600; j++) {
+        var d = cand[j], R3 = bodyR() + 3, hitN = 0;
+        for (var q = 0; q < rects.length; q++) {
+          var rr = rects[q];
+          if (!(d.x + R3 <= rr.left || d.x - R3 >= rr.right || d.y + R3 <= rr.top || d.y - R3 >= rr.bottom)) hitN++;
+        }
+        if (hitN < leastHit) { leastHit = hitN; best = d; }
+      }
+    }
+    if (best) {
+      nudgeX += best.x - goal.x;
+      nudgeY += best.y - goal.y;
+      retarget();
+    }
+  }
+
+  /* AGAIN, ONCE THE PAGE HAS STOPPED MOVING UNDER HIM. The reveals do not
+     only fade text in, they MOVE it: data-rise starts ~40px low and slides
+     up. So at the moment he settles, the lines are not where they will be -
+     the check finds a clear spot, and the text then rises into it. Measured
+     at 950px: clear at settle, 6 lines covered a second later. Re-checking at
+     0.7s and 1.6s, after the reveals land, catches it. Still decisions at
+     discrete moments, never per frame - at worst he shifts aside once. */
+  var recheckT = [];
+  function chooseSaySideSoon() {
+    chooseSaySide();
+    recheckT.forEach(window.clearTimeout);
+    recheckT = [window.setTimeout(chooseSaySide, 700), window.setTimeout(chooseSaySide, 1600)];
+  }
+
+  /* CONTROLS ARE FORBIDDEN GROUND, not just text. The rest search's offset
+     is applied AFTER keepOffPanel(), so a search that only looked at words
+     could slide him straight onto a button - measured, one tap in 33 landed
+     on the star instead of the control. Every link, button and control panel
+     on screen joins the no-go set, for his body and for the box. */
+  function controlRects() {
+    var out = hotBoxes().slice(), vh = document.documentElement.clientHeight;
+    var els = document.querySelectorAll("main a[href], main button, main [role=button], main input, main select, main textarea");
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.closest(".levi, .levi-say")) continue;
+      var r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4 || r.bottom < 0 || r.top > vh) continue;
+      out.push(r);
+    }
+    return out;
+  }
+
+  function chooseSaySide() {
+    if (!sayW) { sayW = speech.offsetWidth; sayH = speech.offsetHeight; }
+    if (!sayW) return;
+    var de = document.documentElement, vw = de.clientWidth, vh = de.clientHeight;
+    var rects = textLines().concat(controlRects()), best = null, bestN = 1e9;
+    settleSpot(rects);
+    ["right", "left", "below", "above"].forEach(function (m) {
+      var g = geomFor(m, goal.x, goal.y, vw, vh);
+      if (!g) return;
+      var n = coverage(g, rects);
+      if (n < bestN) { best = m; bestN = n; }
+    });
+    if (best) sayPref = best;
+  }
+
   function placeSay(x, y) {
     if (!sayW) { sayW = speech.offsetWidth; sayH = speech.offsetHeight; }
     var de = document.documentElement, vw = de.clientWidth, vh = de.clientHeight;
-    var R = bodyR(), GAP = 16, M = 10, top0 = headEdge() + 8;
-    var rightL = x + R + GAP, leftL = x - R - GAP - sayW;
-    var fitsR = rightL + sayW <= vw - M, fitsL = leftL >= M;
-
-    var m;
-    if (fitsR && fitsL) m = (sayMode === "left" && rightL + sayW > vw - M - 24) ? "left" : "right";
-    else if (fitsR) m = "right";
-    else if (fitsL) m = "left";
-    else m = (y + R + GAP + sayH <= vh - M) ? "below" : "above";
+    /* The preferred side if it fits where he is right now; otherwise the
+       first that does. Only mid-flight near an edge does the fallback run. */
+    var m = sayPref, g = geomFor(m, x, y, vw, vh);
+    if (!g) {
+      var order = ["right", "left", "below", "above"];
+      for (var i = 0; i < order.length && !g; i++) { m = order[i]; g = geomFor(m, x, y, vw, vh); }
+      if (!g) { m = "above"; g = { l: 10, t: headEdge() + 8 }; }
+    }
     setMode(m);
-
-    var l, t, tail;
+    var l = g.l, t = g.t, R = bodyR();
     if (m === "right" || m === "left") {
-      l = m === "right" ? rightL : leftL;
-      /* ANCHORED BY ITS FIRST LINE, NOT ITS MIDDLE. The box grows as the
-         sentence types and wraps (57px -> 90px), and centring it on him moved
-         its top up by half of every new line, mid-sentence - a little jump
-         each time he spoke. Pinning the top 30px above him keeps the first
-         line level with his eyes and lets the box grow downward, still. */
-      t = Math.max(top0, Math.min(vh - sayH - M, y - 30));
-      tail = Math.max(14, Math.min(sayH - 14, y - t));
-      speech.style.setProperty("--tail-y", tail.toFixed(1) + "px");
+      speech.style.setProperty("--tail-y", Math.max(14, Math.min(sayH - 14, y - t)).toFixed(1) + "px");
     } else {
-      l = Math.max(M, Math.min(vw - sayW - M, x - sayW / 2));
-      t = m === "below" ? y + R + GAP : y - R - GAP - sayH;
-      t = Math.max(top0, Math.min(vh - sayH - M, t));
-      tail = Math.max(16, Math.min(sayW - 16, x - l));
-      speech.style.setProperty("--tail-x", tail.toFixed(1) + "px");
+      speech.style.setProperty("--tail-x", Math.max(16, Math.min(sayW - 16, x - l)).toFixed(1) + "px");
     }
     speech.style.setProperty("--say-l", l.toFixed(1) + "px");
     speech.style.setProperty("--say-t", t.toFixed(1) + "px");
@@ -1120,7 +1361,7 @@
     if (!zoneName) {
       var hold = holdPoint();
       var h = keepOffPanel(hold.x, hold.y);
-      goal.x = offColumn(h.x); goal.y = belowHead(h.y); laneOffsets(); return;
+      goal.x = offColumn(h.x) + nudgeX; goal.y = belowHead(h.y + nudgeY); laneOffsets(); return;
     }
     /* Re-resolved every frame so the hand-off between two bands of the SAME
        zone happens without a change of line - arrive() returns early when the
@@ -1130,7 +1371,7 @@
     if (!r) {
       var hp0 = holdPoint();
       var hp = keepOffPanel(hp0.x, hp0.y);
-      goal.x = offColumn(hp.x); goal.y = belowHead(hp.y); laneOffsets(); return;
+      goal.x = offColumn(hp.x) + nudgeX; goal.y = belowHead(hp.y + nudgeY); laneOffsets(); return;
     }
     zone = el;
     var R = starR(), gap = gapW();
@@ -1198,7 +1439,7 @@
        scanning, no candidate scoring: one number off the section box. */
     /* The zone put it somewhere; the panel gets the final say. */
     var safe = keepOffPanel(goal.x, goal.y);
-    goal.x = offColumn(safe.x); goal.y = belowHead(safe.y);
+    goal.x = offColumn(safe.x) + nudgeX; goal.y = belowHead(safe.y + nudgeY);
 
     /* RELATIVE OFFSETS ONLY. The first attempt pinned the line to viewport
        coordinates with (lineY - p.y), which fed the light's own position back
@@ -1271,11 +1512,31 @@
        a new section - and is requested by arrive(). Everything else, scroll
        drift included, is the follow, which cannot repeat because it is one
        tween being re-aimed. */
-    if (window.gsap) {
-      if (flyNext && !drag && dist > 24) { flyNext = false; flyTo(gx, gy); }
-      else if (!flight) { flyNext = false; ensureFollow(); qx(gx); qy(gy); }
-    } else {
-      p.x = gx; p.y = gy;               /* no vendor file: correct, not pretty */
+    if (flyNext && !drag && dist > 24 && window.gsap) { flyNext = false; flyTo(gx, gy); }
+    else if (!flight) {
+      flyNext = false;
+      /* THE FOLLOW HAS A SPEED LIMIT - AND THAT IS THE WHOLE TELEPORT FIX.
+
+         It was gsap.quickTo with a power3 ease: an ease-OUT, fastest at the
+         start. Fine for small drifts, but when a section scrolls away his
+         target jumps hundreds of pixels at once, and an ease-out covers a
+         jump like that by leaping first. Measured at 1300x760 during a flick:
+         76px in a single frame, then 67, 61, 53... - roughly 4,600px/s at the
+         start. At 60fps a 76px step is not motion, it is a teleport.
+
+         Now: an exponential approach (quick for small moves, so he still
+         feels responsive) with a hard ceiling on how far he may travel in one
+         frame. A big jump becomes a steady glide at FOLLOW_MAX instead of a
+         snap. It also removes the quickTo tweens entirely, which were a
+         second writer to p still running underneath every flight. */
+      var fdx = gx - p.x, fdy = gy - p.y, fd = Math.hypot(fdx, fdy);
+      if (fd > 0.05) {
+        var stepLen = fd * (1 - Math.exp(-dt * (drag ? 24 : 7)));
+        var cap = (drag ? 4000 : FOLLOW_MAX) * dt;
+        if (stepLen > cap) stepLen = cap;
+        p.x += fdx / fd * stepLen;
+        p.y += fdy / fd * stepLen;
+      }
     }
 
     /* VELOCITY IS DERIVED NOW, NOT INTEGRATED. Nothing steers by it any more -
@@ -1586,7 +1847,11 @@
     setState("idle");
   }
 
-  function arrive(z) {
+  /* opts.silent: go there - fly, clear the old detour, look round - but do
+     not speak. Used while banter holds the floor; see readPosition. */
+  var pendingLine = false;
+  function arrive(z, opts) {
+    opts = opts || {};
     /* A GAP IS NOT A SILENCE. Measured on the homepage: the ten bands cover
        2839px of a 6839px scroll range, so 58% of the page fell between zones
        and called goQuiet(). That was survivable while the line was pinned to
@@ -1605,9 +1870,20 @@
        goQuiet() is kept for the cases that really are silence: dismissal, and
        a page where nothing has been said at all. */
     if (!z) { if (!zoneName) goQuiet(); return; }
-    if (z.name === zoneName) return;          /* already here */
+    if (z.name === zoneName) {                /* already here */
+      /* ...unless he got here SILENTLY while a remark held the floor - then
+         this section's line is still owed, and this is the moment for it. */
+      if (pendingLine && !opts.silent) {
+        pendingLine = false;
+        var owed = voice("line", z.name);
+        if (speak(owed, { glow: 3.2 })) sectionLine = owed;
+      }
+      return;
+    }
     zone = z.el; zoneName = z.name;
     flyNext = true;          /* a new section is the one thing worth flying to */
+    nudgeX = 0; nudgeY = 0;  /* and from its own spot, not the last one's detour */
+    window.setTimeout(function () { blinkOnce(false); }, 380);   /* he looks round */
     /* A LEAN IS PER-SECTION. Whoever set it - the approve gesture or the demo
        commentary - it points at something in the section being left, so it
        cannot outlive the arrival in the next one. Belt and braces against the
@@ -1618,6 +1894,8 @@
        walking back up the page is a different sentence in the same section:
        the script carries names now, and the words are fetched at the moment
        the visitor gets there. */
+    if (opts.silent) { pendingLine = true; return; }
+    pendingLine = false;
     var sl = voice("line", z.name);
     var said = speak(sl, { glow: 3.2 });
     if (said) { sectionLine = sl; banterHold = false; return; }
@@ -1657,17 +1935,36 @@
          arrive() returns early when the section has not changed, so without
          this a remark would sit there for the rest of the section - the
          visitor clicks once and Levi stops narrating the page. */
+      var zNow = dominantZone();
       if (banterHold) {
-        /* Still his turn. Skipping arrive() too is deliberate: banter outranks
-           the section line, and that has to include the section he is
-           arriving in, or a remark made mid-flight is overwritten by the
-           landing. */
-        if (Date.now() - banterT < BANTER_DWELL) return;
+        /* BANTER KEEPS THE FLOOR - NOT THE POSITION.
+
+           This used to return here while a remark held, skipping arrive()
+           entirely. That skipped the section change, so after a fast flick
+           (which is exactly when "Slow down." fires) he kept tracking the
+           section he had LEFT - the hero, scrolled mostly away, its visible
+           strip clamped just under the header - and parked there, on the hero
+           paragraph, with the remark beside him. It also skipped the text
+           check. That is the screenshot Jordan sent.
+
+           Now he goes where the page is, silently, and the text check runs.
+           Only the words wait: the new section's line is spoken on the next
+           settle, once the remark has had its turn. */
+        if (Date.now() - banterT < BANTER_DWELL) {
+          arrive(zNow, { silent: true });
+          chooseSaySideSoon();
+          return;
+        }
         banterHold = false;
-        var z0 = dominantZone();
-        if (z0 && z0.name === zoneName && sectionLine) { speak(sectionLine, { instant: true }); return; }
+        if (zNow && zNow.name === zoneName) {
+          if (pendingLine) arrive(zNow);                       /* the owed line */
+          else if (sectionLine) speak(sectionLine, { instant: true });
+          chooseSaySideSoon();
+          return;
+        }
       }
-      arrive(dominantZone());
+      arrive(zNow);
+      chooseSaySideSoon();
     }, SETTLE_MS);
   }
 
