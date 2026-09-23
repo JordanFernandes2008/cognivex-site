@@ -778,20 +778,27 @@
      leave the viewport; the side changes with 32px of hysteresis so a station
      sitting near the boundary cannot flip it every frame. Size comes from a
      ResizeObserver, never from a per-frame layout read. */
-  var sayW = 0, sayH = 0, headH = -1;
+  var sayW = 0, sayH = 0, headBottom = -1;
   if (window.ResizeObserver) {
     new ResizeObserver(function () {
       sayW = speech.offsetWidth; sayH = speech.offsetHeight;
     }).observe(speech);
   }
-  function mastheadH() {
-    if (headH < 0) {
-      var m = document.querySelector(".masthead");
-      headH = m ? Math.round(m.getBoundingClientRect().height) : 0;
-    }
-    return headH;
+  /* WHERE THE HEADER ACTUALLY ENDS - its BOTTOM EDGE, not its height.
+     The first version used the masthead's height (63px), which is only right
+     once the page has scrolled. At the top of the homepage there is a ticker
+     ABOVE the masthead, so the header ends far lower - and measured at 390px
+     the box sat over the logo and half the Menu button, while Levi's station
+     was up there too, hidden behind the masthead (which paints above him).
+     The edge moves as the ticker scrolls away, so it is re-read on scroll and
+     resize - one rect per scroll event, never one per frame. */
+  function readHead() {
+    var m = document.querySelector(".masthead");
+    headBottom = m ? Math.max(0, Math.round(m.getBoundingClientRect().bottom)) : 0;
   }
-  window.addEventListener("resize", function () { headH = -1; }, { passive: true });
+  function headEdge() { if (headBottom < 0) readHead(); return headBottom; }
+  window.addEventListener("resize", readHead, { passive: true });
+  window.addEventListener("scroll", readHead, { passive: true });
 
   /* WHERE IT GOES. Beside him when a side fits - right by default, left near
      the right edge, with 24px of hysteresis between the two so a station near
@@ -815,7 +822,7 @@
   function placeSay(x, y) {
     if (!sayW) { sayW = speech.offsetWidth; sayH = speech.offsetHeight; }
     var de = document.documentElement, vw = de.clientWidth, vh = de.clientHeight;
-    var R = bodyR(), GAP = 16, M = 10, top0 = mastheadH() + 8;
+    var R = bodyR(), GAP = 16, M = 10, top0 = headEdge() + 8;
     var rightL = x + R + GAP, leftL = x - R - GAP - sayW;
     var fitsR = rightL + sayW <= vw - M, fitsL = leftL >= M;
 
@@ -1057,6 +1064,12 @@
     return colCache.left;
   }
 
+  /* Nor under the header: the masthead paints above him, so a station up
+     there is a Levi nobody can see, with a box floating beside nothing. */
+  function belowHead(y) {
+    return Math.max(y, headEdge() + bodyR() + 12);
+  }
+
   function offColumn(x) {
     var w = document.documentElement.clientWidth;
     if (x > w * 0.5) return x;          /* a right-hand placement is its own case */
@@ -1070,7 +1083,7 @@
     if (!zoneName) {
       var hold = holdPoint();
       var h = keepOffPanel(hold.x, hold.y);
-      goal.x = offColumn(h.x); goal.y = h.y; laneOffsets(); return;
+      goal.x = offColumn(h.x); goal.y = belowHead(h.y); laneOffsets(); return;
     }
     /* Re-resolved every frame so the hand-off between two bands of the SAME
        zone happens without a change of line - arrive() returns early when the
@@ -1080,7 +1093,7 @@
     if (!r) {
       var hp0 = holdPoint();
       var hp = keepOffPanel(hp0.x, hp0.y);
-      goal.x = offColumn(hp.x); goal.y = hp.y; laneOffsets(); return;
+      goal.x = offColumn(hp.x); goal.y = belowHead(hp.y); laneOffsets(); return;
     }
     zone = el;
     var R = starR(), gap = gapW();
@@ -1148,7 +1161,7 @@
        scanning, no candidate scoring: one number off the section box. */
     /* The zone put it somewhere; the panel gets the final say. */
     var safe = keepOffPanel(goal.x, goal.y);
-    goal.x = offColumn(safe.x); goal.y = safe.y;
+    goal.x = offColumn(safe.x); goal.y = belowHead(safe.y);
 
     /* RELATIVE OFFSETS ONLY. The first attempt pinned the line to viewport
        coordinates with (lineY - p.y), which fed the light's own position back
@@ -1420,7 +1433,13 @@
   function hotBoxes() {
     var out = [];
     var vh = document.documentElement.clientHeight;
-    [".app", ".cta"].forEach(function (sel) {
+    /* The walkthrough's CONTROLS, not its whole player. On a phone the player
+       is 854px tall - most of the screen - so keeping him off all of it
+       would leave him nowhere to be. The rule Jordan set was never the
+       controls, and the controls are what matters: the star is a real
+       button (pointer-events: auto), so measured at 390px with him parked on
+       "Next kind of item", a tap there hit LEVI and not the button. */
+    [".app", ".cta", ".walk__bar", ".walk__tabs"].forEach(function (sel) {
       var el = document.querySelector(sel);
       if (!el) return;
       var r = el.getBoundingClientRect();
