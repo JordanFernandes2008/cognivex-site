@@ -61,14 +61,14 @@ window.LEVI_LINES = {
       /* Spoken once, when the surface first comes into view. */
       intro: [
         "This is the product. Everything else on the page describes it.",
-        "Three items, each already drafted. Nothing has been sent.",
+        "Five items, each already drafted. Nothing has been sent.",
         "Watch one go through, or do it yourself.",
-        "The left rail is the argument: forty-one in, three out."
+        "The left rail is the argument: forty-one in, five out."
       ],
 
       /* Per item type, as it comes into focus. */
       emailReply: [
-        "Priya asked about an invoice. The reply is written.",
+        "A check-in to Priya about invoice 0142. Written, not sent.",
         "Eighteen days overdue, so the tone is a reminder, not a demand.",
         "It stays in the same thread, so she is not starting again.",
         "Read the reasoning under it. That is where you check my work."
@@ -89,13 +89,13 @@ window.LEVI_LINES = {
         "I drafted it, but you should read every word."
       ],
       repeatQuestion: [
-        "Opening hours, asked three times this week.",
+        "Opening hours, asked three times this morning.",
         "Same answer each time. It never reached you.",
         "This is the kind of thing that eats a morning."
       ],
       noise: [
         "Filed, not answered. Nothing here needs a person.",
-        "Receipts, alerts, confirmations. You can look if you want."
+        "Newsletters and promotions. Twenty of the forty-one."
       ],
 
       /* The reasoning block. */
@@ -114,7 +114,7 @@ window.LEVI_LINES = {
 
       /* After each action. */
       afterApprove: [
-        "Gone, because you said so. Two left.",
+        "Gone, because you said so. The rest are still waiting.",
         "That is one decision made. The counter moved.",
         "Approved. It was never going anywhere without that."
       ],
@@ -129,8 +129,8 @@ window.LEVI_LINES = {
 
       /* Queue empty. */
       empty: [
-        "That is the morning. Three decisions, nothing else needed you.",
-        "Empty queue. The other thirty-eight were handled beneath it.",
+        "That is the morning. Five decisions, nothing else needed you.",
+        "Empty queue. The other thirty-six were handled beneath it.",
         "Done. Replay it if you want to see it again."
       ],
 

@@ -2501,44 +2501,6 @@ html:has(.void-page) { background: #05070a; }
   will-change: auto;
 }
 
-/* THE FOREGROUND LAYER. One fixed canvas over the whole page, which is how a
-   WebGL object gets to be IN FRONT of HTML rather than trapped behind it -
-   the reference does the same thing with a canvas at z-index 200.
-
-   35, not 200. Above every page layer (main is 1, the hero intro 2) so Levi
-   passes over the display type, but under the masthead at 40 and under its
-   own line at 60: a bright object sweeping across the navigation would cost
-   more legibility than the depth is worth.
-
-   pointer-events: none is not optional - the whole page is underneath it. */
-.levi3d {
-  position: fixed;
-  inset: 0;
-  /* EXPLICIT, BECAUSE A CANVAS IS A REPLACED ELEMENT. inset:0 stretches a
-     normal box, but a replaced element with width:auto keeps its INTRINSIC
-     size - the drawing buffer. Measured: the buffer is viewport x devicePixel-
-     Ratio, so at 1425 CSS px and DPR 1.5 the canvas laid out at 2137px wide
-     and the star painted at buffer (847,350) landed on screen about 380px to
-     the right of where levi.js had put it, sitting on the black hole. */
-  width: 100%;
-  height: 100%;
-  display: block;
-  z-index: 35;
-  pointer-events: none;
-}
-
-/* Handover. The CSS star renders until levi3d.js has actually drawn a frame,
-   so no WebGL means no blank space - it keeps the star it already had. The
-   BUTTON stays either way: it is the keyboard and click target, and the
-   canvas cannot receive focus. The contact shadow also stays, in the DOM
-   layer behind the type, which is what reads as Levi floating above the page
-   rather than being pasted onto it. */
-.levi.is-3d .levi__core,
-
-.levi.is-3d .levi__corona,
-.levi.is-3d .levi__flare,
-.levi.is-3d .levi__trail { display: none; }
-
 .levi__star {
   position: absolute;
   left: 0; top: 0;

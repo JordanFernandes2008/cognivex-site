@@ -43,7 +43,7 @@
                 window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var BOOTING = !!(window.__coldStart && window.__coldStart.pending);
 
-  var K = 150, D = 17, MAX_DT = 1 / 30;
+  var MAX_DT = 1 / 30;
 
   /* FLIGHT, MEASURED. Four frames of the reference about 1.2s apart put its
      character at 415, 372 and 645 px of travel per step - roughly 310 to 540
@@ -54,9 +54,6 @@
      target jumps; a thing with mass cannot, and that limit is most of what
      separates flying from being dragged. */
   var MAXV = 520;      /* px/s cruise ceiling                                */
-  var MAXF = 2400;     /* px/s^2 - how hard it can turn or accelerate        */
-  var SLOW_R = 210;    /* start easing off this far from the target          */
-  var ARRIVE_R = 30;   /* inside this it is hovering, not travelling         */
   var CURSOR_PULL = 30, CURSOR_REACH = 460;
   var PAD = 40;
   var IDLE_MS = 22000;
@@ -317,9 +314,14 @@
 
      This is a text write on one node, so it costs nothing measurable. */
   var typeT = null;
-  function sayLine(text) {
+  /* instant: a line the visitor has ALREADY READ comes back whole. Typing is
+     how a new sentence arrives; re-typing an old one is Levi repeating
+     himself, and it was one of the three things read as "he keeps replaying
+     his animations" - every mouse move after an idle remark typed the
+     section's sentence out again from the first letter. */
+  function sayLine(text, instant) {
     if (typeT) { window.clearInterval(typeT); typeT = null; }
-    if (REDUCED) { sayEl.textContent = text; speech.classList.add("is-done"); return; }
+    if (REDUCED || instant) { sayEl.textContent = text; speech.classList.add("is-done"); return; }
     sayEl.textContent = "";
     speech.classList.remove("is-done");
     var i = 0;
@@ -363,7 +365,7 @@
     say.classList.remove("is-quiet");
     root.classList.remove("is-quiet");
     setState(how.state || "speaking");
-    sayLine(text);
+    sayLine(text, how.instant);
     if (how.glow) glow = how.glow;
     lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
     if (REDUCED) settleNow(); else run();
@@ -412,7 +414,6 @@
     return said;
   }
 
-  var IDLE_LINES = window.LEVI_IDLE || ["Still here."];
 
   var STATES = ["is-idle", "is-speaking", "is-approved"];
   function setState(n) {
@@ -599,8 +600,7 @@
      anything else, which is a stronger guarantee than the three guards it
      replaces. */
   var CRUISE = 640;        /* px/s - the speed he crosses the page at        */
-  var JUMP_R = 150;        /* further than this and it is a flight, not drift */
-  var flight = null, qx = null, qy = null;
+  var flight = null, qx = null, qy = null, flyNext = false;
   var fromP = { x: 0, y: 0 }, ctrlP = { x: 0, y: 0 }, toP = { x: 0, y: 0 };
   var prog = { t: 0 };
   var lastP = { x: 0, y: 0 };
@@ -623,14 +623,29 @@
      the velocity, which is how a 400ms flourish got to move the number every
      placement decision reads. Same lesson as the breath: decoration composites
      on top, it does not enter the station. */
+  /* THE KICK WAS AN ELASTIC SPRING RESTARTED ON EVERY WHEEL TICK.
+
+     gsap.killTweensOf(kick) and then a fresh 0.9s elastic.out, once per scroll
+     event. Measured: 72 restarts across one ordinary 2.4s scroll - so the
+     spring never completed a single cycle while you scrolled, and when you
+     stopped it played its whole boing. The same wobble, over and over, is
+     exactly what "he keeps repeating his animations" describes.
+
+     quickTo retargets one live tween instead of replacing it, which is what a
+     value that changes every event needs. The push follows the scroll, and a
+     short pause hands it back to zero on the same ease - no ringing, no
+     restart, one continuous motion however many events arrive. */
+  var kqx = null, kqy = null, kickT = null;
   function kickBy(dx, dy) {
     if (!window.gsap) return;
-    gsap.killTweensOf(kick);
-    kick.x = Math.max(-40, Math.min(40, kick.x + dx));
-    kick.y = Math.max(-90, Math.min(90, kick.y + dy));
-    writeKick();
-    gsap.to(kick, { x: 0, y: 0, duration: 0.9, ease: "elastic.out(1, 0.55)",
-                    onUpdate: writeKick });
+    if (!kqx) {
+      kqx = gsap.quickTo(kick, "x", { duration: 0.45, ease: "power3", onUpdate: writeKick });
+      kqy = gsap.quickTo(kick, "y", { duration: 0.45, ease: "power3", onUpdate: writeKick });
+    }
+    kqx(Math.max(-22, Math.min(22, dx)));
+    kqy(Math.max(-54, Math.min(54, dy)));
+    window.clearTimeout(kickT);
+    kickT = window.setTimeout(function () { kqx(0); kqy(0); }, 120);
   }
 
   function flyTo(tx, ty) {
@@ -858,7 +873,6 @@
      first - the isFinite barrier in step() is the reason it can be trusted at
      all, and a NaN here would write NaNpx and drop the transform.
      ======================================================================== */
-  var MARGIN = 12;              /* clearance from the panel and the screen    */
 
   /* ==========================================================================
      "THE WORDS MAY NEVER OVERLAP COPY" WAS A COMMENT, NOT A CHECK.
@@ -876,219 +890,6 @@
      name the handful of elements actually under the box, and only those get
      measured properly, at glyph level, with a Range. Bounded either way.
      ======================================================================== */
-  /* WHAT IS ALREADY ON SCREEN, AS LINE BOXES.
-
-     Point sampling was tried first and is wrong for this: seven hit tests
-     inside a 328x90 box miss a 93px run of type sitting between them, and
-     elementsFromPoint hands back the CONTAINER, whose own direct text is
-     empty - `<p class="cap"><span>See it work</span>` returned p.cap, which
-     owns no text of its own, so the check passed over the exact element it
-     was written to catch. Measured: still on `.cap` at 1250 and on the `em`
-     inside `.walk__h` at 1500.
-
-     A Range over an element's contents gives its real line boxes, which is
-     the thing a box must not cross - a paragraph whose last line is four
-     words wide reports a full-width border box and would silence Levi over
-     half the page. Measured at 1536x830: 1,129 candidate elements, 95 line
-     boxes on screen, 2.9ms to build and under 0.05ms to test a box against
-     them. Per frame the build would be a fifth of the frame; on a 150ms
-     throttle it is noise, and the verdict lags a scroll by less than the
-     300ms the box takes to fade anyway. */
-  var TEXTY = "p,h1,h2,h3,h4,h5,h6,li,dt,dd,blockquote,figcaption,label,td,th," +
-              "summary,span,em,strong,b,a,button,small,code,cite,time,legend";
-  var lines = { rects: [], at: -1e9, y: -1e9 };
-
-  function visible(el) {
-    /* opacity 0 is the data-rise start state - copy that has not arrived yet
-       does not get to silence the line. display:none has no rects at all. */
-    if (el.checkVisibility) {
-      return el.checkVisibility({ opacityProperty: true, visibilityProperty: true });
-    }
-    return true;
-  }
-
-  /* THE THROTTLE IS TIME, NOT DISTANCE. The first version also rebuilt on 24px
-     of scroll, which during a fast flick is every single frame - 2.9ms of a
-     16.7ms budget, spent to answer a question about a box that is usually not
-     even being drawn. Time caps it at about seven builds a second; a large
-     jump still forces one, because a teleport is not a scroll. */
-  /* WHAT THE BOX MUST NOT COVER ON A PHONE.
-
-     On a desktop the answer is all copy, and there is always a column free to
-     satisfy it. On a 390px screen the text column IS the screen - 342 of 390 -
-     so "never cross copy" resolves to "never speak", and the queue's line was
-     suppressed at every scroll position on the phone.
-
-     The box is not transparent. It is 93% opaque with its own border, so copy
-     behind it is covered the way a toast covers it, not smeared underneath it,
-     and the sentence that made the desktop rule - two texts on top of each
-     other are both unreadable - does not apply to it.
-
-     So on a phone the protected set is the demo's own content, which is what
-     was actually asked for: the card, the draft, and the three buttons. Their
-     whole boxes, not their line boxes, because a card is a solid object rather
-     than a run of type. */
-  /* THE TICKER IS IN HERE, AND IT IS THE REASON THIS LIST EXISTS AT ALL NOW.
-
-     The last-resort placement is allowed to rest on ordinary copy, because a
-     covered paragraph beats an unreadable line. A marquee is not ordinary
-     copy. `.ticker` runs a 46s linear loop by design - the brief says so and
-     says not to "fix" it - so text slides through anything parked on top of
-     it, continuously, forever. Reported as the box bugging out, and the
-     screenshot shows it sitting across INVOICE 0142 ... NEWSLETTERS x6 while
-     they travel underneath.
-
-     The masthead and the status bar are here for the neighbouring reason:
-     both are sticky chrome, and the box is z-index 60 against the masthead's
-     40, so it does not pass behind them - it covers them. */
-  var GUARDED = ".card, .card__draft, .card__why, .detail__why, .walk__panel," +
-                "[data-approve], [data-edit], [data-skip]," +
-                ".ticker, .masthead, .statusbar";
-
-  function lineBoxes(now) {
-    var y = window.pageYOffset || 0;
-    if (now - lines.at < 150 && Math.abs(y - lines.y) < 400) return lines.rects;
-    lines.at = now; lines.y = y;
-    var de = document.documentElement;
-    var vh = de.clientHeight, vw = de.clientWidth;
-
-    var out = [], els = document.querySelectorAll(TEXTY);
-    for (var i = 0; i < els.length; i++) {
-      var el = els[i];
-      if (root.contains(el) || say.contains(el)) continue;
-      var r = el.getBoundingClientRect();
-      if (r.width < 4 || r.height < 4) continue;
-      if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
-      if (!/\S/.test(el.textContent) || !visible(el)) continue;
-      var rg = document.createRange();
-      rg.selectNodeContents(el);
-      var rs = rg.getClientRects();
-      for (var j = 0; j < rs.length; j++) {
-        var q = rs[j];
-        if (q.width < 4 || q.height < 4 || q.bottom < 0 || q.top > vh) continue;
-        out.push({ l: q.left, t: q.top, r: q.right, b: q.bottom, el: el });
-      }
-    }
-    lines.rects = out;
-    return out;
-  }
-
-  /* LAID OUT IS NOT PAINTED, AND getBoundingClientRect ONLY KNOWS THE FIRST.
-
-     `.app` is `overflow: hidden` and the approval log inside it is 2,615px of
-     content in a 650px panel. Every row below the fold of that panel still
-     reports an honest on-screen rect while being clipped to nothing: measured
-     at scrollY 2000, with `.app` itself 1,107px above the viewport, 219
-     candidate line boxes of which 11 were actually painted. Blocking on the
-     other 208 silenced Levi in the walk, tuesday and ledger zones - three
-     zones that had just measured clean.
-
-     elementFromPoint respects the clip, so it is the arbiter. Validating all
-     219 costs 11.9ms and cannot run on a throttle, let alone a frame; but a
-     rect only matters when it intersects the box, which is almost never, so
-     the hit test is paid per intersection instead of per rect. */
-  function painted(q) {
-    var de = document.documentElement;
-    var x = Math.max(2, Math.min(de.clientWidth - 2, (q.l + q.r) / 2));
-    var y = Math.max(2, Math.min(de.clientHeight - 2, (q.t + q.b) / 2));
-    var hit = document.elementFromPoint(x, y);
-    if (!hit) return false;
-    return hit === q.el || q.el.contains(hit) || hit.contains(q.el);
-  }
-
-  /* THE LAST RESORT, AT EVERY WIDTH.
-
-     This was gated to clientWidth <= 1240, on the reasoning that a single
-     column has no free gutter while a desktop always does. The number was
-     wrong and the reasoning with it. `.app` caps at 1100px and the box needs
-     328 plus its margins, so a gutter only holds it from about 1804px of
-     viewport upward. Everything between 1240 and 1804 got neither: no gutter
-     wide enough, and no fallback either.
-
-     Reported twice from a 1300x620 window, where the demo is 1,100 x 745 -
-     taller than the viewport, with 100px gutters - and the box was suppressed
-     from scrollY 700 to 1000 with nowhere left to go. Measured: 4 of 15
-     sampled positions dark, which is the whole of the interesting part of the
-     page.
-
-     So the strict rule stays the PREFERENCE everywhere, and when it produces
-     nothing, anything falls back to this: protect what was actually asked for
-     - the card, the draft, the three buttons - and let the box rest on
-     ordinary copy. It is 93% opaque with its own border, so it covers that
-     copy the way a toast does rather than smearing through it, which is the
-     thing the strict rule exists to prevent. A line nobody can read is worse
-     than a line sitting over a paragraph. */
-
-  function onGuarded(l, t, w, h) {
-    var de = document.documentElement;
-    var vh = de.clientHeight, vw = de.clientWidth;
-    var r = l + w, b = t + h;
-    var els = document.querySelectorAll(GUARDED);
-    for (var i = 0; i < els.length; i++) {
-      var el = els[i];
-      if (root.contains(el) || say.contains(el)) continue;
-      var q = el.getBoundingClientRect();
-      if (q.width < 4 || q.height < 4) continue;
-      if (q.bottom < 0 || q.top > vh || q.right < 0 || q.left > vw) continue;
-      if (!visible(el)) continue;
-      if (q.left < r - 1 && q.right > l + 1 && q.top < b - 1 && q.bottom > t + 1) return true;
-    }
-    return false;
-  }
-
-  function onWords(l, t, w, h, now) {
-    var rs = lineBoxes(now), r = l + w, b = t + h;
-    for (var i = 0; i < rs.length; i++) {
-      var q = rs[i];
-      if (q.l < r - 1 && q.r > l + 1 && q.t < b - 1 && q.b > t + 1 && painted(q)) return true;
-    }
-    return false;
-  }
-
-  /* HYSTERESIS, BECAUSE THE LIGHT DRIFTS. The wander is a few px per frame and
-     a verdict taken on every one of them would fade the box in and out across
-     a 300ms transition while it sat still. A verdict has to hold twice before
-     it changes anything. */
-  var occ = { hit: false, n: 0 };
-
-  /* ==========================================================================
-     THE WORDS DO NOT FOLLOW THE BREATHING.
-
-     step() wanders the light every frame - amp 12 idle plus a second sine at
-     half that, so roughly +/-18px on a 2.6 second period - and placeBox()
-     derived the box from p on every one of those frames. Anywhere near a
-     constraint boundary that is fatal: the verdict flips as the light drifts
-     across it and back, so the box fades out and in every couple of seconds,
-     forever. Reported as flickering, and the 2-frame hysteresis is no defence
-     at all against an oscillation measured in seconds.
-
-     So the box is ANCHORED. It is placed when something real changes - the
-     section, the scroll, the viewport, the size of the box, or the light
-     actually travelling somewhere - and it holds that viewport position while
-     the light breathes underneath it. 40px is the threshold because it is
-     comfortably above the wander and comfortably below a flight.
-
-     The offsets are still written relative to p, so the light stays the
-     origin and nothing here can feed position back into itself. */
-  var anchor = null;
-
-  function anchorStale(ox, oy, bw, bh, vw, vh) {
-    if (!anchor) return true;
-    if (anchor.zone !== zoneName) return true;
-    if (anchor.vw !== vw || anchor.vh !== vh) return true;
-    if (Math.abs(anchor.bw - bw) > 2 || Math.abs(anchor.bh - bh) > 2) return true;
-    if (Math.abs(anchor.sy - (window.pageYOffset || 0)) > 12) return true;
-    if (Math.abs(ox - anchor.px) > 40 || Math.abs(oy - anchor.py) > 40) return true;
-    return false;
-  }
-
-  function boxOnWords(l, t, w, h, now) {
-    var hit = onWords(l, t, w, h, now);
-    if (hit === occ.hit) { occ.n = 0; return occ.hit; }
-    if (++occ.n >= 2) { occ.hit = hit; occ.n = 0; }
-    return occ.hit;
-  }
-
   /* DOCKED, SO THERE IS NOTHING LEFT TO DECIDE.
 
      Everything that used to live here - the panel escapes, the gutters, the
@@ -1298,11 +1099,18 @@
 
     /* Two modes, decided by one distance. See the long note at flyTo(). */
     var dist = Math.hypot(gx - p.x, gy - p.y);
+    /* A FLIGHT IS AN EVENT, NOT A DISTANCE.
+
+       It used to launch whenever the gap to the station passed 150px. But
+       scrolling drags the station continuously, so an ordinary scroll opened
+       that gap again and again: measured, three separate launch-bank-level
+       sequences in one 2.4s scroll. A flight now means one thing - arriving in
+       a new section - and is requested by arrive(). Everything else, scroll
+       drift included, is the follow, which cannot repeat because it is one
+       tween being re-aimed. */
     if (window.gsap) {
-      if (!flight) {
-        if (dist > JUMP_R) flyTo(gx, gy);
-        else { ensureFollow(); qx(gx); qy(gy); }
-      }
+      if (flyNext && !drag && dist > 24) { flyNext = false; flyTo(gx, gy); }
+      else if (!flight) { flyNext = false; ensureFollow(); qx(gx); qy(gy); }
     } else {
       p.x = gx; p.y = gy;               /* no vendor file: correct, not pretty */
     }
@@ -1365,7 +1173,6 @@
        the reference uses to tell you how high its character is. */
     var sp = Math.hypot(v.x, v.y);
     alt += (Math.min(1, sp / MAXV) - alt) * Math.min(1, dt * 2.6);
-    var lift = alt;
 
     /* The trail: each point chases the one in front, and the whole thing is
        only visible while there is real speed to leave a mark.
@@ -1374,7 +1181,7 @@
        .levi.is-3d, so on any machine with WebGL these were six elements being
        repositioned every frame while display:none - twenty-four style writes a
        frame for something nobody can see. */
-    if (!REDUCED && !root.classList.contains("is-3d")) {
+    if (!REDUCED) {
       var speed = Math.hypot(v.x, v.y);
       var vis = Math.min(1, Math.max(0, (speed - 120) / 900));
       for (var k = 0; k < TRAIL; k++) {
@@ -1616,6 +1423,7 @@
     if (!z) { if (!zoneName) goQuiet(); return; }
     if (z.name === zoneName) return;          /* already here */
     zone = z.el; zoneName = z.name;
+    flyNext = true;          /* a new section is the one thing worth flying to */
     /* A LEAN IS PER-SECTION. Whoever set it - the approve gesture or the demo
        commentary - it points at something in the section being left, so it
        cannot outlive the arrival in the next one. Belt and braces against the
@@ -1673,7 +1481,7 @@
         if (Date.now() - banterT < BANTER_DWELL) return;
         banterHold = false;
         var z0 = dominantZone();
-        if (z0 && z0.name === zoneName && sectionLine) { speak(sectionLine); return; }
+        if (z0 && z0.name === zoneName && sectionLine) { speak(sectionLine, { instant: true }); return; }
       }
       arrive(dominantZone());
     }, SETTLE_MS);
@@ -1728,7 +1536,7 @@
     lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
     idleTier = 0;
     if (idleSpoken && savedLine !== null) {
-      sayLine(savedLine);
+      sayLine(savedLine, true);
       savedLine = null; idleSpoken = false;
     }
   }

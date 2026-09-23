@@ -12,7 +12,7 @@
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="stylesheet" href="site.css?v=523da536">
+<link rel="stylesheet" href="site.css?v=2fef98d0">
 <!-- The cold start, in the head deliberately: it has to add its class before
      <body> exists so the black is on the first paint rather than a flash of
      the page and then a cover. It builds its own markup, so with JavaScript
@@ -947,9 +947,9 @@
      nothing else; levi-voice.js decides which line of it a visitor gets
      and remembers what they have already been told; levi.js is the light.
      levi-demo.js is home-only and narrates the demo on top. -->
-<script src="levi-lines.js?v=711715ee"></script>
+<script src="levi-lines.js?v=adcefc6f"></script>
 <script src="levi-voice.js?v=36b93a72"></script>
-<script src="levi.js?v=df0dc888"></script>
+<script src="levi.js?v=b8d7303a"></script>
 <script src="levi-demo.js?v=3337a1e7"></script>
       <!-- levi3d.js is NOT loaded. It built Levi from a flat-shaded
            icosahedron with four octahedron spikes, lit by two directional
@@ -958,7 +958,8 @@
            cannot see it rotate; facets fixed that. A soft glowing ball has no
            facets either, so the geometry has nothing left to do, and 682KB of
            Three.js plus a WebGL context would be paying for an effect that is
-           invisible. The file is still in the repo - restoring it is one line. -->
+           invisible. Removed along with vendor/three.module.min.js; both are
+           in git history (commit 570ba03 onward) if a real 3D Levi is built. -->
 <script src="motion.js?v=bc725647"></script>
 </body>
 </html>
