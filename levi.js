@@ -212,6 +212,13 @@
     '<b class="levi__who">Levi</b>' +
     '<p class="levi__line"><span data-levi-say></span><i class="levi__caret" aria-hidden="true"></i></p>';
 
+  /* The cast shadow goes in FIRST so it paints behind the body. It is not
+     inside the star: the star is the button, and the body tilts and squashes,
+     none of which a shadow on the ground should do. */
+  var cast = document.createElement("i");
+  cast.className = "levi__cast";
+  cast.setAttribute("aria-hidden", "true");
+  root.appendChild(cast);
   root.appendChild(star);
   say.appendChild(speech);
   host.appendChild(root);
@@ -499,6 +506,9 @@
   function writeBreath() {
     root.style.setProperty("--levi-bx", (breath.x * breath.k).toFixed(2) + "px");
     root.style.setProperty("--levi-by", (breath.y * breath.k).toFixed(2) + "px");
+    /* -1 at the top of the bob, +1 at the bottom: the shadow reads it as
+       distance from the ground (site.css, .levi__cast). */
+    root.style.setProperty("--levi-h", (breath.y * breath.k / 13).toFixed(3));
   }
 
   /* Periods carried over from the hand-rolled version (2.6s and 3.1s) so the
@@ -635,6 +645,33 @@
      value that changes every event needs. The push follows the scroll, and a
      short pause hands it back to zero on the same ease - no ringing, no
      restart, one continuous motion however many events arrive. */
+  /* ---- HE LOOKS AT YOU ------------------------------------------------------
+     Within LOOK_REACH of a real pointer, the face turns toward it. Otherwise
+     it glances the way he is flying, and settles forward when he is still.
+     One quickTo pair, re-aimed - the same rule as the kick, for the same
+     reason: a value that changes every frame must not start a tween every
+     frame. Hover-capable pointers only; a finger that has lifted is not a
+     cursor, and a face staring at where it last was reads as broken. */
+  var LOOK_REACH = 380, LOOK_X = 6.5, LOOK_Y = 4.5;
+  var look = { x: 0, y: 0 }, lqx = null, lqy = null, lookTx = 0, lookTy = 0;
+  var HOVER = !!(window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches);
+
+  function writeLook() {
+    if (!body) return;
+    body.style.setProperty("--look-x", look.x.toFixed(2) + "px");
+    body.style.setProperty("--look-y", look.y.toFixed(2) + "px");
+  }
+  function lookAt(x, y) {
+    if (!window.gsap || !body) return;
+    if (Math.abs(x - lookTx) < 0.25 && Math.abs(y - lookTy) < 0.25) return;
+    lookTx = x; lookTy = y;
+    if (!lqx) {
+      lqx = gsap.quickTo(look, "x", { duration: 0.32, ease: "power3", onUpdate: writeLook });
+      lqy = gsap.quickTo(look, "y", { duration: 0.32, ease: "power3", onUpdate: writeLook });
+    }
+    lqx(x); lqy(y);
+  }
+
   var kqx = null, kqy = null, kickT = null;
   function kickBy(dx, dy) {
     if (!window.gsap) return;
@@ -731,8 +768,84 @@
     var xs = x.toFixed(1) + "px", ys = y.toFixed(1) + "px";
     root.style.setProperty("--levi-x", xs);
     root.style.setProperty("--levi-y", ys);
-    say.style.setProperty("--levi-x", xs);
-    say.style.setProperty("--levi-y", ys);
+    placeSay(x, y);
+  }
+
+  /* ---- THE BOX BESIDE HIM ------------------------------------------------
+     Placed from the STATION (x, y) - never the breath or the kick - so it is
+     exactly as stable as he is between moves, which the held-station test
+     measures at 0.00px. Right of him by default, left of him when that would
+     leave the viewport; the side changes with 32px of hysteresis so a station
+     sitting near the boundary cannot flip it every frame. Size comes from a
+     ResizeObserver, never from a per-frame layout read. */
+  var sayW = 0, sayH = 0, headH = -1;
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () {
+      sayW = speech.offsetWidth; sayH = speech.offsetHeight;
+    }).observe(speech);
+  }
+  function mastheadH() {
+    if (headH < 0) {
+      var m = document.querySelector(".masthead");
+      headH = m ? Math.round(m.getBoundingClientRect().height) : 0;
+    }
+    return headH;
+  }
+  window.addEventListener("resize", function () { headH = -1; }, { passive: true });
+
+  /* WHERE IT GOES. Beside him when a side fits - right by default, left near
+     the right edge, with 24px of hysteresis between the two so a station near
+     the boundary cannot flip it every frame. When NEITHER side fits it
+     stacks: below him, or above if there is no room below. That is the phone
+     case, and it is not an edge case: at 390px a 256px box fits on neither
+     side of a 54px Levi, and the first version measured the box sitting ON
+     him at 4 of 5 scroll positions - it had flipped left, found no room, and
+     been clamped back across his face. Jordan's own mobile brief said it
+     first: above or below on a phone, never beside. */
+  var sayMode = "right";
+  function setMode(m) {
+    if (m === sayMode) return;
+    speech.classList.remove("is-flip", "is-below", "is-above");
+    if (m === "left")  speech.classList.add("is-flip");
+    if (m === "below") speech.classList.add("is-below");
+    if (m === "above") speech.classList.add("is-above");
+    sayMode = m;
+  }
+
+  function placeSay(x, y) {
+    if (!sayW) { sayW = speech.offsetWidth; sayH = speech.offsetHeight; }
+    var de = document.documentElement, vw = de.clientWidth, vh = de.clientHeight;
+    var R = bodyR(), GAP = 16, M = 10, top0 = mastheadH() + 8;
+    var rightL = x + R + GAP, leftL = x - R - GAP - sayW;
+    var fitsR = rightL + sayW <= vw - M, fitsL = leftL >= M;
+
+    var m;
+    if (fitsR && fitsL) m = (sayMode === "left" && rightL + sayW > vw - M - 24) ? "left" : "right";
+    else if (fitsR) m = "right";
+    else if (fitsL) m = "left";
+    else m = (y + R + GAP + sayH <= vh - M) ? "below" : "above";
+    setMode(m);
+
+    var l, t, tail;
+    if (m === "right" || m === "left") {
+      l = m === "right" ? rightL : leftL;
+      /* ANCHORED BY ITS FIRST LINE, NOT ITS MIDDLE. The box grows as the
+         sentence types and wraps (57px -> 90px), and centring it on him moved
+         its top up by half of every new line, mid-sentence - a little jump
+         each time he spoke. Pinning the top 30px above him keeps the first
+         line level with his eyes and lets the box grow downward, still. */
+      t = Math.max(top0, Math.min(vh - sayH - M, y - 30));
+      tail = Math.max(14, Math.min(sayH - 14, y - t));
+      speech.style.setProperty("--tail-y", tail.toFixed(1) + "px");
+    } else {
+      l = Math.max(M, Math.min(vw - sayW - M, x - sayW / 2));
+      t = m === "below" ? y + R + GAP : y - R - GAP - sayH;
+      t = Math.max(top0, Math.min(vh - sayH - M, t));
+      tail = Math.max(16, Math.min(sayW - 16, x - l));
+      speech.style.setProperty("--tail-x", tail.toFixed(1) + "px");
+    }
+    speech.style.setProperty("--say-l", l.toFixed(1) + "px");
+    speech.style.setProperty("--say-t", t.toFixed(1) + "px");
   }
 
   /* ---- which section is the visitor actually looking at ---------------------
@@ -1122,6 +1235,21 @@
     v.x = dt > 0 ? (p.x - lastP.x) / dt : 0;
     v.y = dt > 0 ? (p.y - lastP.y) / dt : 0;
     lastP.x = p.x; lastP.y = p.y;
+
+    /* Cursor first, then the direction of travel, then forward. */
+    var lkx = 0, lky = 0;
+    if (HOVER && mouse.inside) {
+      var ldx = mouse.x - p.x, ldy = mouse.y - p.y, ld = Math.hypot(ldx, ldy);
+      if (ld < LOOK_REACH && ld > 1) {
+        var lk = Math.min(1, ld / 70);          /* ease in right next to him */
+        lkx = ldx / ld * LOOK_X * lk; lky = ldy / ld * LOOK_Y * lk;
+      }
+    }
+    if (!lkx && !lky) {
+      var lsp = Math.hypot(v.x, v.y);
+      if (lsp > 90) { lkx = v.x / lsp * LOOK_X * .55; lky = v.y / lsp * LOOK_Y * .55; }
+    }
+    lookAt(lkx, lky);
 
     /* A GUIDE MAY NOT LEAVE THE SCREEN. Ever, for any reason.
 
@@ -1579,10 +1707,13 @@
   });
 
   document.addEventListener("pointermove", function (e) {
-    mouse.x = e.clientX; mouse.y = e.clientY; mouse.fresh = 1;
+    mouse.x = e.clientX; mouse.y = e.clientY; mouse.fresh = 1; mouse.inside = true;
     noteActivity();
   }, { passive: true });
   document.addEventListener("keydown", noteActivity, true);
+  /* The pointer left the window: stop looking at where it used to be. */
+  document.documentElement.addEventListener("mouseleave", function () { mouse.inside = false; });
+  window.addEventListener("blur", function () { mouse.inside = false; });
   document.addEventListener("click", noteActivity, true);
 
   document.addEventListener("click", function (e) {

@@ -2627,12 +2627,14 @@ html:has(.void-page) { background: #05070a; }
 }
 .levi__corona {
   width: 120px; height: 120px;
-  background: rgb(255 158 66 / 62%);
+  /* Lower than it was (62%): the glossy body is the character now, and a
+     strong corona flattens exactly the shading that makes it round. */
+  background: rgb(255 158 66 / 46%);
   filter: blur(34px) saturate(1.7);
 }
 .levi__flare {
   width: 300px; height: 300px;
-  background: rgb(255 120 26 / 26%);
+  background: rgb(255 120 26 / 17%);   /* was 26%: it read as brown haze */
   filter: blur(100px);
 }
 
@@ -2672,18 +2674,83 @@ html:has(.void-page) { background: #05070a; }
   margin: -32px 0 0 -32px;
   border-radius: 50%;
   pointer-events: none;
+  /* A TOY, NOT A STICKER. The reference's bee reads as an object because
+     three things are true of its surface and none of them were true of this
+     one: there is a hard specular window where the key light hits, the far
+     side falls into a real core shadow, and the ground throws a little warm
+     light back up into the lower rim. One gradient could not say any of
+     that - it was a disc with a vignette. So three layers, top-down:
+       specular   a small, near-white, fairly HARD-edged window, top-left.
+                  Soft highlights read as matte; hard ones read as glossy.
+       sheen      the broad, soft falloff around it.
+       body       warm-light to deep-orange across the sphere, lit from the
+                  same top-left the specular claims.
+     The inset shadows do the core shadow and the fill; ::after (below) does
+     the bounce. Everything is lit from one light, which is the whole trick. */
   background:
-    radial-gradient(circle at 38% 32%,
-      rgb(255 226 176) 0%,
-      rgb(255 154 54)  46%,
-      rgb(233 112 20)  100%);
+    radial-gradient(ellipse 13% 9% at 36% 30%,
+      rgb(255 255 255 / 97%) 0 52%, rgb(255 255 255 / 0) 100%),
+    radial-gradient(circle at 38% 33%,
+      rgb(255 238 212 / 46%) 0%, rgb(255 238 212 / 0) 30%),
+    radial-gradient(circle at 42% 36%,
+      #ffb65c 0%, #ff8b25 30%, #f26c10 56%, #bd4b0b 86%, #8c3406 100%);
   box-shadow:
-    0 0 0 1px rgb(120 52 0 / 22%),
-    0 6px 18px rgb(96 40 0 / 30%),
-    inset 0 -4px 10px rgb(150 62 0 / 26%);
+    inset -6px -8px 13px rgb(104 34 0 / 46%),
+    inset 3px 4px 7px rgb(255 228 186 / 32%),
+    0 0 0 1px rgb(120 52 0 / 18%);
   display: grid;
   place-items: center;
 }
+
+/* BOUNCE LIGHT. A thin warm crescent along the lower-right rim: light from
+   the page thrown back up into the underside. It is the single strongest cue
+   that a circle is a sphere, and it costs one pseudo-element. Painted over
+   the body but confined to the rim, so it never reaches the face. */
+.levi__body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 64% 70%,
+    rgb(255 196 128 / 0) 58%, rgb(255 196 128 / 50%) 66%, rgb(255 196 128 / 0) 74%);
+}
+
+/* THE CAST SHADOW - the reference's real signature.
+   A flat, soft ellipse on the page below and to the right of him, in a dark
+   warm tone rather than grey, so it reads as HIS shadow on THIS surface. It
+   lives in .levi, so it follows the station; it deliberately cancels the
+   vertical breath (--levi-by) so it stays on the ground while the body bobs
+   above it, and it tightens and darkens as he comes down (--levi-h, from
+   -1 high to +1 low). That is what turns a bob into altitude.
+   Behind the body by DOM order. On the dark homepage it all but vanishes,
+   which is right: a light does not cast a visible shadow onto the dark. */
+.levi__cast {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 56px; height: 16px;
+  margin: -8px 0 0 -28px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgb(92 38 4 / 30%);
+  filter: blur(4px);
+  transform:
+    translate(14px, calc(40px - var(--levi-by, 0px)))
+    scale(calc(1 + var(--levi-h, 0) * .14), calc(1 + var(--levi-h, 0) * .10));
+  opacity: calc(.82 + var(--levi-h, 0) * .18);
+}
+@media (max-width: 700px) {
+  .levi__cast { width: 46px; height: 13px; margin: -6.5px 0 0 -23px;
+    transform: translate(11px, calc(33px - var(--levi-by, 0px))); }
+}
+
+/* THE FACE TURNS. Eyes slide toward --look-x/--look-y and the mouth follows
+   at three quarters. On a sphere whose highlight stays put, that parallax
+   reads as the whole head rotating to look - not as features sliding on a
+   decal. `translate` (the individual property), so it composes with the
+   margins that place them and with nothing GSAP owns. */
+.levi__eye   { translate: var(--look-x, 0px) var(--look-y, 0px); }
+.levi__mouth { translate: calc(var(--look-x, 0px) * .75) calc(var(--look-y, 0px) * .6); }
 
 .levi__eye,
 .levi__mouth {
@@ -2693,6 +2760,16 @@ html:has(.void-page) { background: #05070a; }
   pointer-events: none;
 }
 
+/* CATCHLIGHTS. A flat black oval on a glossy sphere reads as a decal; the
+   same oval with one hard white point in it reads as a wet eye reflecting
+   the same key light as the body's specular - which is also top-left, so the
+   face and the surface agree about where the light is. Drawn as a gradient
+   on the eye itself, so it squashes away with the eye during a blink. */
+.levi__eye {
+  background:
+    radial-gradient(circle at 64% 30%, rgb(255 255 255 / 92%) 0 17%, rgb(255 255 255 / 0) 23%),
+    #14161a;
+}
 .levi__eye {
   top: 50%;
   width:  var(--e-w,  8px);
@@ -2803,10 +2880,19 @@ body:not(.void-page) .levi__flare { display: none; }
   --say-accent: #ff9d52;
   --say-edge:   rgb(255 255 255 / 13%);
 
+  /* IT FOLLOWS HIM AGAIN - and this time it can.
+     It was docked because a box that followed him flickered. The cause was
+     never following; it was that his BREATHING was written into the position
+     every placement decision read, so the box inherited a +/-18px wobble and
+     oscillated across its own thresholds. The breath is a separate transform
+     layer now (--levi-bx/by) that nothing measures. levi.js places this box
+     from the STATION alone - stable to the pixel between moves - beside him,
+     tail pointing at him, clamped to the viewport. left/top rather than a
+     transform because GSAP owns this element's transform for the reveal. */
   position: absolute;
-  left: clamp(12px, 2vw, 28px);
-  top: auto;
-  bottom: clamp(12px, 2.5vh, 26px);
+  left: var(--say-l, 12px);
+  top: var(--say-t, 80px);
+  bottom: auto;
   width: 20.5rem;
   min-width: 20.5rem;
   pointer-events: none;
@@ -2855,6 +2941,49 @@ body:not(.void-page) .levi__flare { display: none; }
 }
 
 .levi__speech::after { content: none; }
+
+/* THE TAIL. A speech box that follows someone has to say WHO is speaking,
+   and a pointer at him says it faster than the LEVI label does - which is
+   why the banter pill, which drops the label, still reads as his. It points
+   left by default (he is on the box's left) and flips with the box. --tail-y
+   is set per frame so it tracks him even when the box is clamped at a screen
+   edge and he is not at its middle. */
+.levi__speech::before {
+  content: "";
+  position: absolute;
+  top: var(--tail-y, 50%);
+  left: -6px;
+  width: 11px; height: 11px;
+  margin-top: -5.5px;
+  background: var(--say-bg);
+  border-left: 1px solid var(--say-edge);
+  border-bottom: 1px solid var(--say-edge);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.levi__speech.is-flip::before {
+  left: auto; right: -6px;
+  border-left: 0; border-bottom: 0;
+  border-right: 1px solid var(--say-edge);
+  border-top: 1px solid var(--say-edge);
+}
+/* Stacked (the phone case): the tail moves to the edge facing him and
+   tracks his x, so it still points at him when the box is clamped sideways. */
+.levi__speech.is-below::before,
+.levi__speech.is-above::before {
+  left: var(--tail-x, 50%);
+  margin: 0 0 0 -5.5px;
+}
+.levi__speech.is-below::before {
+  top: -6px;
+  border-bottom: 0;
+  border-top: 1px solid var(--say-edge);
+}
+.levi__speech.is-above::before {
+  top: auto; bottom: -6px;
+  border-left: 0;
+  border-right: 1px solid var(--say-edge);
+}
 .levi__speech--tail::after {
   content: "";
   position: absolute;
@@ -2965,27 +3094,6 @@ body:not(.void-page) .levi__flare { display: none; }
   .levi-note { max-width: 30ch; bottom: .6rem; }
 }
 
-/* THE DOCK MOVES TO THE TOP ON SMALL SCREENS, AND ONLY THERE.
-
-   The bottom-left corner is the right dock on a wide screen: the layout is
-   centred with real margins there, so the corner is empty. On a phone the
-   layout is edge to edge and the corner is not empty - it is where controls
-   live. Measured at 390x844 across nineteen scroll positions, a bottom dock
-   landed on 29 controls and 50 blocks of copy; the same box under the masthead
-   landed on 8 and 28. The walkthrough's own "go" button was one of the 29,
-   half-covered - taps still reached it (the box is pointer-events: none, and
-   elementFromPoint confirmed the button was the hit target) but a control you
-   cannot read is not a control you can use.
-
-   Under the masthead rather than over it: the masthead measured 63px and is
-   sticky, so it is the one thing guaranteed to be at the top of every screen.
-   Sitting below it means the box never fights it. */
-@media (max-width: 1024px) {
-  .levi__speech {
-    top: calc(var(--masthead-h, 63px) + 10px);
-    bottom: auto;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .levi__speech { transition: none; }
