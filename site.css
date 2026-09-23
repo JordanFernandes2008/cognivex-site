@@ -2940,6 +2940,27 @@ body:not(.void-page) .levi__flare { display: none; }
   .levi-say.is-banter .levi__speech { border-radius: 16px; }
 }
 
+/* "(click me)". Same dark pill family as his banter, smaller, no tail, no
+   border - a caption, not a remark. #f1f3f5 on this pill composites to 7.3:1
+   even over white, the worst ground it can land on. */
+.levi-hint {
+  position: absolute;
+  left: var(--hint-l, -999px);
+  top: var(--hint-t, -999px);
+  font: 500 11px/1 "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: .02em;
+  color: #f1f3f5;
+  background: rgb(12 14 18 / 72%);
+  padding: 4px 8px 5px;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms var(--ease-out);
+}
+.levi-hint.is-shown { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .levi-hint { transition: none; } }
+
 .levi__speech::after { content: none; }
 
 /* THE TAIL. A speech box that follows someone has to say WHO is speaking,

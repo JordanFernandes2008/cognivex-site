@@ -221,6 +221,18 @@
   root.appendChild(cast);
   root.appendChild(star);
   say.appendChild(speech);
+
+  /* "(click me)" - the reference's one piece of micro-copy, carried over.
+     Its bee is captioned "(Click to feed the bee)", and that parenthetical is
+     what tells you the character is a thing you can touch. Levi's click does
+     something real - banter, or approving the nearest item - and nothing on
+     the page had ever said so. Once per session, gone at the first
+     interaction or after 14s. */
+  var hint = document.createElement("span");
+  hint.className = "levi-hint";
+  hint.setAttribute("aria-hidden", "true");
+  hint.textContent = (window.matchMedia && matchMedia("(hover: hover)").matches) ? "(click me)" : "(tap me)";
+  say.appendChild(hint);
   host.appendChild(root);
   document.body.appendChild(say);
 
@@ -253,6 +265,7 @@
      approve gesture still works; anything further is a drag. */
   star.style.touchAction = "none";
   star.addEventListener("pointerdown", function (e) {
+    dropHint();
     if (dismissed) return;
     drag = { id: e.pointerId, x: p.x, y: p.y, ox: e.clientX - p.x, oy: e.clientY - p.y };
     dragMoved = 0; dragSaid = false;
@@ -853,6 +866,30 @@
     }
     speech.style.setProperty("--say-l", l.toFixed(1) + "px");
     speech.style.setProperty("--say-t", t.toFixed(1) + "px");
+    if (hintOn) {
+      if (!hintW) hintW = hint.offsetWidth;
+      var stacked = m === "below" || m === "above";
+      hint.classList.toggle("is-shown", !stacked);
+      hint.style.setProperty("--hint-l", (x - hintW / 2).toFixed(1) + "px");
+      hint.style.setProperty("--hint-t", (y + R + 30).toFixed(1) + "px");
+    }
+  }
+
+  var hintOn = false, hintW = 0, hintT = null, HINT_KEY = "cognivex.levi.hinted";
+  function hintSeen() {
+    try { return !!window.sessionStorage.getItem(HINT_KEY); } catch (e) { return true; }
+  }
+  function dropHint() {
+    if (!hintOn) return;
+    hintOn = false;
+    hint.classList.remove("is-shown");
+    window.clearTimeout(hintT);
+    try { window.sessionStorage.setItem(HINT_KEY, "1"); } catch (e) {}
+  }
+  function offerHint() {
+    if (hintSeen() || dismissed) return;
+    hintOn = true;
+    hintT = window.setTimeout(dropHint, 14000);
   }
 
   /* ---- which section is the visitor actually looking at ---------------------
@@ -1720,7 +1757,7 @@
     savedLine = keep; idleSpoken = true; idleTier = want;
   }
 
-  star.addEventListener("click", function (e) { e.preventDefault(); gesture(); });
+  star.addEventListener("click", function (e) { e.preventDefault(); dropHint(); gesture(); });
   star.addEventListener("keydown", function (e) {
     if (e.key === "Escape") { e.stopPropagation(); dismiss(); }
   });
@@ -2124,6 +2161,7 @@
 
   watchBox();
   blink();
+  window.setTimeout(offerHint, REDUCED ? 800 : 2800);
 
   setState("idle");
   lastActivity = (window.performance && performance.now) ? performance.now() : Date.now();
