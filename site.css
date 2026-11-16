@@ -2791,8 +2791,8 @@ html:has(.void-page) { background: #05070a; }
 
 /* TILT AND SQUASH SHARE ONE TRANSFORM, THROUGH VARIABLES.
 
-   --b-tilt is GSAP's, tweened in flyTo(): he banks into the turn on the way
-   out of a section and comes level as he arrives. --b-scale is the grab.
+   --b-tilt is written by bankTo() in levi.js every frame from his sideways
+   speed: he banks into the turn and comes level as he slows. --b-scale is the grab.
    They are separate variables feeding one declaration because two rules both
    setting `transform` would simply overwrite each other, and a CSS transition
    on that declaration would fight GSAP for the same property sixty times a

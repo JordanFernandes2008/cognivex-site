@@ -735,41 +735,126 @@
     kickT = window.setTimeout(function () { kqx(0); kqy(0); }, 120);
   }
 
+  /* ---- FLIGHT v2 -----------------------------------------------------------
+     Four things the quadratic version got wrong, each one visible:
+
+     1. A NEW FLIGHT STARTED FROM A DEAD STOP. Every flight began on
+        sine.inOut, whose speed at t=0 is zero. Scroll through two sections
+        quickly and he braked to nothing mid-air, then set off again. Now a
+        flight launched while he is already moving is a cubic whose first
+        handle IS his current velocity, on an ease that starts at speed: the
+        new path leaves the old one at the same speed and heading (C1
+        continuous), so a change of plan reads as a turn, not a stall.
+
+     2. THE ENDPOINT WAS FROZEN AT LAUNCH. The station drifts with scroll and
+        the cursor pull, so he landed where the station HAD been and then
+        crept the rest of the way - two motions for one trip. The endpoint
+        and its handle now track the live station every frame; t^3 weights
+        the drift, so it costs nothing early and is exact on landing.
+
+     3. THE BOW PICKED ITS SIDE BY THE SIGN OF dy. Arbitrary, and half the
+        time it swung toward the nearest edge and got clamped flat against
+        it. It now bends toward the middle of the screen, and both handles
+        are kept inside the viewport, so the arc you see is the arc drawn.
+
+     4. THE BANK WAS A TIMELINE PER FLIGHT. Retarget mid-flight and two
+        timelines fought over --b-tilt. The bank is now read off his actual
+        sideways speed each frame (see bankTo, called from the tick), so it
+        is right during flights, follows and drags alike, and cannot stack. */
+  var c1P = { x: 0, y: 0 }, c2P = { x: 0, y: 0 }, drift = { x: 0, y: 0 };
+  var bank = 0, bankShown = 0;
+
+  function cbez(a, b, c, d, t) {
+    var u = 1 - t;
+    return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+  }
+
+  function clampTo(pt, mg) {
+    var cw = document.documentElement.clientWidth;
+    var ch = document.documentElement.clientHeight;
+    pt.x = Math.max(mg, Math.min(cw - mg, pt.x));
+    pt.y = Math.max(mg, Math.min(ch - mg, pt.y));
+  }
+
+  /* Called by the tick while a flight is in the air: where the station is
+     NOW, so the landing point follows it. */
+  function steerFlight(gx, gy, dt) {
+    if (!flight) return;
+    /* Eased and speed-capped, exactly like the follow. Copying the station
+       straight in let a scroll mid-flight move the landing point - and so
+       him - by a hundred pixels in one frame. */
+    var wx = gx - toP.x - drift.x, wy = gy - toP.y - drift.y, wd = Math.hypot(wx, wy);
+    if (wd < 0.05) return;
+    var step = Math.min(wd * (1 - Math.exp(-dt * 7)), FOLLOW_MAX * dt);
+    drift.x += wx / wd * step;
+    drift.y += wy / wd * step;
+  }
+
+  /* Bank into sideways motion, level out when still. Smoothed, capped, and
+     off entirely under reduced motion (an inline value would beat the
+     stylesheet's reduced-motion rule, so it is never written there). */
+  function bankTo(vx, dt) {
+    if (!body || REDUCED) return;
+    var want = Math.max(-14, Math.min(14, vx * 0.014));
+    bank += (want - bank) * Math.min(1, dt * 6);
+    if (!isFinite(bank)) bank = 0;
+    if (Math.abs(bank - bankShown) > 0.05) {
+      bankShown = bank;
+      body.style.setProperty("--b-tilt", bank.toFixed(2) + "deg");
+    }
+  }
+
   function flyTo(tx, ty) {
     if (!window.gsap) { p.x = tx; p.y = ty; return; }
     var dx = tx - p.x, dy = ty - p.y;
     var d = Math.hypot(dx, dy) || 1;
+    var cw = document.documentElement.clientWidth;
+    var ch = document.documentElement.clientHeight;
+    var mg = starR() * 0.6;
     fromP.x = p.x; fromP.y = p.y; toP.x = tx; toP.y = ty;
+    drift.x = 0; drift.y = 0;
 
-    /* The bow is perpendicular to the route and always the same size for the
-       same trip, so the same journey draws the same curve every time. Capped,
-       or a full-page flight swings out of the viewport on the way. */
-    var bow = Math.min(d * 0.3, 200) * (dy >= 0 ? 1 : -1);
-    ctrlP.x = (fromP.x + tx) / 2 + (-dy / d) * bow;
-    ctrlP.y = (fromP.y + ty) / 2 + ( dx / d) * bow;
+    /* The bow: perpendicular to the route, toward the middle of the screen.
+       Same trip, same curve. Capped so a long trip does not balloon. */
+    var mx = (p.x + tx) / 2, my = (p.y + ty) / 2;
+    var nx = -dy / d, ny = dx / d;
+    var side = ((cw / 2 - mx) * nx + (ch / 2 - my) * ny) >= 0 ? 1 : -1;
+    var bow = Math.min(d * 0.28, 180) * side;
+    ctrlP.x = mx + nx * bow;
+    ctrlP.y = my + ny * bow;
+    clampTo(ctrlP, mg);
 
-    /* NO 1.5s CEILING ON LONG TRIPS. With one, a flight across most of the
-       page had to cover ~1,400px in 1.5s, and power2.inOut peaks at twice
-       its average - measured 32px in a single frame mid-arc, which reads as
-       a jump, not a flight. Now a long trip simply takes longer, on sine,
-       whose peak is ~1.57x its average: about 14px a frame at most. */
+    /* Quadratic -> cubic (identical curve), so the first handle can be
+       replaced by momentum below. */
+    c1P.x = p.x + (ctrlP.x - p.x) * 2 / 3; c1P.y = p.y + (ctrlP.y - p.y) * 2 / 3;
+    c2P.x = tx + (ctrlP.x - tx) * 2 / 3;   c2P.y = ty + (ctrlP.y - ty) * 2 / 3;
+
+    /* Long trips take longer rather than going faster - see CRUISE. */
     var dur = Math.max(0.45, Math.min(2.8, d / CRUISE));
+    var ease = "sine.inOut";
+
+    var sp = Math.hypot(v.x, v.y);
+    if (flight && sp > 40 && isFinite(sp)) {
+      /* Already flying: leave on the current heading at the current speed.
+         sine.out starts at pi/2 x its average rate, so the handle that
+         reproduces velocity v is v * dur * 2 / (3 * pi). Capped at 60% of
+         the trip, or a fast reversal would loop round on itself. */
+      var k = dur * 2 / (3 * Math.PI);
+      var hx = v.x * k, hy = v.y * k, hl = Math.hypot(hx, hy), cap = d * 0.6;
+      if (hl > cap) { hx *= cap / hl; hy *= cap / hl; }
+      c1P.x = p.x + hx; c1P.y = p.y + hy;
+      ease = "sine.out";
+    }
+    clampTo(c1P, mg); clampTo(c2P, mg);
+
     if (flight) flight.kill();
     prog.t = 0;
-
-    /* He leans into the turn and comes level as he arrives. */
-    if (body) {
-      var tilt = Math.max(-14, Math.min(14, dx * 0.05));
-      gsap.timeline()
-        .to(body, { "--b-tilt": tilt + "deg", duration: dur * 0.4, ease: "power2.out" })
-        .to(body, { "--b-tilt": "0deg", duration: dur * 0.6, ease: "power2.inOut" });
-    }
-
     flight = gsap.to(prog, {
-      t: 1, duration: dur, ease: "sine.inOut",
+      t: 1, duration: dur, ease: ease,
       onUpdate: function () {
-        p.x = qbez(fromP.x, ctrlP.x, toP.x, prog.t);
-        p.y = qbez(fromP.y, ctrlP.y, toP.y, prog.t);
+        var t = prog.t;
+        p.x = cbez(fromP.x, c1P.x, c2P.x + drift.x, toP.x + drift.x, t);
+        p.y = cbez(fromP.y, c1P.y, c2P.y + drift.y, toP.y + drift.y, t);
       },
       onComplete: function () { flight = null; chooseSaySide(); }
     });
@@ -1512,8 +1597,12 @@
        a new section - and is requested by arrive(). Everything else, scroll
        drift included, is the follow, which cannot repeat because it is one
        tween being re-aimed. */
+    /* Your hand outranks a flight in progress: grab him mid-air and the
+       flight lets go instead of fighting the drag for p. */
+    if (drag && flight) { flight.kill(); flight = null; }
     if (flyNext && !drag && dist > 24 && window.gsap) { flyNext = false; flyTo(gx, gy); }
-    else if (!flight) {
+    else if (flight) steerFlight(gx, gy, dt);
+    else {
       flyNext = false;
       /* THE FOLLOW HAS A SPEED LIMIT - AND THAT IS THE WHOLE TELEPORT FIX.
 
@@ -1546,6 +1635,7 @@
     v.x = dt > 0 ? (p.x - lastP.x) / dt : 0;
     v.y = dt > 0 ? (p.y - lastP.y) / dt : 0;
     lastP.x = p.x; lastP.y = p.y;
+    bankTo(v.x, dt);
 
     /* Cursor first, then the direction of travel, then forward. */
     var lkx = 0, lky = 0;

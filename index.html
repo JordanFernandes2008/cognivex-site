@@ -12,16 +12,16 @@
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="stylesheet" href="site.css?v=7ab8d9eb">
+<link rel="stylesheet" href="site.css?v=24d894d2">
 <!-- The cold start, in the head deliberately: it has to add its class before
      <body> exists so the black is on the first paint rather than a flash of
      the page and then a cover. It builds its own markup, so with JavaScript
      off there is no overlay and this tag does nothing at all. -->
-<script src="boot.js?v=4e72d77a"></script>
+<script src="boot.js?v=bdd06150"></script>
 <!-- The sequence itself, DEFERRED: it must never block parsing, least of
      all on a visit where it will not play. boot.js above is the only part
      that has to be blocking, and it is small for exactly that reason. -->
-<script src="cold.js?v=7cb06c37" defer></script>
+<script src="cold.js?v=4dbe85ca" defer></script>
 </head>
 <body class="void-page" data-void-room>
 <a class="skip" href="#main">Skip to content</a>
@@ -932,25 +932,25 @@
 <script src="vendor/lenis.min.js"></script>
 <!-- The other 47 queue items. Before site.js, so the counter is right on
      the first paint and nothing has to be told to refresh. -->
-<script src="queue-butler.js?v=53c55c3f"></script>
-<script src="queue-data.js?v=634a7bbe"></script>
-<script src="site.js?v=d3f3e002"></script>
+<script src="queue-butler.js?v=4c596071"></script>
+<script src="queue-data.js?v=dca11659"></script>
+<script src="site.js?v=359afec4"></script>
 <!-- After site.js: it puts the briefing in front of the queue site.js
      has already wired, without touching any of that wiring. -->
-<script src="digest.js?v=ff0f2e9c"></script>
-<script src="rail.js?v=14387b82"></script>
-<script src="today.js?v=5d7d6258"></script>
+<script src="digest.js?v=0784d038"></script>
+<script src="rail.js?v=08bd1fc1"></script>
+<script src="today.js?v=92837770"></script>
 <script src="cursor.js?v=f97330b9"></script>
 <script src="walk.js?v=e324178f"></script>
-<script src="film.js?v=5366d4e8"></script>
+<script src="film.js?v=c62c57f1"></script>
 <!-- THE LINE SET, THE PICKER, THEN LEVI. levi-lines.js is data and
      nothing else; levi-voice.js decides which line of it a visitor gets
      and remembers what they have already been told; levi.js is the light.
      levi-demo.js is home-only and narrates the demo on top. -->
-<script src="levi-lines.js?v=adcefc6f"></script>
-<script src="levi-voice.js?v=36b93a72"></script>
-<script src="levi.js?v=acc8b2c2"></script>
-<script src="levi-demo.js?v=3337a1e7"></script>
+<script src="levi-lines.js?v=9e5a7fff"></script>
+<script src="levi-voice.js?v=562a8c45"></script>
+<script src="levi.js?v=3fba2a9a"></script>
+<script src="levi-demo.js?v=944ad357"></script>
       <!-- levi3d.js is NOT loaded. It built Levi from a flat-shaded
            icosahedron with four octahedron spikes, lit by two directional
            lights - which is a faceted rock, and reads as one. The whole reason
@@ -960,6 +960,6 @@
            Three.js plus a WebGL context would be paying for an effect that is
            invisible. Removed along with vendor/three.module.min.js; both are
            in git history (commit 570ba03 onward) if a real 3D Levi is built. -->
-<script src="motion.js?v=bc725647"></script>
+<script src="motion.js?v=da521f82"></script>
 </body>
 </html>
