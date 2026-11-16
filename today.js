@@ -86,8 +86,8 @@
 
     btn.addEventListener("click", function () {
 
-      if (window.cognivexDigest && window.cognivexDigest.detail) {
-        window.cognivexDigest.detail({
+      if (window.curivoxDigest && window.curivoxDigest.detail) {
+        window.curivoxDigest.detail({
           source: li,
           kind: info.kind,
           title: key + (count ? " · " + count.textContent.trim() : ""),
@@ -95,10 +95,10 @@
         });
       }
       try {
-        window.dispatchEvent(new CustomEvent("cognivex:todayopen", { detail: { bucket: key } }));
+        window.dispatchEvent(new CustomEvent("curivox:todayopen", { detail: { bucket: key } }));
       } catch (e) {}
     });
   });
 
-  window.cognivexToday = { buckets: BUCKETS };
+  window.curivoxToday = { buckets: BUCKETS };
 })();

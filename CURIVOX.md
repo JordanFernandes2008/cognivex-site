@@ -1,4 +1,4 @@
-# COGNIVEX — full handoff
+# CURIVOX — full handoff
 
 Last verified: 2026-09-19. Commit `1320ab8`. Local, `origin/main` and the live
 site all agree.
@@ -7,7 +7,7 @@ site all agree.
 
 ## 1. What this is
 
-A static marketing site for Cognivex — an approval-first AI assistant that
+A static marketing site for Curivox — an approval-first AI assistant that
 drafts your admin and waits for you to say yes. The product is **in development
 and not available**; the site says so and must keep saying so.
 
@@ -213,7 +213,7 @@ straight to the point"; this is the one that does not.
 4. **Levi's voice lines** — a set was drafted and is awaiting approval. Jordan has said he will supply his own; Levi's dialogue is parked until then.
 5. **"Emotions like that stupid meme verity"** — the reference is unknown. Needs an image or a name.
 6. **Lottie** — evaluated and **recommended against**. Lottie's value is interpolating vector shapes; Levi is a blur stack with no vectors. ~160–250 KB minified for a win a JS spring already gives free.
-7. **The second Vercel project** (`cognivex-eight`) — delete?
+7. **The second Vercel project** (`curivox-eight`) — delete?
 
 ---
 
@@ -289,11 +289,11 @@ rows.push({ y, live: (L.frame.frames|0) - f0 > 25, /* ...measurements... */ });
 rAF at all:
 
 ```js
-cognivexLevi.tick(dtMs, frames)   // runs the REAL step() over the REAL DOM
-cognivexLevi.readNow()            // pick the dominant zone, no debounce
-cognivexLevi.settle()             // snap to the resting point
-cognivexDigest.show('digest'|'queue')
-cognivexDigest.detail({...})
+curivoxLevi.tick(dtMs, frames)   // runs the REAL step() over the REAL DOM
+curivoxLevi.readNow()            // pick the dominant zone, no debounce
+curivoxLevi.settle()             // snap to the resting point
+curivoxDigest.show('digest'|'queue')
+curivoxDigest.detail({...})
 ```
 
 `tick` deliberately does not validate `dtMs` — passing `NaN`, `Infinity`,

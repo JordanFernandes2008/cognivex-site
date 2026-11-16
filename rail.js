@@ -89,17 +89,17 @@
         });
       }
 
-      if (window.cognivexDigest && window.cognivexDigest.detail) {
-        window.cognivexDigest.detail({
+      if (window.curivoxDigest && window.curivoxDigest.detail) {
+        window.curivoxDigest.detail({
           source: li, kind: info.kind, title: key, state: info.state, stateKey: info.stateKey,
           draft: info.draft, why: info.why, actions: actions
         });
       }
       try {
-        window.dispatchEvent(new CustomEvent("cognivex:railopen", { detail: { item: key } }));
+        window.dispatchEvent(new CustomEvent("curivox:railopen", { detail: { item: key } }));
       } catch (e) {}
     });
   });
 
-  window.cognivexRail = { handled: HANDLED };
+  window.curivoxRail = { handled: HANDLED };
 })();

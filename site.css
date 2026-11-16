@@ -1,5 +1,5 @@
 /* ============================================================================
-   Cognivex — light
+   Curivox — light
    ----------------------------------------------------------------------------
    Sinch's shape: white ground, one accent, dark confident sans, and the product
    shown as a real surface rather than described.
@@ -1481,7 +1481,7 @@ html.lenis, html.lenis body { height: auto; }
    lines of it. Measured, not noticed by eye.
 
    The markup already sets the line breaks it wants with a <br>. So the width is
-   left alone and the SIZE is solved instead: the longest line is "Cognivex
+   left alone and the SIZE is solved instead: the longest line is "Curivox
    hands you finished work." at 33 characters, and DM Sans averages about half
    an em per character, so it needs roughly 16.5em. Against the 1100px of usable
    wrap at desktop that puts the ceiling at about 66px, and 4rem sits under it

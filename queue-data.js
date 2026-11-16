@@ -19,7 +19,7 @@
    point of the thing having a voice: not narration of what you can already
    see, but the one sentence a good assistant would add.
    ========================================================================== */
-window.COGNIVEX_QUEUE = [
+window.CURIVOX_QUEUE = [
   /* ---- inbox triage ------------------------------------------------------ */
   { av: "RK", kind: "Email reply", meta: "Rohan Kamat · delivery date", age: "2h",
     draft: "Hi Rohan — the walnut bench is finished and going for its last coat tomorrow. It will be ready to collect from Thursday, or we can deliver to Powai on Friday morning. Which suits you?",
@@ -230,11 +230,11 @@ window.COGNIVEX_QUEUE = [
 (function () {
   "use strict";
   var stack = document.querySelector("[data-stack]");
-  if (!stack || !window.COGNIVEX_QUEUE) return;
+  if (!stack || !window.CURIVOX_QUEUE) return;
 
   var frag = document.createDocumentFragment();
 
-  var ALL = window.COGNIVEX_QUEUE.concat(window.COGNIVEX_QUEUE_EXTRA || []);
+  var ALL = window.CURIVOX_QUEUE.concat(window.CURIVOX_QUEUE_EXTRA || []);
   ALL.forEach(function (it) {
     var li = document.createElement("li");
     li.className = "card";

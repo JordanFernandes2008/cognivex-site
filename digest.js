@@ -225,7 +225,7 @@
     setCount(5, "need you");
     detail.focus();
     try {
-      window.dispatchEvent(new CustomEvent("cognivex:view", { detail: { view: "detail", item: d.title } }));
+      window.dispatchEvent(new CustomEvent("curivox:view", { detail: { view: "detail", item: d.title } }));
     } catch (e) {}
   }
 
@@ -271,7 +271,7 @@
       if (b) b.focus();
     }
     try {
-      window.dispatchEvent(new CustomEvent("cognivex:view", { detail: { view: which } }));
+      window.dispatchEvent(new CustomEvent("curivox:view", { detail: { view: which } }));
     } catch (e) {}
   }
 
@@ -299,7 +299,7 @@
 
   /* Exposed so Levi can talk about whichever view is open, and so a check can
      drive it without clicking. */
-  window.cognivexDigest = {
+  window.curivoxDigest = {
     show: show,
     detail: showDetail,
     view: function () { return stack.hidden ? "digest" : "queue"; },

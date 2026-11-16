@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var KEY = "cognivex.coldstart.seen";
+  var KEY = "curivox.coldstart.seen";
   var root = document.documentElement;
 
   /* Once per session. Checked before anything is flagged or added, so a second
@@ -79,7 +79,7 @@
     /* 5. film.js and levi.js are waiting on this and must never be stranded. */
     if (cs.pending) {
       cs.pending = false;
-      try { window.dispatchEvent(new Event("cognivex:cold-start-done")); } catch (e) {}
+      try { window.dispatchEvent(new Event("curivox:cold-start-done")); } catch (e) {}
     }
   }
   cs.panic = panic;

@@ -1,5 +1,5 @@
 /* ============================================================================
-   Cognivex — Demo 1, the approval queue.
+   Curivox — Demo 1, the approval queue.
 
    Architecture note, because it is the whole reason this feels solid:
 

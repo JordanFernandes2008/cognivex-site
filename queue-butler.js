@@ -11,11 +11,11 @@
    and nothing here is ever sent, paid or placed on its own.
 
    WHAT THIS DOES NOT CLAIM. No integration is named, no account is connected,
-   no price for Cognivex appears. The amounts are this fictional workshop's own
+   no price for Curivox appears. The amounts are this fictional workshop's own
    bills. The page's footer already says the interface is illustrative and not
    connected to a live account, and that stays true of every item below.
    ========================================================================== */
-window.COGNIVEX_QUEUE_EXTRA = [
+window.CURIVOX_QUEUE_EXTRA = [
 
   /* ---- the day itself ---------------------------------------------------- */
   { av: "CAL", kind: "Calendar", meta: "Saturday · three things collide", age: "This week",

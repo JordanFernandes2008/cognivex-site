@@ -28,7 +28,7 @@
   var LINES = window.LEVI_LINES;
   if (!LINES) return;
 
-  var KEY = "cognivex.levi.voice";
+  var KEY = "curivox.levi.voice";
 
   /* ---- which page ----------------------------------------------------------
      Declared in the markup rather than sniffed from the URL. The path form is

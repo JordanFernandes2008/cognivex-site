@@ -38,7 +38,7 @@
      So this waits rather than assuming, and gives up quietly. */
   var waited = 0;
   (function wait() {
-    L = window.cognivexLevi;
+    L = window.curivoxLevi;
     if (L && L.speak && L.leanTo) { begin(); return; }
     waited += 160;
     if (waited > 12000) return;
@@ -286,7 +286,7 @@
 
     /* For the verification harness, and for anyone wondering why a line did
        not fire. Reports state, never changes it. */
-    window.cognivexLeviDemo = {
+    window.curivoxLeviDemo = {
       fired: function () { return JSON.parse(JSON.stringify(once)); },
       busy: function () { return Math.max(0, Math.round(busyUntil - now())); },
       say: function (key) { return say(key, { force: true }); },

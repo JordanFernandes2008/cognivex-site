@@ -401,7 +401,7 @@ window.LEVI_LINES = {
       "Two names, no fake team page, no stock photographs."
     ],
 
-    /* .pclose — "Cognivex is not available yet." */
+    /* .pclose — "Curivox is not available yet." */
     close: [
       "Not available yet. No waitlist to soften that.",
       "In development. The site says so everywhere, including here."

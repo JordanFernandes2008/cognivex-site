@@ -1,6 +1,6 @@
 # One-off generator for the five inner pages.
 #
-# The original Cognivex site kept 41 pages consistent by emitting them all from
+# The original Curivox site kept 41 pages consistent by emitting them all from
 # one shell. Same idea here: the header and footer exist once, so a fix lands
 # once. The OUTPUT is plain static HTML — there is no build step at deploy.
 # Run it, commit the .html files, delete this if you prefer.
@@ -43,7 +43,7 @@ HEAD = '''<!doctype html>
   <div class="wrap masthead__inner">
     <a class="brand" href="index.html">
       <span class="brand__mark" aria-hidden="true"></span>
-      <span>Cognivex</span>
+      <span>Curivox</span>
     </a>
     <nav class="nav" aria-label="Primary">
 {navdesk}
@@ -74,7 +74,7 @@ FOOT = '''</main>
     <div class="foot__brand">
       <a class="brand" href="index.html">
         <span class="brand__mark" aria-hidden="true"></span>
-        <span>Cognivex</span>
+        <span>Curivox</span>
       </a>
       <p class="foot__by">Built by Suraj Balke and Jordan Fernandes at Digital Coyotes.</p>
     </div>
@@ -137,7 +137,7 @@ def closing(title, body, label, href):
 HOW = phero(
     "How it works",
     'One morning, from arriving to <em>answered.</em>',
-    "For the sceptical reader. What Cognivex reads, how it decides what needs "
+    "For the sceptical reader. What Curivox reads, how it decides what needs "
     "you, what a draft actually contains, and what happens the moment you "
     "approve, edit or skip it."
 ) + '''
@@ -147,7 +147,7 @@ HOW = phero(
       <div class="prose__body" data-rise data-rise-delay="60">
         <h2>It reads</h2>
         <p>
-          Cognivex reads the places you have connected and nothing else: your
+          Curivox reads the places you have connected and nothing else: your
           email, your order and customer messages, and where each job and payment
           currently stands. Each source is switched on by you, one at a time, and
           can be switched off the same way.
@@ -171,7 +171,7 @@ HOW = phero(
           about opening hours need one answer, not three decisions.
         </p>
         <p>
-          So Cognivex separates the morning into what it can answer from what you
+          So Curivox separates the morning into what it can answer from what you
           have already approved, what it can draft but must not send, and what it
           genuinely cannot judge. Only the last two reach you.
         </p>
@@ -358,7 +358,7 @@ TRUST = phero(
       <div class="prose__body" data-rise data-rise-delay="60">
         <h2>It does not move money. Ever.</h2>
         <p>
-          Cognivex drafts invoices and drafts follow-ups. It does not take
+          Curivox drafts invoices and drafts follow-ups. It does not take
           payments, issue refunds, hold funds, or connect to your bank to move
           anything. The most it will ever do with money is write you a document
           about it and wait.
@@ -430,7 +430,7 @@ TRUST = phero(
 ABOUT = phero(
     "About",
     'Built by two people who <em>run the admin themselves.</em>',
-    "Cognivex is made by Suraj Balke and Jordan Fernandes at Digital Coyotes."
+    "Curivox is made by Suraj Balke and Jordan Fernandes at Digital Coyotes."
 ) + '''
   <section class="prose">
     <div class="wrap prose__grid">
@@ -443,7 +443,7 @@ ABOUT = phero(
           who is deciding whether to pay you.
         </p>
         <p>
-          Cognivex is built on the opposite bet: that a small business owner will
+          Curivox is built on the opposite bet: that a small business owner will
           hand over the work long before they hand over the final say, and that
           the product which does the work and stops is more useful than the one
           that does everything and hopes.
@@ -470,7 +470,7 @@ ABOUT = phero(
     </div>
   </section>
 ''' + closing(
-    "Cognivex is not available yet.",
+    "Curivox is not available yet.",
     "There is no waitlist, trial or private beta. When there is something to join, this is where it will say so.",
     "Contact", "contact.html")
 
@@ -479,7 +479,7 @@ ABOUT = phero(
 CONTACT = phero(
     "Contact",
     'Not available yet — <em>and saying so plainly.</em>',
-    "Cognivex is in development. There is no waitlist, no trial and no private "
+    "Curivox is in development. There is no waitlist, no trial and no private "
     "beta to join, and this page will not pretend otherwise to collect an email."
 ) + '''
   <section class="prose">
@@ -520,16 +520,16 @@ CONTACT = phero(
 
 
 PAGES = [
-    ("how-it-works.html", "How Cognivex works — Cognivex",
-     "What Cognivex reads, how it decides what needs a decision, what a draft contains, and what happens when you approve, edit or skip.", HOW),
-    ("capabilities.html", "Capabilities — Cognivex",
-     "Inbox triage, invoices and follow-up, social posts, memory and priorities. The complete list of what Cognivex does.", CAPS),
-    ("trust.html", "Trust — Cognivex",
-     "Nothing is sent without your approval, Cognivex never moves money, and it reads only the sources you switch on.", TRUST),
-    ("about.html", "About — Cognivex",
-     "Cognivex is built by Suraj Balke and Jordan Fernandes at Digital Coyotes.", ABOUT),
-    ("contact.html", "Contact — Cognivex",
-     "Cognivex is in development and not yet available. There is no waitlist, trial or private beta.", CONTACT),
+    ("how-it-works.html", "How Curivox works — Curivox",
+     "What Curivox reads, how it decides what needs a decision, what a draft contains, and what happens when you approve, edit or skip.", HOW),
+    ("capabilities.html", "Capabilities — Curivox",
+     "Inbox triage, invoices and follow-up, social posts, memory and priorities. The complete list of what Curivox does.", CAPS),
+    ("trust.html", "Trust — Curivox",
+     "Nothing is sent without your approval, Curivox never moves money, and it reads only the sources you switch on.", TRUST),
+    ("about.html", "About — Curivox",
+     "Curivox is built by Suraj Balke and Jordan Fernandes at Digital Coyotes.", ABOUT),
+    ("contact.html", "Contact — Curivox",
+     "Curivox is in development and not yet available. There is no waitlist, trial or private beta.", CONTACT),
 ]
 
 for href, title, desc, body in PAGES:

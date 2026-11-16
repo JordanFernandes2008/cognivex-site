@@ -65,7 +65,7 @@
     /* Scrolling is no longer window.scrollTo's job. Anything that moves the
        page programmatically has to go through this instance or it fights the
        interpolation and gets dragged back on the next frame. */
-    window.cognivexScroll = lenis;
+    window.curivoxScroll = lenis;
 
     lenis.on("scroll", ScrollTrigger.update);
 

@@ -25,7 +25,7 @@
 
    OWNERSHIP IS SEQUENTIAL, never shared. While this runs, film.js has not
    started its tweens and levi.js has not started its tour; both wait for
-   cognivex:cold-start-done. One owner at a time, handed over cleanly.
+   curivox:cold-start-done. One owner at a time, handed over cleanly.
    ========================================================================== */
 (function () {
   "use strict";
@@ -66,7 +66,7 @@
     end: 3900
   };
 
-  var LINE = "COGNIVEX — COLD START";
+  var LINE = "CURIVOX — COLD START";
 
   /* The size the point forms at, in multiples of Levi's own resting size. It
      ends the sequence at exactly 1, so the component inherits it without a
@@ -383,7 +383,7 @@
     if (cs.pending) {
       cs.pending = false;
       cs.durationMs = Math.round(measured.end - tHead);
-      try { window.dispatchEvent(new Event("cognivex:cold-start-done")); } catch (e) {}
+      try { window.dispatchEvent(new Event("curivox:cold-start-done")); } catch (e) {}
     }
   }
 
@@ -392,8 +392,8 @@
 
     /* Levi is built but held; ask it where it is going to stand so the light
        can travel there rather than to a guess. */
-    if (window.cognivexLevi && window.cognivexLevi.restingPoint) {
-      try { target = window.cognivexLevi.restingPoint(); } catch (e) { target = null; }
+    if (window.curivoxLevi && window.curivoxLevi.restingPoint) {
+      try { target = window.curivoxLevi.restingPoint(); } catch (e) { target = null; }
     }
 
     /* The first write goes where the light will actually be, which under
@@ -422,7 +422,7 @@
     try { start(); } catch (e) { finish(); }
   }
 
-  window.cognivexColdStart = {
+  window.curivoxColdStart = {
     skip: finish,
     timeline: T,
     cap: CAP,

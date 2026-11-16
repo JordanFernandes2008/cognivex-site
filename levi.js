@@ -34,7 +34,7 @@
 (function () {
   "use strict";
 
-  var KEY = "cognivex.levi.dismissed";
+  var KEY = "curivox.levi.dismissed";
   var script = window.LEVI_SCRIPT;
   if (!script || !script.length) return;
   try { if (window.sessionStorage.getItem(KEY) === "1") return; } catch (e) {}
@@ -1116,7 +1116,7 @@
     }
   }
 
-  var hintOn = false, hintW = 0, hintT = null, HINT_KEY = "cognivex.levi.hinted";
+  var hintOn = false, hintW = 0, hintT = null, HINT_KEY = "curivox.levi.hinted";
   function hintSeen() {
     try { return !!window.sessionStorage.getItem(HINT_KEY); } catch (e) { return true; }
   }
@@ -2416,7 +2416,7 @@
 
     /* The briefing and the list are two different conversations, so Levi says
        a different thing in each. Fired by digest.js, not polled. */
-    window.addEventListener("cognivex:view", function (e) {
+    window.addEventListener("curivox:view", function (e) {
       if (dismissed || !queueVisible()) return;
       var v = e.detail && e.detail.view;
       cancelPending();
@@ -2499,7 +2499,7 @@
     root.classList.add("is-boot");
     say.classList.add("is-boot");
     note.style.opacity = "0";
-    window.addEventListener("cognivex:cold-start-done", function () {
+    window.addEventListener("curivox:cold-start-done", function () {
       root.classList.remove("is-boot");
       say.classList.remove("is-boot");
       note.style.opacity = "";
@@ -2511,7 +2511,7 @@
   }
   }   /* end startLevi */
 
-  window.cognivexLevi = {
+  window.curivoxLevi = {
     root: root, say: say, star: star, speech: speech, note: note,
 
     /* FOR levi-demo.js, which owns the running commentary but owns no UI.

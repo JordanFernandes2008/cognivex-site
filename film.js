@@ -48,7 +48,7 @@
      out and back in again the moment the page arrived. */
   var cold = window.__coldStart;
   if (cold && cold.pending) {
-    window.addEventListener("cognivex:cold-start-done", function () {
+    window.addEventListener("curivox:cold-start-done", function () {
       setup(true);
     }, { once: true });
   } else {
@@ -142,7 +142,7 @@
   });
 
   /* A handle for verification, same contract as the old scene had. */
-  window.cognivexFilm = {
+  window.curivoxFilm = {
     el: film,
     stats: function () {
       var r = film.getBoundingClientRect();
