@@ -1,6 +1,6 @@
 /* ============================================================================
    LEVI — THE COMPLETE LINE SET
-   Written against the live sections of cognivex-site.vercel.app (all 7 pages).
+   Written against the live sections of the site (all 7 pages).
 
    VOICE RULES (keep these if you write more lines yourself)
    - Levi is showing you its own screen. It is not selling and not announcing.

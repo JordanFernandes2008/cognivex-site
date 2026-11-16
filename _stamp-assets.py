@@ -11,7 +11,8 @@ import io
 import os
 import re
 
-ROOT = r'C:\Users\LENOVO_17\Downloads\cognivex-rebuild'
+# The folder this script lives in, so it works wherever the site is checked out.
+ROOT = os.path.dirname(os.path.abspath(__file__))
 PAGES = ['index.html', 'how-it-works.html', 'capabilities.html',
          'trust.html', 'about.html', 'contact.html',
          # The 404 is served by Vercel for unmatched routes and needs the same

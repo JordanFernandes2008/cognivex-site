@@ -19,11 +19,11 @@ looking at.
 
 | | |
 |---|---|
-| Working tree | `C:\Users\LENOVO_17\Downloads\cognivex-rebuild` |
+| Working tree | `C:\Users\LENOVO_17\Downloads\curivox-rebuild` |
 | Repo | `github.com/JordanFernandes2008/cognivex-site`, branch `main`, public |
 | Live | `https://cognivex-site.vercel.app` (Vercel team *digital coyotes*) |
 | Also live | `https://cognivex-eight.vercel.app` — **a second Vercel project on the same repo.** Serves identical output. Probably wants deleting. |
-| Retired | `C:\Users\LENOVO_17\Downloads\cognivex-site` — old single-page build, still on disk, **do not edit** |
+| Retired | `C:\Users\LENOVO_17\Downloads\cognivex-site` (pre-rename folder name) — old single-page build, still on disk, **do not edit** |
 
 **Never create a new repo or Vercel project.** Edit the existing ones.
 
